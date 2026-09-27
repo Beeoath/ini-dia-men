@@ -1,0 +1,250 @@
+@import "tailwindcss";
+@import "lenis/dist/lenis.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+html {
+  scroll-behavior: smooth;
+}
+
+@layer base {
+  :root {
+    --sigma-cyan: #00f0ff;
+    --sigma-yellow: #ffd600;
+    --sigma-magenta: #ff007a;
+    --sigma-purple: #a78bfa;
+    --sigma-emerald: #10b981;
+
+    /* Light mode defaults */
+    --sigma-bg: #f8fafc;
+    --sigma-bg-alt: #ffffff;
+    --sigma-text: #0f172a;
+    --sigma-text-secondary: #475569;
+    --sigma-text-muted: #64748b;
+    --sigma-border: rgba(15, 23, 42, 0.12);
+    --sigma-border-subtle: rgba(15, 23, 42, 0.06);
+    --sigma-card-bg: rgba(255, 255, 255, 0.92);
+    --sigma-card-border: rgba(226, 232, 240, 0.9);
+    --sigma-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.08), 0 4px 10px rgba(0, 0, 0, 0.03);
+    --sigma-field-bg: #ffffff;
+    --sigma-field-border: #cbd5e1;
+    --sigma-field-text: #0f172a;
+    --sigma-field-placeholder: #94a3b8;
+  }
+
+  html.dark,
+  body.dark,
+  [data-theme="dark"] {
+    --sigma-bg: #070913;
+    --sigma-bg-alt: #0c0f1d;
+    --sigma-text: #f1f5f9;
+    --sigma-text-secondary: #94a3b8;
+    --sigma-text-muted: #64748b;
+    --sigma-border: rgba(255, 255, 255, 0.12);
+    --sigma-border-subtle: rgba(255, 255, 255, 0.06);
+    --sigma-card-bg: rgba(17, 20, 36, 0.85);
+    --sigma-card-border: rgba(255, 255, 255, 0.12);
+    --sigma-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    --sigma-field-bg: rgba(5, 8, 20, 0.65);
+    --sigma-field-border: rgba(255, 255, 255, 0.14);
+    --sigma-field-text: #f8fafc;
+    --sigma-field-placeholder: #64748b;
+  }
+
+  body {
+    background-color: var(--sigma-bg);
+    color: var(--sigma-text);
+    font-family: 'Outfit', 'Lexend', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+}
+
+.font-display {
+  font-family: 'Outfit', 'Lexend', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.font-lexend {
+  font-family: 'Lexend', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+.font-outfit {
+  font-family: 'Outfit', 'Lexend', system-ui, -apple-system, sans-serif;
+}
+
+.font-body {
+  font-family: 'Lexend', 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+.font-mono, .mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Glassmorphism containers */
+.glass {
+  background: var(--sigma-card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--sigma-card-border);
+  box-shadow: var(--sigma-shadow);
+  color: var(--sigma-text);
+  transition: all 0.25s ease;
+}
+
+.glass-subtle {
+  background: rgba(17, 24, 52, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+html.light .glass-subtle {
+  background: rgba(241, 245, 249, 0.85);
+  border: 1px solid rgba(203, 213, 225, 0.7);
+  color: #0f172a;
+}
+
+/* Interactive Buttons */
+.btn-sigma {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.875rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  background-color: #00f0ff;
+  color: #050814;
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-sigma:hover {
+  background-color: #38f8ff;
+  box-shadow: 0 0 32px rgba(0, 240, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.btn-sigma:active {
+  transform: translateY(1px);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--sigma-text-secondary);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-ghost:hover {
+  color: var(--sigma-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html.light .btn-ghost:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+/* Form Fields */
+.field {
+  width: 100%;
+  border-radius: 0.875rem;
+  border: 1px solid var(--sigma-field-border);
+  background: var(--sigma-field-bg);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--sigma-field-text);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.field:focus {
+  border-color: #00f0ff;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.25);
+}
+
+html.light .field:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.field::placeholder {
+  color: var(--sigma-field-placeholder);
+}
+
+.overline-label {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sigma-text-secondary);
+}
+
+/* Sigma Brand Colors */
+.bg-sigma-void { background-color: #070913; }
+html.light .bg-sigma-void { background-color: #f1f5f9; }
+.bg-sigma-cyan { background-color: #00f0ff; }
+.text-sigma-cyan { color: #00f0ff; }
+html.light .text-sigma-cyan { color: #0284c7; }
+.border-sigma-cyan { border-color: #00f0ff; }
+html.light .border-sigma-cyan { border-color: #0284c7; }
+.bg-sigma-yellow { background-color: #ffd600; }
+.text-sigma-yellow { color: #ffd600; }
+html.light .text-sigma-yellow { color: #d97706; }
+.border-sigma-yellow { border-color: #ffd600; }
+html.light .border-sigma-yellow { border-color: #d97706; }
+.text-sigma-void { color: #070913; }
+html.light .text-sigma-void { color: #0f172a; }
+
+/* KaTeX theme adaptation */
+html.light .katex,
+html.light .katex-html {
+  color: #0f172a !important;
+}
+
+html.dark .katex,
+html.dark .katex-html {
+  color: #f8fafc !important;
+}
+
+/* Custom Scrollbar */
+.font-lacasa {
+  font-family: 'Bebas Neue', 'Anton', 'Impact', sans-serif;
+  letter-spacing: 0.05em;
+}
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+html.light ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.2);
+  border-radius: 9999px;
+}
+
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.35);
+}

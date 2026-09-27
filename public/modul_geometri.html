@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BAB 3: GEOMETRI DAN PENGUKURAN - Modul Pembelajaran Resmi TKA</title>
+  <!-- KaTeX for formula rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #1a1e29;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #10223e;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(16, 34, 62, 0.95);
+      backdrop-filter: blur(8px);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      width: 100%;
+      max-width: 960px;
+    }
+
+    .toolbar-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .toolbar-info {
+      font-size: 12px;
+      color: #ff007a;
+      font-family: monospace;
+      font-weight: bold;
+    }
+
+    .btn-print {
+      background: #ff007a;
+      color: white;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+
+    .btn-print:hover {
+      background: #d60066;
+    }
+
+    .btn-close-pdf {
+      background: #e11d48;
+      color: white;
+      border: 1.5px solid white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      box-shadow: 0 0 12px rgba(225, 29, 72, 0.6);
+    }
+
+    .btn-close-pdf:hover {
+      background: #be123c;
+      transform: scale(1.05);
+    }
+
+    .slide-page {
+      background: #ffffff;
+      width: 100%;
+      max-width: 960px;
+      aspect-ratio: 16 / 9;
+      border-radius: 6px;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.4);
+      padding: 36px 44px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      border: 3px solid #10223e;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      .slide-page {
+        aspect-ratio: auto;
+        min-height: 480px;
+        padding: 24px 20px;
+      }
+    }
+
+    .slide-header {
+      font-size: 24px;
+      font-weight: 900;
+      color: #10223e;
+      letter-spacing: -0.5px;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    .page-footer-num {
+      position: absolute;
+      bottom: 10px;
+      right: 20px;
+      font-size: 11px;
+      font-weight: bold;
+      color: #10223e;
+      opacity: 0.5;
+    }
+
+    .card-box {
+      border: 2px solid #10223e;
+      border-radius: 10px;
+      padding: 16px;
+      background: white;
+    }
+
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+        gap: 0;
+      }
+      .toolbar {
+        display: none !important;
+      }
+      .slide-page {
+        box-shadow: none;
+        page-break-after: always;
+        break-after: page;
+        border-radius: 0;
+        max-width: 100%;
+        width: 100vw;
+        height: 100vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <div class="toolbar">
+    <span class="toolbar-title">📄 BAB 3: GEOMETRI DAN PENGUKURAN (Modul Pembelajaran Resmi TKA)</span>
+    <span class="toolbar-info">15 Slide / Halaman Lengkap</span>
+    <button class="btn-print" onclick="window.print()">
+      🖨️ Cetak / Simpan PDF
+    </button>
+    <button class="btn-close-pdf" onclick="window.parent.postMessage('CLOSE_PDF_MODAL', '*')">
+      ✕ TUTUP (X)
+    </button>
+  </div>
+
+  <!-- SLIDE 1: COVER -->
+  <div class="slide-page" id="page-1" style="display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:#fafbfe;">
+    <div style="border: 4px solid #10223e; padding: 40px 60px; border-radius: 14px; max-width: 820px; width:100%; box-shadow: 0 10px 30px rgba(16,34,62,0.08);">
+      <h1 style="font-size: 56px; font-weight: 950; color: #10223e; letter-spacing: -1.5px; text-transform: uppercase; line-height: 1.1;">
+        BAB 3: GEOMETRI<br>DAN PENGUKURAN
+      </h1>
+      <div style="display: flex; flex-direction: column; gap: 8px; text-align: left; margin-top: 24px; padding-left: 20px; border-left: 3px solid #ff007a;">
+        <span style="font-size: 15px; font-weight: 700; color: #334155;">• A. Hubungan Sudut, Kesebangunan, dan Pythagoras</span>
+        <span style="font-size: 15px; font-weight: 700; color: #334155;">• B. Bangun Datar, Bangun Ruang, dan Pengukuran</span>
+        <span style="font-size: 15px; font-weight: 700; color: #334155;">• C. Transformasi Geometri</span>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 1 / 15</div>
+  </div>
+
+  <!-- SLIDE 2: PETA JALAN GEOMETRI -->
+  <div class="slide-page" id="page-2">
+    <div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2 class="slide-header">PETA JALAN GEOMETRI</h2>
+        <div style="border: 2px solid #10223e; border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 800; color: #10223e; background:#f8fafc;">
+          Tujuan Akhir: Memecahkan Soal TKA Multi-Langkah
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 24px;">
+        <div class="card-box" style="text-align: center; padding: 20px;">
+          <div style="width: 44px; height: 44px; border-radius: 50%; background: #10223e; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; margin: 0 auto 12px;">
+            1
+          </div>
+          <h4 style="font-size: 15px; font-weight: 900; color: #10223e;">Tahap 1: Dasar Geometri</h4>
+          <p style="font-size: 12px; color: #64748b; margin-top: 6px;">Hubungan Sudut & Segitiga<br>(1 Dimensi & 2 Dimensi)</p>
+          <div style="margin-top: 14px; font-size: 13px; font-weight: 800; color: #0284c7;">
+            $\text{Sudut } \parallel \text{ & Pythagoras}$
+          </div>
+        </div>
+
+        <div class="card-box" style="text-align: center; padding: 20px; border-color: #ff007a; background: #fff1f6;">
+          <div style="width: 44px; height: 44px; border-radius: 50%; background: #ff007a; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; margin: 0 auto 12px;">
+            2
+          </div>
+          <h4 style="font-size: 15px; font-weight: 900; color: #10223e;">Tahap 2: Pengukuran Ruang</h4>
+          <p style="font-size: 12px; color: #64748b; margin-top: 6px;">Luas, Volume, & Jarak<br>(3 Dimensi / Bangun Ruang)</p>
+          <div style="margin-top: 14px; font-size: 13px; font-weight: 800; color: #ff007a;">
+            $V = s^3, \quad A = 6s^2, \quad d$
+          </div>
+        </div>
+
+        <div class="card-box" style="text-align: center; padding: 20px;">
+          <div style="width: 44px; height: 44px; border-radius: 50%; background: #10223e; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; margin: 0 auto 12px;">
+            3
+          </div>
+          <h4 style="font-size: 15px; font-weight: 900; color: #10223e;">Tahap 3: Pergerakan</h4>
+          <p style="font-size: 12px; color: #64748b; margin-top: 6px;">Matriks Transformasi & Komposisi<br>(Translasi, Refleksi, Rotasi)</p>
+          <div style="margin-top: 14px; font-size: 13px; font-weight: 800; color: #0284c7;">
+            $T_2 \circ T_1 = T_2 \times T_1$
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 2 / 15</div>
+  </div>
+
+  <!-- SLIDE 3: GARIS TRANSVERSAL & RELASI SUDUT -->
+  <div class="slide-page" id="page-3">
+    <div>
+      <h2 class="slide-header">GARIS TRANSVERSAL & RELASI SUDUT</h2>
+      <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; margin-top: 8px;">
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div class="card-box" style="background: #f8fafc;">
+            <strong>Contoh Aplikasi Angka:</strong><br>
+            <span style="font-size: 13px; color: #334155; line-height: 1.6;">
+              Dua garis sejajar $CD$ dan $AB$ dipotong garis transversal $EF$.<br>
+              Jika $\angle CGE$ sehadap dengan $\angle AHG$, dan $\angle CGE = 60^\circ$, maka:<br>
+              <strong style="color: #0284c7; font-size: 16px;">$\angle AHG = 60^\circ$</strong>
+            </span>
+          </div>
+
+          <div class="card-box" style="border-color: #d97706; background: #fffbeb;">
+            <strong style="color: #b45309;">💡 Jebakan Umum:</strong><br>
+            <span style="font-size: 12px; color: #92400e;">
+              Ingat, <strong>HANYA SUDUT SEPIHAK</strong> yang dijumlahkan menjadi $180^\circ$, sisanya bernilai <strong>SAMA BESAR</strong>.
+            </span>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div class="card-box" style="padding: 12px 16px;">
+            <strong style="color: #0284c7;">Sehadap</strong>
+            <p style="font-size: 12px; color: #475569; margin-top: 2px;">Menghadap arah yang sama $\rightarrow$ <strong>Besar SAMA</strong></p>
+          </div>
+          <div class="card-box" style="padding: 12px 16px;">
+            <strong style="color: #0284c7;">Berseberangan</strong>
+            <p style="font-size: 12px; color: #475569; margin-top: 2px;">Silang dari garis transversal $\rightarrow$ <strong>Besar SAMA</strong></p>
+          </div>
+          <div class="card-box" style="padding: 12px 16px; border-color: #ff007a; background: #fff1f6;">
+            <strong style="color: #ff007a;">Sepihak</strong>
+            <p style="font-size: 12px; color: #9f1239; margin-top: 2px;">Di sisi transversal yang sama $\rightarrow$ <strong>Jumlah $180^\circ$</strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 3 / 15</div>
+  </div>
+
+  <!-- SLIDE 4: KESEBANGUNAN, KONGRUENSI & PYTHAGORAS -->
+  <div class="slide-page" id="page-4">
+    <div>
+      <h2 class="slide-header">KESEBANGUNAN, KONGRUENSI & PYTHAGORAS</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div class="card-box">
+          <h3 style="font-size: 15px; font-weight: 900; color: #10223e; margin-bottom: 6px;">SEBANGUN (Kesebangunan)</h3>
+          <ul style="font-size: 12px; line-height: 1.6; color: #334155; padding-left: 16px;">
+            <li>Sudut sama besar</li>
+            <li>Rasio sisi proporsional</li>
+            <li>Contoh: Segitiga sudut $60^\circ, 40^\circ, 80^\circ$ pasti sebangun meski ukurannya berbeda.</li>
+          </ul>
+        </div>
+        <div class="card-box" style="border-color: #0284c7; background: #f0f9ff;">
+          <h3 style="font-size: 15px; font-weight: 900; color: #0369a1; margin-bottom: 6px;">KONGRUEN (Kekongruenan)</h3>
+          <ul style="font-size: 12px; line-height: 1.6; color: #0c4a6e; padding-left: 16px;">
+            <li>Bentuk persis sama</li>
+            <li>Ukuran persis sama (Rasio 1:1)</li>
+            <li>Contoh: Segitiga dengan panjang sisi dan sudut sama besar adalah kongruen.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 800; color: #92400e; text-align: center; margin-bottom: 14px;">
+        Semua yang KONGRUEN pasti SEBANGUN. Namun yang SEBANGUN, belum tentu KONGRUEN!
+      </div>
+
+      <div class="card-box" style="text-align: center; padding: 14px;">
+        <span style="font-size: 12px; font-weight: 700; color: #64748b;">Teorema Pythagoras:</span>
+        <div style="font-size: 26px; font-weight: 900; color: #d97706; margin: 4px 0;">
+          $a^2 + b^2 = c^2$
+        </div>
+        <span style="font-size: 11px; color: #475569;">Sisi miring (hipotenusa) adalah sisi terpanjang di seberang sudut siku-siku.</span>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 4 / 15</div>
+  </div>
+
+  <!-- SLIDE 5: DASHBOARD PENGUKURAN 2D & 3D -->
+  <div class="slide-page" id="page-5">
+    <div>
+      <h2 class="slide-header">DASHBOARD PENGUKURAN: 2D & 3D</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="card-box">
+          <h3 style="font-size: 14px; font-weight: 900; color: #10223e; margin-bottom: 8px;">Bangun Datar (2 Dimensi)</h3>
+          <div style="font-size: 12px; line-height: 1.8; color: #334155;">
+            <strong>Trapesium:</strong> $\text{Luas} = \frac{(a + b) \times t}{2}$<br>
+            <strong>Lingkaran:</strong> $\text{Luas} = \pi r^2$, $\text{Keliling} = 2\pi r$<br>
+            <strong>Segitiga:</strong> $\text{Luas} = \frac{1}{2} a \times t$
+          </div>
+        </div>
+
+        <div class="card-box" style="border-color: #ff007a; background: #fff5f8;">
+          <h3 style="font-size: 14px; font-weight: 900; color: #ff007a; margin-bottom: 8px;">Pola Cepat Kubus (Rusuk = a)</h3>
+          <div style="font-size: 13px; line-height: 1.8; color: #10223e;">
+            • $\text{Volume} = a^3$<br>
+            • $\text{Luas Permukaan} = 6a^2$<br>
+            • <strong>Panjang Diagonal Sisi:</strong> <span style="background:#fbcfe8; padding:2px 8px; border-radius:4px; font-weight:900;">$a\sqrt{2}$</span><br>
+            • <strong>Panjang Diagonal Ruang:</strong> <span style="background:#fed7aa; padding:2px 8px; border-radius:4px; font-weight:900;">$a\sqrt{3}$</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 5 / 15</div>
+  </div>
+
+  <!-- SLIDE 6: DIMENSI TIGA RAHASIA JARAK -->
+  <div class="slide-page" id="page-6">
+    <div>
+      <h2 class="slide-header">DIMENSI TIGA: RAHASIA MENCARI JARAK</h2>
+      <p style="font-size: 12px; color: #475569; margin-bottom: 14px;">
+        Jarak adalah lintasan terpendek. Kuncinya selalu mencari <strong>proyeksi tegak lurus</strong> dari titik asal ke target.
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+        <div class="card-box">
+          <strong style="color: #0284c7;">1. Titik ke Garis</strong>
+          <p style="font-size: 11px; color: #334155; margin-top: 6px; line-height: 1.5;">
+            Tarik ruas garis dari titik $T$ tegak lurus ke garis $g$ di titik $T'$ ($TT' \perp g$). Jarak $= |TT'|$.
+          </p>
+        </div>
+        <div class="card-box">
+          <strong style="color: #0284c7;">2. Titik ke Bidang</strong>
+          <p style="font-size: 11px; color: #334155; margin-top: 6px; line-height: 1.5;">
+            Panjang ruas garis tegak lurus dari titik $T$ menembus bidang $V$.
+          </p>
+        </div>
+        <div class="card-box">
+          <strong style="color: #0284c7;">3. Garis ke Garis (Bersilangan)</strong>
+          <p style="font-size: 11px; color: #334155; margin-top: 6px; line-height: 1.5;">
+            Geser salah satu garis hingga memotong garis lainnya untuk mencari jarak tegak lurusnya.
+          </p>
+        </div>
+      </div>
+
+      <div style="margin-top: 14px; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; padding: 10px 16px; font-size: 12px; color: #15803d; line-height: 1.5;">
+        <strong>Strategi Emas 3D:</strong> Proyeksi tegak lurus memecah masalah 3 Dimensi yang rumit menjadi segitiga 2 Dimensi (siku-siku) yang bisa diselesaikan dengan Pythagoras.
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 6 / 15</div>
+  </div>
+
+  <!-- SLIDE 7: MATRIKS TRANSFORMASI (BAGIAN I) -->
+  <div class="slide-page" id="page-7">
+    <div>
+      <h2 class="slide-header">MATRIKS TRANSFORMASI (BAGIAN I)</h2>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; margin-top: 10px;">
+        <thead>
+          <tr style="background: #10223e; color: white;">
+            <th style="padding: 10px 16px; border-radius: 8px 0 0 0;">Jenis Transformasi</th>
+            <th style="padding: 10px 16px; border-radius: 0 8px 0 0;">Matriks / Pemetaan</th>
+          </tr>
+        </thead>
+        <tbody style="border: 2px solid #10223e;">
+          <tr style="border-bottom: 1px solid #cbd5e1;">
+            <td style="padding: 10px 16px; font-weight: 700;">Translasi (Pergeseran)</td>
+            <td style="padding: 10px 16px;">$T = \begin{bmatrix} a \\ b \end{bmatrix} \rightarrow (x + a, y + b)$</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #cbd5e1; background: #f8fafc;">
+            <td style="padding: 10px 16px; font-weight: 700;">Refleksi Sumbu X</td>
+            <td style="padding: 10px 16px;">$\begin{bmatrix} 1 & 0 \\ 0 & -1 \end{bmatrix} \rightarrow (x, -y)$</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #cbd5e1;">
+            <td style="padding: 10px 16px; font-weight: 700;">Refleksi Sumbu Y</td>
+            <td style="padding: 10px 16px;">$\begin{bmatrix} -1 & 0 \\ 0 & 1 \end{bmatrix} \rightarrow (-x, y)$</td>
+          </tr>
+          <tr style="background: #f0f9ff;">
+            <td style="padding: 10px 16px; font-weight: 700; color: #0284c7;">Refleksi Garis $y = x$</td>
+            <td style="padding: 10px 16px; font-weight: 700; color: #0284c7;">$\begin{bmatrix} 0 & 1 \\ 1 & 0 \end{bmatrix} \rightarrow (y, x)$</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="page-footer-num">Hal 7 / 15</div>
+  </div>
+
+  <!-- SLIDE 8: MATRIKS TRANSFORMASI (BAGIAN II) & KOMPOSISI -->
+  <div class="slide-page" id="page-8">
+    <div>
+      <h2 class="slide-header">MATRIKS TRANSFORMASI (BAGIAN II) & KOMPOSISI</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div class="card-box">
+          <strong style="color: #0284c7;">Rotasi (Perputaran) Pusat $(0,0)$ sebesar $\theta$:</strong>
+          <div style="font-size: 20px; font-weight: 900; text-align: center; margin: 10px 0; color: #10223e;">
+            $\begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}$
+          </div>
+          <span style="font-size: 11px; color: #64748b;">$\theta (-)$ searah jarum jam, $\theta (+)$ berlawanan arah jarum jam.</span>
+        </div>
+
+        <div class="card-box">
+          <strong style="color: #0284c7;">Dilatasi (Perkalian Ukuran) Pusat $(0,0)$ faktor $k$:</strong>
+          <div style="font-size: 20px; font-weight: 900; text-align: center; margin: 10px 0; color: #10223e;">
+            $\begin{bmatrix} k & 0 \\ 0 & k \end{bmatrix}$
+          </div>
+        </div>
+      </div>
+
+      <div class="card-box" style="border-color: #d97706; background: #fffbeb; text-align: center;">
+        <strong style="color: #b45309; font-size: 14px;">KOMPOSISI MATRIKS TRANSFORMASI</strong>
+        <p style="font-size: 12px; color: #92400e; margin: 4px 0 10px;">Jika $T_1$ dilanjutkan $T_2$, maka rumusnya:</p>
+        <div style="font-size: 24px; font-weight: 900; color: #10223e; margin-bottom: 6px;">
+          $T_2 \circ T_1 = T_2 \times T_1$
+        </div>
+        <span style="font-size: 11px; font-weight: 800; color: #dc2626;">
+          ⚠️ HATI-HATI URUTAN! Komposisi $T_1$ lalu $T_2$ dikerjakan dengan mengalikan matriks secara TERBALIK dari kanan ke kiri: $[\text{Matriks } T_2] \times [\text{Matriks } T_1]$.
+        </span>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 8 / 15</div>
+  </div>
+
+  <!-- SLIDE 9: TRIPEL PYTHAGORAS & JALAN PINTAS TRANSLASI -->
+  <div class="slide-page" id="page-9">
+    <div>
+      <h2 class="slide-header">TRIPEL PYTHAGORAS & JALAN PINTAS</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="card-box">
+          <h3 style="font-size: 15px; font-weight: 900; color: #10223e; margin-bottom: 6px;">Tripel Pythagoras Cepat</h3>
+          <p style="font-size: 12px; color: #334155; line-height: 1.6;">
+            Jangan buang waktu menghitung kuadrat jika menemui pasangan:<br>
+            • $(3, 4, 5)$ atau $(6, 8, 10)$<br>
+            • $(5, 12, 13)$ atau $(10, 24, 26)$<br>
+            • $(7, 24, 25)$ dan $(8, 15, 17)$<br>
+            <em>Contoh: Sisi tegak 5 cm dan 12 cm, sisi miring langsung 13 cm.</em>
+          </p>
+        </div>
+
+        <div class="card-box" style="border-color: #0284c7; background: #f0f9ff;">
+          <h3 style="font-size: 15px; font-weight: 900; color: #0369a1; margin-bottom: 6px;">Jalan Pintas Komposisi Translasi</h3>
+          <p style="font-size: 12px; color: #0c4a6e; line-height: 1.6;">
+            Tidak perlu pusing mengalikan matriks! Cukup dijumlahkan biasa:<br>
+            <strong style="font-size: 18px; display: block; text-align: center; margin: 8px 0; color: #0369a1;">
+              $T_1 + T_2 = \begin{bmatrix} a_1 + a_2 \\ b_1 + b_2 \end{bmatrix}$
+            </strong>
+          </p>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 10px 16px; font-size: 12px; color: #92400e;">
+        <strong>Mentalitas Ujian:</strong> Menguasai jalan pintas ini akan menghemat 2-3 menit per soal saat ujian. Gunakan waktu yang dihemat untuk soal dimensi tiga yang lebih panjang.
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 9 / 15</div>
+  </div>
+
+  <!-- SLIDE 10: AWAS! JEBAKAN UJIAN -->
+  <div class="slide-page" id="page-10">
+    <div>
+      <h2 class="slide-header" style="color: #dc2626;">AWAS! JEBAKAN UJIAN YANG SERING TERJADI</h2>
+      <p style="font-size: 13px; color: #334155; margin-bottom: 14px;">
+        Nilai aljabar ($x$) yang ditemukan <strong>TIDAK SELALU</strong> menjadi jawaban final yang masuk akal di dunia nyata geometri.
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="card-box" style="border-color: #ef4444; background: #fef2f2;">
+          <strong style="color: #b91c1c;">Kasus 1: Sudut Negatif</strong>
+          <p style="font-size: 12px; color: #7f1d1d; margin-top: 6px; line-height: 1.6;">
+            Faktorisasi persamaan sudut menghasilkan $x = 6$ atau $x = -24$.<br>
+            Jika dimasukkan $x = -24$, sudut menjadi NEGATIF.<br>
+            <strong>Kesimpulan:</strong> Sudut tidak mungkin negatif. $x = -24$ <strong>WAJIB DITOLAK</strong>.
+          </p>
+        </div>
+
+        <div class="card-box" style="border-color: #ef4444; background: #fef2f2;">
+          <strong style="color: #b91c1c;">Kasus 2: Panjang Sisi Negatif</strong>
+          <p style="font-size: 12px; color: #7f1d1d; margin-top: 6px; line-height: 1.6;">
+            Faktorisasi persamaan sisi segitiga menghasilkan $x = 3$ atau $x = -2$.<br>
+            Jika $x = -2$ dimasukkan, panjang sisi bernilai $\le 0$.<br>
+            <strong>Kesimpulan:</strong> Panjang tidak mungkin $\le 0$. $x = -2$ <strong>WAJIB DITOLAK</strong>.
+          </p>
+        </div>
+      </div>
+
+      <div style="margin-top: 14px; text-align: center; font-size: 12px; font-weight: 800; color: #1e293b;">
+        Selalu substitusikan kembali nilai x yang kamu temukan ke variabel asli untuk memastikan logikanya berjalan.
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 10 / 15</div>
+  </div>
+
+  <!-- SLIDE 11: TELAAH SOAL KESEBANGUNAN -->
+  <div class="slide-page" id="page-11">
+    <div>
+      <h2 class="slide-header">TELAAH SOAL: KESEBANGUNAN DUNIA NYATA</h2>
+      <div class="card-box" style="margin-bottom: 14px; background: #f8fafc; font-size: 13px;">
+        <strong>Kasus:</strong> Sebuah tiang bendera membentuk bayangan $4{,}5\text{ m}$. Pada saat bersamaan, tongkat $1{,}2\text{ m}$ membentuk bayangan $1{,}5\text{ m}$. Berapa tinggi bendera?
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+        <div class="card-box">
+          <strong style="color: #0284c7;">Langkah 1: Visualisasi</strong>
+          <p style="font-size: 12px; color: #475569; margin-top: 6px; line-height: 1.5;">
+            Sketsa dua segitiga siku-siku sebangun yang dibentuk oleh sinar matahari.
+          </p>
+        </div>
+        <div class="card-box">
+          <strong style="color: #0284c7;">Langkah 2: Strategi</strong>
+          <p style="font-size: 12px; color: #475569; margin-top: 6px; line-height: 1.5;">
+            $\frac{\text{Tinggi Bendera}}{\text{Tinggi Tongkat}} = \\ \frac{\text{Bayangan Bendera}}{\text{Bayangan Tongkat}}$
+          </p>
+        </div>
+        <div class="card-box" style="border-color: #22c55e; background: #f0fdf4; text-align: center;">
+          <strong style="color: #15803d;">Langkah 3: Eksekusi</strong>
+          <div style="font-size: 14px; margin-top: 4px; line-height: 1.6;">
+            $\frac{T}{1{,}2} = \frac{4{,}5}{1{,}5} = 3$<br>
+            $T = 3 \times 1{,}2$<br>
+            <span style="font-size: 20px; font-weight: 900; color: #15803d;">3,6 meter</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 11 / 15</div>
+  </div>
+
+  <!-- SLIDE 12: TELAAH SOAL DIMENSI TIGA -->
+  <div class="slide-page" id="page-12">
+    <div>
+      <h2 class="slide-header">TELAAH SOAL: MEMBEDAH JARAK DIMENSI TIGA</h2>
+      <div class="card-box" style="margin-bottom: 14px; background: #f8fafc; font-size: 13px;">
+        <strong>Kasus:</strong> Kubus $ABCD.EFGH$ dengan rusuk $9\text{ cm}$. Tentukan jarak titik $E$ ke diagonal ruang $AG$.
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="card-box">
+          <strong style="color: #0284c7;">Langkah 1: Identifikasi 3D</strong>
+          <p style="font-size: 12px; color: #475569; margin-top: 6px; line-height: 1.6;">
+            Jarak $E$ ke diagonal ruang $AG$ adalah proyeksi tegak lurus garis $EO$ pada segitiga siku-siku $AEG$ (siku-siku di $E$).
+          </p>
+          <ul style="font-size: 12px; color: #334155; padding-left: 18px; margin-top: 6px;">
+            <li>$AE = 9\text{ cm}$ (rusuk)</li>
+            <li>$EG = 9\sqrt{2}\text{ cm}$ (diagonal sisi)</li>
+            <li>$AG = 9\sqrt{3}\text{ cm}$ (diagonal ruang)</li>
+          </ul>
+        </div>
+
+        <div class="card-box" style="border-color: #0284c7; background: #f0f9ff; text-align: center;">
+          <strong style="color: #0369a1;">Langkah 2: Bantuan 2D & Eksekusi</strong>
+          <p style="font-size: 12px; color: #0c4a6e; margin-top: 4px;">Perbandingan luas segitiga siku-siku $AEG$:</p>
+          <div style="font-size: 14px; line-height: 1.8; margin: 8px 0;">
+            $\frac{1}{2} \times AG \times EO = \frac{1}{2} \times AE \times EG$<br>
+            $EO = \frac{AE \times EG}{AG} = \frac{9 \times 9\sqrt{2}}{9\sqrt{3}} = \frac{9\sqrt{2}}{\sqrt{3}}$<br>
+            <strong style="font-size: 24px; color: #0284c7;">$EO = 3\sqrt{6}\text{ cm}$</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 12 / 15</div>
+  </div>
+
+  <!-- SLIDE 13: TELAAH SOAL TRANSFORMASI GARIS -->
+  <div class="slide-page" id="page-13">
+    <div>
+      <h2 class="slide-header">TELAAH SOAL: RAHASIA SUBSTITUSI TRANSFORMASI</h2>
+      <div class="card-box" style="margin-bottom: 12px; background: #f8fafc; font-size: 12px;">
+        <strong>Kasus:</strong> Refleksi terhadap $y = -3$ dilanjutkan rotasi $270^\circ$ menghasilkan bayangan $6x - 3y + 9 = 0$. Cari gradien persamaan semula!
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; font-size: 11px;">
+        <div class="card-box">
+          <strong style="color: #0284c7;">1. Matriks Bayangan</strong>
+          <p style="margin-top: 4px; line-height: 1.5;">
+            $(x, y) \xrightarrow{y=-3} (x, -y-6)$<br>
+            $\xrightarrow{R_{270^\circ}} (y'', -x'') = (y+6, -x)$<br>
+            $x'' = y + 6$<br>
+            $y'' = -x$
+          </p>
+        </div>
+        <div class="card-box">
+          <strong style="color: #0284c7;">2. Isolasi Variabel Awal</strong>
+          <p style="margin-top: 4px; line-height: 1.5;">
+            Dapatkan $x$ dan $y$ polos:<br>
+            $y = x'' - 6$<br>
+            $x = -y''$
+          </p>
+        </div>
+        <div class="card-box" style="border-color: #22c55e; background: #f0fdf4;">
+          <strong style="color: #15803d;">3. Substitusi Terbalik</strong>
+          <p style="margin-top: 4px; line-height: 1.5;">
+            $6(-y'') - 3(x'' - 6) + 9 = 0$<br>
+            $-3x'' - 6y'' + 27 = 0$<br>
+            <strong style="font-size: 14px; color: #15803d; display: block; margin-top: 4px;">Gradien $m = -\frac{1}{2}$</strong>
+          </p>
+        </div>
+      </div>
+
+      <div style="margin-top: 10px; font-size: 11px; font-weight: 700; color: #475569; text-align: center;">
+        INGAT: Selalu selesaikan persamaan untuk mencari x dan y polos dahulu, baru substitusikan.
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 13 / 15</div>
+  </div>
+
+  <!-- SLIDE 14: RANGKUMAN ESENSIAL -->
+  <div class="slide-page" id="page-14">
+    <div>
+      <h2 class="slide-header">RANGKUMAN ESENSIAL</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+        <div class="card-box">
+          <h3 style="font-size: 14px; font-weight: 900; color: #10223e; margin-bottom: 6px;">Fondasi 2D</h3>
+          <ul style="font-size: 12px; line-height: 1.6; color: #334155; padding-left: 16px;">
+            <li>Tripel Pythagoras: $(3,4,5), (5,12,13), (7,24,25)$</li>
+            <li>Aturan Transversal: Sudut sepihak $= 180^\circ$, sisanya sama besar.</li>
+          </ul>
+        </div>
+        <div class="card-box">
+          <h3 style="font-size: 14px; font-weight: 900; color: #10223e; margin-bottom: 6px;">Proyeksi 3D</h3>
+          <ul style="font-size: 12px; line-height: 1.6; color: #334155; padding-left: 16px;">
+            <li>Diagonal Sisi $= a\sqrt{2}$</li>
+            <li>Diagonal Ruang $= a\sqrt{3}$</li>
+            <li>Selalu cari Segitiga Bantuan 2D siku-siku ($90^\circ$).</li>
+          </ul>
+        </div>
+        <div class="card-box">
+          <h3 style="font-size: 14px; font-weight: 900; color: #10223e; margin-bottom: 6px;">Matriks Transformasi</h3>
+          <ul style="font-size: 12px; line-height: 1.6; color: #334155; padding-left: 16px;">
+            <li>Komposisi: $T_2 \circ T_1 = T_2 \times T_1$ (dari kanan!)</li>
+            <li>Rotasi $90^\circ$: $\begin{bmatrix} 0 & -1 \\ 1 & 0 \end{bmatrix}$</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 14 / 15</div>
+  </div>
+
+  <!-- SLIDE 15: PENUTUP -->
+  <div class="slide-page" id="page-15" style="display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:#fafbfe;">
+    <div style="border: 3px solid #10223e; border-radius: 14px; padding: 40px; max-width: 680px; width: 100%; background: white;">
+      <h2 style="font-size: 32px; font-weight: 900; color: #10223e; margin-bottom: 16px;">
+        Konsep Dikuasai. Saatnya Beraksi.
+      </h2>
+      <p style="font-size: 16px; line-height: 1.6; color: #334155; margin-bottom: 24px;">
+        Anda telah memahami hubungan sudut, cara menembus dimensi tiga, dan logika di balik matriks transformasi.<br>
+        Jangan biarkan konsep ini menguap!
+      </p>
+      <button onclick="window.parent.postMessage('START_QUIZ', '*')" style="background:#ff007a; color:white; border:none; font-weight:900; font-size:15px; padding:12px 28px; border-radius:30px; cursor:pointer; box-shadow: 0 4px 15px rgba(255,0,122,0.4);">
+        Lanjut ke Kuis →
+      </button>
+    </div>
+    <div class="page-footer-num">Hal 15 / 15</div>
+  </div>
+
+</body>
+</html>

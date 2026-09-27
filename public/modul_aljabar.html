@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BAB 2: ALJABAR - Modul Pembelajaran Resmi TKA</title>
+  <!-- KaTeX for formula rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #1e222d;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #10223e;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(16, 34, 62, 0.95);
+      backdrop-filter: blur(8px);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      width: 100%;
+      max-width: 960px;
+    }
+
+    .toolbar-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .toolbar-info {
+      font-size: 12px;
+      color: #ffd600;
+      font-family: monospace;
+      font-weight: bold;
+    }
+
+    .btn-print {
+      background: #ffd600;
+      color: #10223e;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+
+    .btn-print:hover {
+      background: #e6c200;
+    }
+
+    .btn-close-pdf {
+      background: #e11d48;
+      color: white;
+      border: 1.5px solid white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      box-shadow: 0 0 12px rgba(225, 29, 72, 0.6);
+    }
+
+    .btn-close-pdf:hover {
+      background: #be123c;
+      transform: scale(1.05);
+    }
+
+    /* Standard 16:9 Slide Page */
+    .slide-page {
+      background: #ffffff;
+      width: 100%;
+      max-width: 960px;
+      aspect-ratio: 16 / 9;
+      border-radius: 6px;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.4);
+      padding: 36px 44px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      border: 3px solid #10223e;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      .slide-page {
+        aspect-ratio: auto;
+        min-height: 480px;
+        padding: 24px 20px;
+      }
+    }
+
+    .slide-header {
+      font-size: 24px;
+      font-weight: 900;
+      color: #10223e;
+      letter-spacing: -0.5px;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    .page-footer-num {
+      position: absolute;
+      bottom: 10px;
+      right: 20px;
+      font-size: 11px;
+      font-weight: bold;
+      color: #10223e;
+      opacity: 0.5;
+    }
+
+    .card-box {
+      border: 2px solid #10223e;
+      border-radius: 10px;
+      padding: 16px;
+      background: white;
+    }
+
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+        gap: 0;
+      }
+      .toolbar {
+        display: none !important;
+      }
+      .slide-page {
+        box-shadow: none;
+        page-break-after: always;
+        break-after: page;
+        border-radius: 0;
+        max-width: 100%;
+        width: 100vw;
+        height: 100vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <div class="toolbar">
+    <span class="toolbar-title">📄 BAB 2: ALJABAR (Sistem Persamaan, Pertidaksamaan, Fungsi, Barisan & Deret)</span>
+    <span class="toolbar-info">16 Slide / Halaman Lengkap</span>
+    <button class="btn-print" onclick="window.print()">
+      🖨️ Cetak / Simpan PDF
+    </button>
+    <button class="btn-close-pdf" onclick="window.parent.postMessage('CLOSE_PDF_MODAL', '*')">
+      ✕ TUTUP (X)
+    </button>
+  </div>
+
+  <!-- SLIDE 1: COVER -->
+  <div class="slide-page" id="page-1" style="display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:#fafbfe;">
+    <div style="border: 4px solid #10223e; padding: 40px 60px; border-radius: 14px; max-width: 820px; width:100%; box-shadow: 0 10px 30px rgba(16,34,62,0.08);">
+      <h1 style="font-size: 64px; font-weight: 950; color: #10223e; letter-spacing: -1.5px; text-transform: uppercase;">
+        BAB 2: ALJABAR
+      </h1>
+      <p style="font-size: 22px; font-weight: 700; color: #0284c7; margin-top: 18px; line-height: 1.4;">
+        Sistem Persamaan, Pertidaksamaan,<br>Fungsi, Barisan & Deret
+      </p>
+    </div>
+    <div class="page-footer-num">Hal 1 / 16</div>
+  </div>
+
+  <!-- SLIDE 2: PETA KONSEP ALJABAR -->
+  <div class="slide-page" id="page-2">
+    <div>
+      <h2 class="slide-header">PETA KONSEP ALJABAR</h2>
+      <div style="display: grid; grid-template-columns: 200px 1fr; gap: 30px; align-items: center; margin-top: 20px;">
+        <div style="border: 3px solid #10223e; border-radius: 12px; padding: 36px 20px; text-align: center; font-size: 28px; font-weight: 900; color: #10223e; background: #f0f7ff;">
+          ALJABAR
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px; border-left: 3px solid #38bdf8; padding-left: 20px;">
+          <div class="card-box" style="padding: 12px 18px; font-size: 15px; font-weight: 800; color: #10223e;">
+            1. Sistem Persamaan (SPLDV & SPLTV)
+          </div>
+          <div class="card-box" style="padding: 12px 18px; font-size: 15px; font-weight: 800; color: #10223e;">
+            2. Sistem Pertidaksamaan & Program Linear
+          </div>
+          <div class="card-box" style="padding: 12px 18px; font-size: 15px; font-weight: 800; color: #10223e;">
+            3. Konsep Fungsi (Linear, Kuadrat, Rasional)
+          </div>
+          <div class="card-box" style="padding: 12px 18px; font-size: 15px; font-weight: 800; color: #10223e;">
+            4. Komposisi & Invers Fungsi
+          </div>
+          <div class="card-box" style="padding: 12px 18px; font-size: 15px; font-weight: 800; color: #10223e;">
+            5. Barisan, Deret & Aplikasi Eksponensial
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 2 / 16</div>
+  </div>
+
+  <!-- SLIDE 3: SPLDV -->
+  <div class="slide-page" id="page-3">
+    <div>
+      <h2 class="slide-header">SISTEM PERSAMAAN LINEAR DUA VARIABEL (SPLDV)</h2>
+      <div style="text-align: center; margin-bottom: 20px; padding: 12px; border: 2px dashed #10223e; border-radius: 10px; background: #fafbff;">
+        <span style="font-size: 13px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">Bentuk Umum:</span>
+        <span style="font-size: 20px; font-weight: 900; color: #10223e;">$a_1 x + b_1 y = c_1$ &nbsp;&nbsp;|&nbsp;&nbsp; $a_2 x + b_2 y = c_2$</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+        <div class="card-box">
+          <h3 style="font-size: 16px; font-weight: 900; color: #10223e; margin-bottom: 8px;">1. Eliminasi</h3>
+          <p style="font-size: 13px; line-height: 1.5; color: #334155;">
+            - Menyamakan koefisien satu variabel.<br>
+            - Jumlahkan/kurangkan untuk menghilangkan variabel tersebut.
+          </p>
+        </div>
+        <div class="card-box">
+          <h3 style="font-size: 16px; font-weight: 900; color: #10223e; margin-bottom: 8px;">2. Substitusi</h3>
+          <p style="font-size: 13px; line-height: 1.5; color: #334155;">
+            - Nyatakan satu variabel ke dalam bentuk variabel lain.<br>
+            - Masukkan ke persamaan yang tersisa.
+          </p>
+        </div>
+        <div class="card-box" style="border-color: #0284c7; background: #f0f9ff;">
+          <h3 style="font-size: 16px; font-weight: 900; color: #0369a1; margin-bottom: 8px;">3. Campuran (Cepat & Akurat)</h3>
+          <p style="font-size: 13px; line-height: 1.5; color: #0c4a6e;">
+            - <strong>Langkah 1:</strong> Eliminasi (cari nilai variabel pertama).<br>
+            - <strong>Langkah 2:</strong> Substitusi hasil ke persamaan awal (cari variabel kedua).
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 3 / 16</div>
+  </div>
+
+  <!-- SLIDE 4: SPLTV -->
+  <div class="slide-page" id="page-4">
+    <div>
+      <h2 class="slide-header">SISTEM PERSAMAAN LINEAR TIGA VARIABEL (SPLTV)</h2>
+      <div style="display: grid; grid-template-columns: 1.2fr 1.8fr; gap: 24px; align-items: center; margin-top: 10px;">
+        <div class="card-box" style="padding: 24px; text-align: center;">
+          <span style="font-size: 13px; font-weight: 700; color: #64748b; display: block; margin-bottom: 10px;">Bentuk Umum:</span>
+          <div style="font-size: 20px; font-weight: 900; line-height: 1.8; color: #10223e;">
+            $a_1 x + b_1 y + c_1 z = d_1$<br>
+            $a_2 x + b_2 y + c_2 z = d_2$<br>
+            $a_3 x + b_3 y + c_3 z = d_3$
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="card-box" style="padding: 12px 18px; text-align: center; font-weight: 900; font-size: 15px; color: #10223e;">
+            3 Variabel (x, y, z)
+          </div>
+          <div style="text-align: center; font-size: 12px; font-weight: 700; color: #0284c7;">
+            ⬇ Eliminasi z dari dua pasang persamaan
+          </div>
+          <div class="card-box" style="padding: 12px 18px; text-align: center; font-weight: 900; font-size: 15px; color: #10223e; background: #f8fafc;">
+            2 Variabel (SPLDV x, y)
+          </div>
+          <div style="text-align: center; font-size: 12px; font-weight: 700; color: #0284c7;">
+            ⬇ Selesaikan dengan Metode Campuran
+          </div>
+          <div class="card-box" style="padding: 12px 18px; text-align: center; font-weight: 900; font-size: 15px; color: #0369a1; background: #e0f2fe; border-color: #0284c7;">
+            1 Variabel (Substitusi Balik $\rightarrow$ Dapatkan nilai z)
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 4 / 16</div>
+  </div>
+
+  <!-- SLIDE 5: SPtLDV & DHP -->
+  <div class="slide-page" id="page-5">
+    <div>
+      <h2 class="slide-header">SISTEM PERTIDAKSAMAAN LINEAR (SPtLDV) & DHP</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px;">
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="card-box" style="background: #f8fafc;">
+            <strong>Bentuk Umum:</strong> $ax + by < c$ (atau $>$, $\le$, $\ge$)<br>
+            <span style="font-size: 12px; color: #475569;"><strong>DHP (Daerah Himpunan Penyelesaian)</strong> adalah area yang memenuhi semua syarat.</span>
+          </div>
+          <div class="card-box" style="border-color: #0284c7; background: #f0f9ff;">
+            <strong style="color: #0369a1;">Rumus Cepat Gambar Garis!</strong><br>
+            <span style="font-size: 13px; color: #0c4a6e;">Jika memotong sumbu X di $(a, 0)$ dan Y di $(0, b)$:<br>
+            <strong style="font-size: 18px; display: block; margin-top: 6px;">$bx + ay = ab$</strong></span>
+          </div>
+        </div>
+
+        <div class="card-box" style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 1.5;">
+          <div><strong>1. Ubah:</strong> Jadikan persamaan garis lurus ($ax + by = c$).</div>
+          <div><strong>2. Potong Sumbu:</strong> Cari titik potong sumbu X ($y=0$) dan Y ($x=0$).</div>
+          <div><strong>3. Uji Titik:</strong> Substitusi sembarang titik $P(x_1, y_1)$, misal $(0,0)$.</div>
+          <div><strong>4. Gambar & Arsir:</strong> Garis Penuh ($\le, \ge$) vs Putus-putus ($<, >$).</div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 5 / 16</div>
+  </div>
+
+  <!-- SLIDE 6: PROGRAM LINEAR OPTIMASI -->
+  <div class="slide-page" id="page-6">
+    <div>
+      <h2 class="slide-header">PROGRAM LINEAR: OPTIMASI (MAKSIMUM / MINIMUM)</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div class="card-box">
+          <strong>Fungsi Kendala:</strong><br>
+          <span style="font-size: 13px; color: #475569;">Batasan sistem berupa pertidaksamaan.<br>(Syarat wajib non-negatif: $x \ge 0, y \ge 0$).</span>
+        </div>
+        <div class="card-box" style="border-color: #0284c7; background: #f0f9ff; text-align: center;">
+          <strong style="color: #0369a1;">Fungsi Objektif: Target Optimasi</strong>
+          <div style="font-size: 24px; font-weight: 900; margin-top: 4px; color: #10223e;">
+            $Z = ax + by$
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="card-box">
+          <h4 style="font-size: 14px; font-weight: 900; color: #10223e; margin-bottom: 8px;">⬠ Metode Uji Titik Pojok (Ekstrim):</h4>
+          <ol style="font-size: 12px; padding-left: 18px; line-height: 1.6; color: #334155;">
+            <li>Gambar DHP.</li>
+            <li>Tentukan koordinat tiap titik sudut.</li>
+            <li>Substitusi ke $Z = ax + by$. Pilih nilai paling ekstrim.</li>
+          </ol>
+        </div>
+        <div class="card-box">
+          <h4 style="font-size: 14px; font-weight: 900; color: #10223e; margin-bottom: 8px;">📈 Metode Garis Selidik:</h4>
+          <ul style="font-size: 12px; padding-left: 18px; line-height: 1.6; color: #334155; list-style: square;">
+            <li>Geser garis $ax + by = k$.</li>
+            <li>Geser Kanan/Atas $\rightarrow$ Nilai Maksimum.</li>
+            <li>Geser Kiri/Bawah $\rightarrow$ Nilai Minimum.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 6 / 16</div>
+  </div>
+
+  <!-- SLIDE 7: KONSEP FUNGSI & FUNGSI LINEAR -->
+  <div class="slide-page" id="page-7">
+    <div>
+      <h2 class="slide-header">KONSEP FUNGSI & FUNGSI LINEAR</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="card-box" style="font-size: 13px; line-height: 1.6;">
+          <strong>Pemetaan $f: A \rightarrow B$</strong><br>
+          • <strong>Domain ($D_f$):</strong> Daerah asal (Himpunan A)<br>
+          • <strong>Kodomain ($K_f$):</strong> Daerah kawan (Himpunan B)<br>
+          • <strong>Range ($R_f$):</strong> Daerah hasil (Anggota B yang punya pasangan)<br><br>
+          <strong>Fungsi Linear:</strong> $f(x) = mx + c$<br>
+          • Gradien (kemiringan): $m = \frac{y_2 - y_1}{x_2 - x_1}$<br>
+          • Persamaan Garis: $y - y_1 = m(x - x_1)$
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="card-box" style="text-align: center;">
+            <div style="font-weight: 900; font-size: 13px; color: #10223e;">Sejajar:</div>
+            <div style="font-size: 16px; font-weight: 800; color: #0284c7; margin-top: 4px;">$m_1 = m_2$</div>
+          </div>
+          <div class="card-box" style="text-align: center; border-color: #0284c7; background: #f0f9ff;">
+            <div style="font-weight: 900; font-size: 13px; color: #0369a1;">Tegak Lurus:</div>
+            <div style="font-size: 16px; font-weight: 800; color: #0369a1; margin-top: 4px;">$m_1 \times m_2 = -1$</div>
+          </div>
+          <div class="card-box" style="text-align: center;">
+            <div style="font-weight: 900; font-size: 13px; color: #10223e;">Berimpit:</div>
+            <div style="font-size: 13px; font-weight: 700; color: #475569; margin-top: 4px;">$m_1 = m_2$ & $c_1 = c_2$</div>
+          </div>
+          <div class="card-box" style="text-align: center;">
+            <div style="font-weight: 900; font-size: 13px; color: #10223e;">Berpotongan:</div>
+            <div style="font-size: 14px; font-weight: 700; color: #475569; margin-top: 4px;">$m_1 \ne m_2$</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 7 / 16</div>
+  </div>
+
+  <!-- SLIDE 8: FUNGSI KUADRAT & RASIONAL -->
+  <div class="slide-page" id="page-8">
+    <div>
+      <h2 class="slide-header">FUNGSI KUADRAT & FUNGSI RASIONAL</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="card-box">
+          <h3 style="font-size: 16px; font-weight: 900; color: #10223e; margin-bottom: 6px;">FUNGSI KUADRAT</h3>
+          <div style="text-align: center; font-size: 18px; font-weight: 900; color: #0284c7; margin-bottom: 10px;">
+            $f(x) = ax^2 + bx + c$
+          </div>
+          <ul style="font-size: 12px; line-height: 1.6; color: #334155; padding-left: 18px;">
+            <li>Sifat $a$: $a > 0$ (Terbuka Atas), $a < 0$ (Terbuka Bawah).</li>
+            <li>Diskriminan ($D = b^2 - 4ac$):<br>
+                $D > 0$ (potong 2 titik sumbu X),<br>
+                $D = 0$ (singgung sumbu X),<br>
+                $D < 0$ (mengambang definit).</li>
+            <li>Titik Puncak: $P\left(-\frac{b}{2a}, -\frac{D}{4a}\right)$.</li>
+          </ul>
+        </div>
+
+        <div class="card-box">
+          <h3 style="font-size: 16px; font-weight: 900; color: #10223e; margin-bottom: 6px;">FUNGSI RASIONAL</h3>
+          <div style="text-align: center; font-size: 18px; font-weight: 900; color: #0284c7; margin-bottom: 10px;">
+            $f(x) = \frac{ax + b}{cx + d}$
+          </div>
+          <p style="font-size: 12px; color: #475569; margin-bottom: 10px;">Garis maya yang tidak pernah disentuh kurva:</p>
+          <ul style="font-size: 13px; line-height: 1.8; color: #334155; padding-left: 18px;">
+            <li><strong>Asimtot Tegak:</strong> $x = -\frac{d}{c}$ (penyebut = 0)</li>
+            <li><strong>Asimtot Mendatar:</strong> $y = \frac{a}{c}$ (rasio koefisien x)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 8 / 16</div>
+  </div>
+
+  <!-- SLIDE 9: KOMPOSISI & INVERS FUNGSI -->
+  <div class="slide-page" id="page-9">
+    <div>
+      <h2 class="slide-header">KOMPOSISI & INVERS FUNGSI</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="card-box">
+          <h3 style="font-size: 16px; font-weight: 900; color: #10223e; margin-bottom: 6px;">Komposisi Fungsi: $(f \circ g)(x)$</h3>
+          <div style="text-align: center; font-size: 20px; font-weight: 900; color: #10223e; margin: 12px 0;">
+            $(f \circ g)(x) = f(g(x))$
+          </div>
+          <ul style="font-size: 12px; line-height: 1.6; color: #334155; padding-left: 18px;">
+            <li><strong>Konsep:</strong> Fungsi $g$ dikerjakan lebih dulu, hasilnya dimasukkan ke fungsi $f$.</li>
+            <li><strong>Syarat:</strong> $\text{Range}(g) \cap \text{Domain}(f) \ne \emptyset$.</li>
+            <li><strong>Sifat:</strong> TIDAK Komutatif ($(f \circ g) \ne (g \circ f)$).</li>
+          </ul>
+        </div>
+
+        <div class="card-box" style="border-color: #0284c7; background: #f0f9ff;">
+          <h3 style="font-size: 16px; font-weight: 900; color: #0369a1; margin-bottom: 6px;">Rumus Cepat Invers Rasional</h3>
+          <p style="font-size: 12px; color: #0c4a6e; margin-bottom: 8px;">Tukar posisi $a$ dan $d$, kalikan dengan minus (-)!</p>
+          <div style="text-align: center; font-size: 16px; font-weight: 800; color: #10223e; margin: 10px 0;">
+            Jika $f(x) = \frac{ax + b}{cx + d} \;\Longrightarrow\; f^{-1}(x) = \frac{-dx + b}{cx - a}$
+          </div>
+          <p style="font-size: 11px; color: #0369a1; font-weight: 700; margin-top: 10px;">
+            Contoh: $f(x) = \frac{2x + 1}{x - 3} \Rightarrow f^{-1}(x) = \frac{3x + 1}{x - 2}$.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 9 / 16</div>
+  </div>
+
+  <!-- SLIDE 10: NOTASI SIGMA & BARISAN ARITMETIKA -->
+  <div class="slide-page" id="page-10">
+    <div>
+      <h2 class="slide-header">NOTASI SIGMA & BARISAN ARITMETIKA</h2>
+      <div class="card-box" style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; padding: 12px 24px;">
+        <strong>Notasi Sigma ($\Sigma$): Penjumlahan Ringkas</strong>
+        <span style="font-size: 18px; font-weight: 900; color: #0284c7;">$\sum_{k=1}^n U_k = U_1 + U_2 + \dots + U_n$</span>
+      </div>
+
+      <div class="card-box">
+        <h3 style="font-size: 16px; font-weight: 900; color: #10223e; margin-bottom: 6px;">Barisan & Deret Aritmetika</h3>
+        <p style="font-size: 12px; color: #475569; margin-bottom: 12px;">Pola bilangan dengan selisih/beda yang TETAP. Beda ($b$): $b = U_n - U_{n-1}$.</p>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div style="border: 2px dashed #0284c7; border-radius: 8px; padding: 12px; text-align: center; background: #f0f9ff;">
+            <div style="font-size: 12px; font-weight: 700; color: #0369a1;">Suku ke-n:</div>
+            <div style="font-size: 18px; font-weight: 900; color: #10223e; margin-top: 4px;">$U_n = a + (n - 1)b$</div>
+          </div>
+          <div style="border: 2px dashed #0284c7; border-radius: 8px; padding: 12px; text-align: center; background: #f0f9ff;">
+            <div style="font-size: 12px; font-weight: 700; color: #0369a1;">Jumlah n Suku Pertama ($S_n$):</div>
+            <div style="font-size: 16px; font-weight: 900; color: #10223e; margin-top: 4px;">$S_n = \frac{n}{2}(2a + (n - 1)b) = \frac{n}{2}(a + U_n)$</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 14px; font-size: 14px; font-weight: 800; color: #d97706;">
+          Hubungan Emas: $U_n = S_n - S_{n-1}$
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 10 / 16</div>
+  </div>
+
+  <!-- SLIDE 11: SUKU TENGAH & SISIPAN ARITMETIKA -->
+  <div class="slide-page" id="page-11">
+    <div>
+      <h2 class="slide-header">SUKU TENGAH & SISIPAN ARITMETIKA</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px;">
+        <div class="card-box" style="text-align: center;">
+          <h3 style="font-size: 16px; font-weight: 900; color: #10223e; margin-bottom: 8px;">Suku Tengah ($U_t$)</h3>
+          <p style="font-size: 12px; color: #475569; margin-bottom: 16px;">Jika jumlah suku barisan ganjil, suku tepat di tengah adalah:</p>
+          <div style="font-size: 22px; font-weight: 900; color: #0284c7; padding: 16px; border: 2px solid #0284c7; border-radius: 10px; background: #f0f9ff;">
+            $U_t = \frac{1}{2}(U_{\text{awal}} + U_{\text{akhir}})$
+          </div>
+        </div>
+
+        <div class="card-box" style="text-align: center;">
+          <h3 style="font-size: 16px; font-weight: 900; color: #10223e; margin-bottom: 8px;">Sisipan Bilangan</h3>
+          <p style="font-size: 12px; color: #475569; margin-bottom: 12px;">Di antara dua bilangan ($p$ dan $q$) disisipkan $s$ bilangan baru:</p>
+          <div style="font-size: 18px; font-weight: 900; color: #0284c7; padding: 12px; border: 2px solid #0284c7; border-radius: 10px; background: #f0f9ff; margin-bottom: 10px;">
+            $b_{\text{baru}} = \frac{b_{\text{lama}}}{s + 1} = \frac{q - p}{s + 1}$
+          </div>
+          <div style="font-size: 11px; color: #64748b;">
+            Banyaknya suku baru: $n_{\text{baru}} = n_{\text{lama}} + (n_{\text{lama}} - 1)s$
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 11 / 16</div>
+  </div>
+
+  <!-- SLIDE 12: BARISAN & DERET GEOMETRI -->
+  <div class="slide-page" id="page-12">
+    <div>
+      <h2 class="slide-header">BARISAN & DERET GEOMETRI</h2>
+      <div class="card-box" style="margin-bottom: 16px;">
+        <p style="font-size: 13px; color: #475569;">Pola bilangan dengan rasio/pengali yang TETAP. <strong>Rasio ($r$):</strong> $r = \frac{U_n}{U_{n-1}}$.</p>
+        <div style="text-align: center; font-size: 22px; font-weight: 900; color: #10223e; margin-top: 8px;">
+          Suku ke-n: $U_n = a \cdot r^{n-1}$
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="card-box" style="text-align: center; border-color: #0284c7; background: #f0f9ff;">
+          <div style="font-size: 13px; font-weight: 800; color: #0369a1;">Untuk $r < 1$ (Rasio Pecahan):</div>
+          <div style="font-size: 20px; font-weight: 900; color: #10223e; margin-top: 8px;">
+            $S_n = \frac{a(1 - r^n)}{1 - r}$
+          </div>
+        </div>
+        <div class="card-box" style="text-align: center;">
+          <div style="font-size: 13px; font-weight: 800; color: #475569;">Untuk $r > 1$ (Rasio Bulat/Besar):</div>
+          <div style="font-size: 20px; font-weight: 900; color: #10223e; margin-top: 8px;">
+            $S_n = \frac{a(r^n - 1)}{r - 1}$
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 12 / 16</div>
+  </div>
+
+  <!-- SLIDE 13: DERET GEOMETRI TAK HINGGA -->
+  <div class="slide-page" id="page-13">
+    <div>
+      <h2 class="slide-header">DERET GEOMETRI TAK HINGGA ($\infty$)</h2>
+      <p style="font-size: 13px; color: #475569; margin-bottom: 16px;">Menjumlahkan barisan yang ukurannya mengecil tanpa batas, atau membesar tanpa batas.</p>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="card-box" style="border-color: #0284c7; background: #f0f9ff; text-align: center;">
+          <h3 style="font-size: 16px; font-weight: 900; color: #0369a1; margin-bottom: 8px;">1. Konvergen (Memusat)</h3>
+          <p style="font-size: 12px; color: #0c4a6e; margin-bottom: 12px;"><strong>Syarat:</strong> $-1 < r < 1$<br>Deret memiliki jumlah limit pasti:</p>
+          <div style="font-size: 24px; font-weight: 900; color: #0284c7; padding: 14px; border: 2px solid #0284c7; border-radius: 10px; background: white;">
+            $S_\infty = \frac{a}{1 - r}$
+          </div>
+        </div>
+
+        <div class="card-box" style="text-align: center;">
+          <h3 style="font-size: 16px; font-weight: 900; color: #10223e; margin-bottom: 8px;">2. Divergen (Menyebar)</h3>
+          <p style="font-size: 12px; color: #475569; margin-bottom: 12px;"><strong>Syarat:</strong> $r \le -1$ atau $r \ge 1$<br>Deret membesar tanpa batas:</p>
+          <div style="font-size: 24px; font-weight: 900; color: #64748b; padding: 14px; border: 2px dashed #94a3b8; border-radius: 10px; background: #f8fafc;">
+            $S_\infty = \pm\infty$ (Tak Terhingga)
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 13 / 16</div>
+  </div>
+
+  <!-- SLIDE 14: APLIKASI EKSPONENSIAL & KEUANGAN -->
+  <div class="slide-page" id="page-14">
+    <div>
+      <h2 class="slide-header">APLIKASI EKSPONENSIAL & ARITMETIKA KEUANGAN</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+        <div class="card-box">
+          <h3 style="font-size: 14px; font-weight: 900; color: #10223e; margin-bottom: 6px;">1. Pertumbuhan</h3>
+          <p style="font-size: 11px; color: #64748b; margin-bottom: 8px;">(Bakteri, Populasi Penduduk)</p>
+          <p style="font-size: 12px; color: #334155; margin-bottom: 10px;">Peningkatan konstan per periode:</p>
+          <div style="font-size: 15px; font-weight: 900; color: #0284c7; text-align: center; padding: 10px; border: 2px solid #0284c7; border-radius: 8px; background: #f0f9ff;">
+            $A_n = A_0(1 + p)^n$
+          </div>
+        </div>
+
+        <div class="card-box">
+          <h3 style="font-size: 14px; font-weight: 900; color: #10223e; margin-bottom: 6px;">2. Peluruhan</h3>
+          <p style="font-size: 11px; color: #64748b; margin-bottom: 8px;">(Radioaktif, Penyusutan Harga)</p>
+          <p style="font-size: 12px; color: #334155; margin-bottom: 10px;">Penurunan konstan per periode:</p>
+          <div style="font-size: 15px; font-weight: 900; color: #0284c7; text-align: center; padding: 10px; border: 2px solid #0284c7; border-radius: 8px; background: #f0f9ff;">
+            $A_n = A_0(1 - p)^n$
+          </div>
+        </div>
+
+        <div class="card-box">
+          <h3 style="font-size: 14px; font-weight: 900; color: #10223e; margin-bottom: 6px;">3. Keuangan</h3>
+          <p style="font-size: 11px; color: #64748b; margin-bottom: 8px;">(Bank & Investasi)</p>
+          <div style="font-size: 11px; line-height: 1.6; color: #334155;">
+            <strong>Bunga Majemuk:</strong><br>$M_n = M(1 + i)^n$<br>
+            <strong>Bunga Tunggal:</strong><br>$M_n = M + (M \cdot i \cdot n)$<br>
+            <strong>Nilai Tunai:</strong><br>$N_t = \frac{M_n}{(1 + i)^n}$
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 14 / 16</div>
+  </div>
+
+  <!-- SLIDE 15: CHEAT SHEET -->
+  <div class="slide-page" id="page-15">
+    <div>
+      <h2 class="slide-header">CHEAT SHEET: MASTER FORMULA ALJABAR</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; font-size: 11px;">
+        <div class="card-box">
+          <strong style="color: #0369a1; display: block; margin-bottom: 4px;">SPL & Program Linear</strong>
+          • Garis Cepat: $bx + ay = ab$<br>
+          • Objektif: $Z = ax + by$<br>
+          • Tips: Uji $(0,0)$ penentu arah arsir.
+        </div>
+        <div class="card-box">
+          <strong style="color: #0369a1; display: block; margin-bottom: 4px;">Kuadrat & Rasional</strong>
+          • Puncak: $\left(-\frac{b}{2a}, -\frac{D}{4a}\right)$<br>
+          • Asimtot Tegak: $x = -\frac{d}{c}$<br>
+          • Asimtot Mendatar: $y = \frac{a}{c}$
+        </div>
+        <div class="card-box">
+          <strong style="color: #0369a1; display: block; margin-bottom: 4px;">Komposisi & Invers</strong>
+          • $(f \circ g)(x) = f(g(x))$<br>
+          • Invers Cepat:<br>
+          $\frac{ax + b}{cx + d} \rightarrow \frac{-dx + b}{cx - a}$
+        </div>
+        <div class="card-box">
+          <strong style="color: #0369a1; display: block; margin-bottom: 4px;">Barisan Aritmetika</strong>
+          • $U_n = a + (n - 1)b$<br>
+          • $S_n = \frac{n}{2}(a + U_n)$<br>
+          • $b_{\text{baru}} = \frac{b_{\text{lama}}}{s + 1}$
+        </div>
+        <div class="card-box">
+          <strong style="color: #0369a1; display: block; margin-bottom: 4px;">Barisan Geometri</strong>
+          • $U_n = a \cdot r^{n-1}$<br>
+          • $S_n = \frac{a(1 - r^n)}{1 - r}$ ($r < 1$)<br>
+          • $S_\infty = \frac{a}{1 - r}$
+        </div>
+        <div class="card-box">
+          <strong style="color: #0369a1; display: block; margin-bottom: 4px;">Aplikasi Eksponen</strong>
+          • Tumbuh: $A_0(1 + p)^n$<br>
+          • Luruh: $A_0(1 - p)^n$<br>
+          • Majemuk: $M(1 + i)^n$
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 15 / 16</div>
+  </div>
+
+  <!-- SLIDE 16: PENUTUP -->
+  <div class="slide-page" id="page-16" style="display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:#fafbfe;">
+    <div style="border: 3px solid #10223e; border-radius: 14px; padding: 40px; max-width: 680px; width: 100%; background: white;">
+      <h2 style="font-size: 32px; font-weight: 900; color: #10223e; margin-bottom: 16px;">
+        "Bab 2 Beres! Kamu Keren."
+      </h2>
+      <p style="font-size: 18px; line-height: 1.6; color: #334155; margin-bottom: 24px;">
+        Di aljabar, setiap <strong>'x'</strong> pasti ada solusinya. Sama kayak perjuanganmu.<br>
+        Udah nemu polanya kan? Saatnya buktikan di kuis!
+      </p>
+      <button onclick="window.parent.postMessage('START_QUIZ', '*')" style="background:#ffd600; color:#10223e; border:2px solid #10223e; font-weight:900; font-size:15px; padding:12px 28px; border-radius:30px; cursor:pointer;">
+        Mulai Kuis Bab 2 →
+      </button>
+    </div>
+    <div class="page-footer-num">Hal 16 / 16</div>
+  </div>
+
+</body>
+</html>

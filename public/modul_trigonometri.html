@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BAB 4: TRIGONOMETRI - Modul Pembelajaran TKA</title>
+  <!-- KaTeX for formula rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #2b2e38;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #10223e;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+
+    /* Fixed Top Toolbar inside iframe */
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(16, 34, 62, 0.95);
+      backdrop-filter: blur(8px);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      width: 100%;
+      max-width: 960px;
+    }
+
+    .toolbar-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .toolbar-info {
+      font-size: 12px;
+      color: #00f0ff;
+      font-family: monospace;
+      font-weight: bold;
+    }
+
+    .btn-print {
+      background: #d8a436;
+      color: #10223e;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+
+    .btn-print:hover {
+      background: #c2912a;
+    }
+
+    .btn-close-pdf {
+      background: #e11d48;
+      color: white;
+      border: 1.5px solid white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      box-shadow: 0 0 12px rgba(225, 29, 72, 0.6);
+    }
+
+    .btn-close-pdf:hover {
+      background: #be123c;
+      transform: scale(1.05);
+    }
+
+    /* Standard 16:9 PDF Slide Page */
+    .slide-page {
+      background: #f4f3ec;
+      width: 100%;
+      max-width: 960px;
+      aspect-ratio: 16 / 9;
+      border-radius: 4px;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.4);
+      padding: 40px 50px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      .slide-page {
+        aspect-ratio: auto;
+        min-height: 480px;
+        padding: 24px 20px;
+      }
+    }
+
+    /* Slide Header */
+    .slide-header {
+      font-size: 26px;
+      font-weight: 800;
+      color: #10223e;
+      letter-spacing: -0.5px;
+      margin-bottom: 20px;
+    }
+
+    /* Slide 1 - Title */
+    .title-timeline {
+      position: absolute;
+      left: 36px;
+      top: 40px;
+      bottom: 40px;
+      width: 4px;
+      background: #10223e;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .timeline-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #10223e;
+      margin-left: -5px;
+    }
+
+    /* Page Numbers */
+    .page-footer-num {
+      position: absolute;
+      bottom: 12px;
+      right: 20px;
+      font-size: 11px;
+      font-weight: bold;
+      color: #10223e;
+      opacity: 0.5;
+    }
+
+    /* Common Card Styles */
+    .box-navy {
+      background: white;
+      border: 2px solid #10223e;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .box-header-navy {
+      background: #10223e;
+      color: white;
+      padding: 8px 16px;
+      font-size: 15px;
+      font-weight: bold;
+    }
+    .box-body {
+      padding: 16px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* Warning Banner */
+    .warning-banner {
+      background: #d8a436;
+      border: 2px solid #10223e;
+      border-radius: 12px;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #10223e;
+    }
+
+    /* Gold Pill */
+    .gold-pill {
+      background: #d8a436;
+      border: 1.5px solid #10223e;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 900;
+      color: #10223e;
+      display: inline-block;
+      text-align: center;
+    }
+
+    /* Print styles */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+        gap: 0;
+      }
+      .toolbar {
+        display: none !important;
+      }
+      .slide-page {
+        box-shadow: none;
+        page-break-after: always;
+        break-after: page;
+        border-radius: 0;
+        max-width: 100%;
+        width: 100vw;
+        height: 100vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <div class="toolbar">
+    <span class="toolbar-title">📄 BAB 4: TRIGONOMETRI (Modul Pembelajaran Resmi)</span>
+    <span class="toolbar-info">13 Slide / Halaman Lengkap</span>
+    <button class="btn-print" onclick="window.print()">
+      🖨️ Cetak / Simpan PDF
+    </button>
+    <button class="btn-close-pdf" onclick="window.parent.postMessage('CLOSE_PDF_MODAL', '*')">
+      ✕ TUTUP (X)
+    </button>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- PAGE 1: TITLE SLIDE                                            -->
+  <!-- ============================================================== -->
+  <div class="slide-page" id="page-1">
+    <div class="title-timeline">
+      <div class="timeline-dot"></div>
+      <div class="timeline-dot"></div>
+      <div class="timeline-dot"></div>
+      <div class="timeline-dot"></div>
+    </div>
+    <div style="margin-left: 60px; margin-top: auto; margin-bottom: auto;">
+      <h1 style="font-size: 46px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase; color: #10223e; line-height: 1.1;">
+        BAB 4: TRIGONOMETRI
+      </h1>
+      <p style="font-size: 26px; font-weight: 600; color: #183256; margin-top: 14px; line-height: 1.3;">
+        Navigasi Sudut, Dimensi, dan<br>Ruang Koordinat.
+      </p>
+    </div>
+    <div class="page-footer-num">Hal 1 / 13</div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- PAGE 2: PETA JALAN NAVIGASI TRIGONOMETRI                       -->
+  <!-- ============================================================== -->
+  <div class="slide-page" id="page-2">
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <h2 class="slide-header">Peta Jalan Navigasi Trigonometri</h2>
+        <div style="background: #d8a436; border: 2px solid #10223e; border-radius: 12px; padding: 10px 16px; font-size: 12px; font-weight: 800; text-align: center; max-width: 220px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+          <div>Tujuan Akhir:</div>
+          <div>Menyelesaikan Soal UTBK Multi-Langkah.</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 30px;">
+        <!-- Step 1 -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 14px;">
+          <div style="display: flex; align-items: center; width: 100%; justify-content: center; position: relative;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; border: 6px solid #10223e; background: white; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 900;">
+              1
+            </div>
+            <span style="position: absolute; right: -14px; font-size: 24px; font-weight: 900; color: #10223e;">»»</span>
+          </div>
+          <div class="box-navy" style="width: 100%; text-align: center; padding: 14px 10px; min-height: 90px; display: flex; flex-direction: column; justify-content: center;">
+            <div style="font-weight: 800; font-size: 13px;">Alat Ukur Dasar</div>
+            <div style="font-size: 11px; margin-top: 4px; opacity: 0.8;">(Derajat, Menit, Detik &amp; Radian)</div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 14px;">
+          <div style="display: flex; align-items: center; width: 100%; justify-content: center; position: relative;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; border: 6px solid #10223e; background: white; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 900;">
+              2
+            </div>
+            <span style="position: absolute; right: -14px; font-size: 24px; font-weight: 900; color: #10223e;">»»</span>
+          </div>
+          <div class="box-navy" style="width: 100%; text-align: center; padding: 14px 10px; min-height: 90px; display: flex; flex-direction: column; justify-content: center;">
+            <div style="font-weight: 800; font-size: 13px;">Komputasi Segitiga</div>
+            <div style="font-size: 11px; margin-top: 4px; opacity: 0.8;">(Perbandingan Sin, Cos, Tan)</div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 14px;">
+          <div style="display: flex; align-items: center; width: 100%; justify-content: center; position: relative;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; border: 6px solid #10223e; background: white; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 900;">
+              3
+            </div>
+            <span style="position: absolute; right: -14px; font-size: 24px; font-weight: 900; color: #10223e;">»»</span>
+          </div>
+          <div class="box-navy" style="width: 100%; text-align: center; padding: 14px 10px; min-height: 90px; display: flex; flex-direction: column; justify-content: center;">
+            <div style="font-weight: 800; font-size: 13px;">Kompas Kuadran</div>
+            <div style="font-size: 11px; margin-top: 4px; opacity: 0.8;">(Relasi Sudut 90°, 180°, 270°, 360°)</div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 14px;">
+          <div style="display: flex; align-items: center; width: 100%; justify-content: center;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; border: 6px solid #10223e; background: white; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 900;">
+              4
+            </div>
+          </div>
+          <div class="box-navy" style="width: 100%; text-align: center; padding: 14px 10px; min-height: 90px; display: flex; flex-direction: column; justify-content: center;">
+            <div style="font-weight: 800; font-size: 13px;">Peta Translasi</div>
+            <div style="font-size: 11px; margin-top: 4px; opacity: 0.8;">(Konversi Koordinat Kutub &amp; Kartesius)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 2 / 13</div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- PAGE 3: INSTRUMEN 1: MEMBACA SKALA SUDUT                       -->
+  <!-- ============================================================== -->
+  <div class="slide-page" id="page-3">
+    <div>
+      <h2 class="slide-header">Instrumen 1: Membaca Skala Sudut</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+        <!-- Sistem Derajat -->
+        <div class="box-navy">
+          <div class="box-header-navy">Sistem Derajat</div>
+          <div class="box-body" style="line-height: 1.8;">
+            <div>• <strong>1 putaran penuh</strong> = 360°</div>
+            <div>• <strong>Skala Mikro:</strong> 1° = 60', dan 1' = 60"</div>
+          </div>
+        </div>
+
+        <!-- Sistem Radian -->
+        <div class="box-navy">
+          <div class="box-header-navy">Sistem Radian</div>
+          <div class="box-body" style="display: flex; align-items: center; justify-content: space-between;">
+            <svg viewBox="0 0 100 100" style="width: 90px; height: 90px;">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="#10223e" stroke-width="2.5" />
+              <line x1="50" y1="50" x2="86" y2="35" stroke="#10223e" stroke-width="2" />
+              <line x1="50" y1="50" x2="86" y2="65" stroke="#10223e" stroke-width="2" />
+              <path d="M 86,35 A 40,40 0 0,1 86,65" fill="none" stroke="#10223e" stroke-width="3" />
+              <circle cx="50" cy="50" r="3" fill="#10223e" />
+              <text x="56" y="53" font-size="11" font-weight="bold">θ</text>
+              <text x="62" y="65" font-size="10" font-weight="bold">r</text>
+              <text x="90" y="52" font-size="11" font-weight="bold">s</text>
+            </svg>
+            <div style="text-align: right;">
+              <div style="font-size: 13px; font-weight: 600;">Sudut dalam radian:</div>
+              <div style="font-size: 22px; font-weight: 800; margin-top: 4px;">$\alpha\text{ rad} = \frac{s}{r}$</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Matriks Konversi Emas -->
+      <div style="background: #d8a436; border: 2px solid #10223e; border-radius: 12px; padding: 20px 24px;">
+        <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 12px;">Matriks Konversi Emas</h3>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; font-size: 20px; font-weight: 800;">
+          <span>$180^\circ = \pi\text{ rad}$</span>
+          <span style="font-size: 24px;">➔</span>
+          <span>$1\text{ rad} = \frac{180^\circ}{\pi}$</span>
+          <span style="font-size: 24px;">➔</span>
+          <span>$1^\circ = \frac{\pi}{180}\text{ rad}$</span>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 3 / 13</div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- PAGE 4: INSTRUMEN 2: KOMPUTASI SEGITIGA SIKU-SIKU               -->
+  <!-- ============================================================== -->
+  <div class="slide-page" id="page-4">
+    <div>
+      <h2 class="slide-header">Instrumen 2: Komputasi Segitiga Siku-Siku</h2>
+      <div style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: center;">
+        <!-- Left Triangle Diagram -->
+        <div class="box-navy" style="padding: 24px; position: relative; display: flex; justify-content: center; align-items: center;">
+          <svg viewBox="0 0 260 200" style="width: 100%; max-width: 260px;">
+            <polygon points="40,160 210,160 210,40" fill="none" stroke="#10223e" stroke-width="3" />
+            <polyline points="192,160 192,142 210,142" fill="none" stroke="#10223e" stroke-width="2.5" />
+            <path d="M 75,160 A 35,35 0 0,0 67,138" fill="none" stroke="#10223e" stroke-width="2.5" />
+            <text x="82" y="152" fill="#10223e" font-size="16" font-weight="bold">α</text>
+            <text x="22" y="166" fill="#10223e" font-size="16" font-style="italic" font-weight="bold">A</text>
+            <text x="218" y="166" fill="#10223e" font-size="16" font-style="italic" font-weight="bold">B</text>
+            <text x="204" y="32" fill="#10223e" font-size="16" font-style="italic" font-weight="bold">C</text>
+            <text x="222" y="102" fill="#10223e" font-size="15" font-style="italic" font-weight="bold">a</text>
+            <text x="120" y="180" fill="#10223e" font-size="15" font-style="italic" font-weight="bold">b</text>
+            <text x="110" y="92" fill="#10223e" font-size="15" font-style="italic" font-weight="bold">c</text>
+          </svg>
+          <div class="gold-pill" style="position: absolute; left: 14px; top: 75px;">MIRING (Hipotenusa)</div>
+          <div class="gold-pill" style="position: absolute; right: 14px; top: 75px;">DEPAN</div>
+          <div class="gold-pill" style="position: absolute; bottom: 10px;">SAMPING</div>
+        </div>
+
+        <!-- Right Formulas -->
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="box-navy" style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 17px; font-weight: bold;">$\sin\alpha = \frac{\text{sisi depan}}{\text{sisi miring}} = \frac{a}{c}$</div>
+            <div class="gold-pill">Mnemonik:<br>De-Mi</div>
+          </div>
+          <div class="box-navy" style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 17px; font-weight: bold;">$\cos\alpha = \frac{\text{sisi samping}}{\text{sisi miring}} = \frac{b}{c}$</div>
+            <div class="gold-pill">Mnemonik:<br>Sa-Mi</div>
+          </div>
+          <div class="box-navy" style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 17px; font-weight: bold;">$\tan\alpha = \frac{\text{sisi depan}}{\text{sisi samping}} = \frac{a}{b}$</div>
+            <div class="gold-pill">Mnemonik:<br>De-Sa</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 4 / 13</div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- PAGE 5: JALAN PINTAS: CUKUP BALIKKAN!                          -->
+  <!-- ============================================================== -->
+  <div class="slide-page" id="page-5">
+    <div>
+      <h2 class="slide-header" style="text-align: center;">Jalan Pintas: Jangan Hafalkan Ulang, Cukup Balikkan!</h2>
+      <div style="display: flex; flex-direction: column; gap: 16px; max-width: 650px; margin: 30px auto 0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+          <div class="box-navy" style="flex: 1; padding: 14px; text-align: center; font-size: 20px; font-weight: bold;">$\sin\alpha$</div>
+          <div class="gold-pill" style="padding: 8px 16px; font-size: 14px;">➔ dibalik menjadi ➔</div>
+          <div class="box-navy" style="flex: 1.5; padding: 14px; text-align: center; font-size: 18px; font-weight: bold;">$\csc\alpha = \frac{\text{miring}}{\text{depan}} = \frac{c}{a}$</div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+          <div class="box-navy" style="flex: 1; padding: 14px; text-align: center; font-size: 20px; font-weight: bold;">$\cos\alpha$</div>
+          <div class="gold-pill" style="padding: 8px 16px; font-size: 14px;">➔ dibalik menjadi ➔</div>
+          <div class="box-navy" style="flex: 1.5; padding: 14px; text-align: center; font-size: 18px; font-weight: bold;">$\sec\alpha = \frac{\text{miring}}{\text{samping}} = \frac{c}{b}$</div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+          <div class="box-navy" style="flex: 1; padding: 14px; text-align: center; font-size: 20px; font-weight: bold;">$\tan\alpha$</div>
+          <div class="gold-pill" style="padding: 8px 16px; font-size: 14px;">➔ dibalik menjadi ➔</div>
+          <div class="box-navy" style="flex: 1.5; padding: 14px; text-align: center; font-size: 18px; font-weight: bold;">$\cot\alpha = \frac{\text{samping}}{\text{depan}} = \frac{b}{a}$</div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 5 / 13</div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- PAGE 6: INSTRUMEN 3: KOMPAS TERITORI                           -->
+  <!-- ============================================================== -->
+  <div class="slide-page" id="page-6">
+    <div>
+      <h2 class="slide-header">Instrumen 3: Kompas Teritori (Positif/Negatif)</h2>
+      <div class="box-navy" style="position: relative; padding: 24px; min-height: 230px; margin-bottom: 16px;">
+        <div style="position: absolute; left: 50%; top: 10px; bottom: 10px; width: 2px; background: #10223e; transform: translateX(-50%);">
+          <span style="position: absolute; top: -14px; left: -4px; font-weight: bold;">Y ▲</span>
+        </div>
+        <div style="position: absolute; top: 50%; left: 10px; right: 10px; height: 2px; background: #10223e; transform: translateY(-50%);">
+          <span style="position: absolute; right: -12px; top: -8px; font-weight: bold;">► X</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; text-align: center;">
+          <div>
+            <div style="font-size: 13px; font-weight: 700;">Kuadran II | 90° &lt; α &lt; 180°</div>
+            <div style="font-size: 32px; font-weight: 900; color: #d8a436; margin: 4px 0;">SIN</div>
+            <div style="font-size: 11px;">(Hanya Sin &amp; Cosec yang Positif)</div>
+          </div>
+          <div>
+            <div style="font-size: 13px; font-weight: 700;">Kuadran I | 0° &lt; α &lt; 90°</div>
+            <div style="font-size: 32px; font-weight: 900; color: #d8a436; margin: 4px 0;">ALL / SEMUA</div>
+            <div style="font-size: 11px;">(Semua fungsi bernilai Positif)</div>
+          </div>
+          <div style="padding-top: 10px;">
+            <div style="font-size: 13px; font-weight: 700;">Kuadran III | 180° &lt; α &lt; 270°</div>
+            <div style="font-size: 32px; font-weight: 900; color: #d8a436; margin: 4px 0;">TAN</div>
+            <div style="font-size: 11px;">(Hanya Tan &amp; Cotan yang Positif)</div>
+          </div>
+          <div style="padding-top: 10px;">
+            <div style="font-size: 13px; font-weight: 700;">Kuadran IV | 270° &lt; α &lt; 360°</div>
+            <div style="font-size: 32px; font-weight: 900; color: #d8a436; margin: 4px 0;">COS</div>
+            <div style="font-size: 11px;">(Hanya Cos &amp; Sec yang Positif)</div>
+          </div>
+        </div>
+      </div>
+      <div class="warning-banner">
+        <span style="font-size: 22px;">⚠️</span>
+        <div>Mentalitas Ujian: Ingat akronim <strong>SEMUA-SIN-TAN-COS</strong> atau <strong>ALL-SIN-TA-COS</strong> untuk mengecek tanda (±) dalam sedetik.</div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 6 / 13</div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- PAGE 7: MATRIKS KEPUTUSAN SUDUT BERELASI                       -->
+  <!-- ============================================================== -->
+  <div class="slide-page" id="page-7">
+    <div>
+      <h2 class="slide-header">Matriks Keputusan: Sudut Berelasi (k · 90° ± α)</h2>
+      <div style="max-width: 600px; margin: 0 auto 16px;">
+        <div class="box-navy" style="padding: 10px; text-align: center; font-size: 14px; font-weight: bold; width: 240px; margin: 0 auto 14px;">
+          Periksa nilai pengali k pada:<br>
+          <span style="font-size: 16px;">$k \cdot 90^\circ \pm \alpha$</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div style="text-align: center;">
+            <div class="box-navy" style="padding: 8px; font-size: 12px; font-weight: bold; margin-bottom: 8px;">
+              Jika <strong>k GANJIL</strong> (1, 3, 5...)
+            </div>
+            <div style="font-size: 16px; font-weight: bold; margin-bottom: 4px;">▼</div>
+            <div class="box-navy" style="padding: 14px;">
+              <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">Fungsi Trigonometri<br>BERUBAH BENTUK</div>
+              <div style="font-size: 13px; font-family: monospace; font-weight: bold;">
+                <div>sin ↔ cos</div>
+                <div>tan ↔ cotan</div>
+                <div>sec ↔ cosec</div>
+              </div>
+            </div>
+          </div>
+          <div style="text-align: center;">
+            <div class="box-navy" style="padding: 8px; font-size: 12px; font-weight: bold; margin-bottom: 8px;">
+              Jika <strong>k GENAP</strong> (2, 4, 6...)
+            </div>
+            <div style="font-size: 16px; font-weight: bold; margin-bottom: 4px;">▼</div>
+            <div class="box-navy" style="padding: 14px;">
+              <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">Fungsi Trigonometri<br>TETAP</div>
+              <div style="font-size: 13px; font-family: monospace; font-weight: bold;">
+                <div>sin ➔ sin</div>
+                <div>cos ➔ cos</div>
+                <div>tan ➔ tan</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="warning-banner">
+        <span style="font-size: 22px;">⚠️</span>
+        <div style="font-size: 12px; line-height: 1.4;">
+          <strong>AWAS! Jebakan Ujian yang Sering Terjadi.</strong><br>
+          Tanda hasil akhir (+ atau -) <strong>SELALU ditentukan oleh KUADRAN AWAL</strong> tempat sudut berada, <strong>BUKAN</strong> dari fungsi yang baru diubah! Tentukan tanda (+/-) sebelum kalian membalik fungsinya.
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 7 / 13</div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- PAGE 8: INSTRUMEN 4: ROSETTA STONE KOORDINAT                   -->
+  <!-- ============================================================== -->
+  <div class="slide-page" id="page-8">
+    <div>
+      <h2 class="slide-header">Instrumen 4: Rosetta Stone Koordinat</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; align-items: center; margin-top: 20px;">
+        <div class="box-navy">
+          <div class="box-header-navy" style="font-size: 13px; text-align: center;">Kutub (r, α) ➔ Kartesius (x,y)</div>
+          <div class="box-body" style="text-align: center; font-size: 18px; font-weight: bold; line-height: 1.8;">
+            <div>$x = r\cos\alpha$</div>
+            <div>$y = r\sin\alpha$</div>
+          </div>
+        </div>
+        <div style="text-align: center;">
+          <svg viewBox="0 0 200 160" style="width: 100%; max-width: 180px;">
+            <line x1="20" y1="130" x2="190" y2="130" stroke="#10223e" stroke-width="2" />
+            <line x1="40" y1="150" x2="40" y2="15" stroke="#10223e" stroke-width="2" />
+            <text x="35" y="10" font-size="12" font-weight="bold">Y</text>
+            <text x="192" y="134" font-size="12" font-weight="bold">X</text>
+            <text x="26" y="142" font-size="12" font-weight="bold">O</text>
+            <line x1="40" y1="130" x2="140" y2="40" stroke="#10223e" stroke-width="2.5" />
+            <line x1="140" y1="130" x2="140" y2="40" stroke="#10223e" stroke-width="2" stroke-dasharray="3 3" />
+            <circle cx="140" cy="40" r="3.5" fill="#10223e" />
+            <text x="135" y="32" font-size="12" font-weight="bold">B(x, y)</text>
+            <text x="144" y="144" font-size="12" font-weight="bold">A</text>
+            <path d="M 65,130 A 25,25 0 0,0 60,113" fill="none" stroke="#10223e" stroke-width="2" />
+            <text x="68" y="124" font-size="12" font-weight="bold">α</text>
+            <text x="85" y="80" font-size="12" font-style="italic" font-weight="bold">r</text>
+            <text x="90" y="145" font-size="12" font-style="italic" font-weight="bold">x</text>
+            <text x="146" y="90" font-size="12" font-style="italic" font-weight="bold">y</text>
+          </svg>
+        </div>
+        <div class="box-navy">
+          <div class="box-header-navy" style="font-size: 13px; text-align: center;">Kartesius (x,y) ➔ Kutub (r, α)</div>
+          <div class="box-body" style="text-align: center; font-size: 18px; font-weight: bold; line-height: 1.8;">
+            <div>$r = \sqrt{x^2 + y^2}$</div>
+            <div>$\alpha = \tan^{-1}\left(\frac{y}{x}\right)$</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 8 / 13</div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- PAGE 9: TELAAH SOAL 1: DIMENSI PUTARAN (RADIAN)                -->
+  <!-- ============================================================== -->
+  <div class="slide-page" id="page-9">
+    <div>
+      <h2 class="slide-header">Telaah Soal 1: Dimensi Putaran (Radian)</h2>
+      <div class="box-navy" style="padding: 12px 16px; font-size: 14px; margin-bottom: 18px;">
+        <strong>Kasus:</strong> Mesin mencapai posisi stabil pada 1.000 rpm (rotasi per menit). Berapa besar sudut dalam Radian setelah mesin menyala selama 2 menit?
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+        <div class="box-navy" style="padding: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 13px; margin-bottom: 8px;">
+            <span style="background: #10223e; color: white; padding: 2px 6px; border-radius: 4px;">1</span>
+            <span>Langkah 1: Identifikasi Data</span>
+          </div>
+          <p style="font-size: 12px;">Kecepatan = 1.000 rotasi / menit.</p>
+          <p style="font-size: 12px; margin-top: 4px;">Waktu = 2 menit.</p>
+        </div>
+        <div class="box-navy" style="padding: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 13px; margin-bottom: 8px;">
+            <span style="background: #10223e; color: white; padding: 2px 6px; border-radius: 4px;">2</span>
+            <span>Langkah 2: Strategi</span>
+          </div>
+          <p style="font-size: 12px;">• Cari total putaran fisik terlebih dahulu.</p>
+          <p style="font-size: 12px; margin-top: 4px;">• Ubah putaran ke unit Radian (1 putaran = 2π rad).</p>
+        </div>
+        <div class="box-navy" style="padding: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 13px; margin-bottom: 8px;">
+            <span style="background: #10223e; color: white; padding: 2px 6px; border-radius: 4px;">3</span>
+            <span>Langkah 3: Eksekusi</span>
+          </div>
+          <p style="font-size: 12px;">Total = 1.000 × 2 = 2.000 putaran.</p>
+          <p style="font-size: 12px; margin-top: 4px;">Konversi = 2.000 × (2π) rad.</p>
+          <div style="background: #d8a436; border: 1.5px solid #10223e; border-radius: 6px; padding: 6px; text-align: center; font-weight: 900; font-size: 16px; margin-top: 8px;">
+            4.000π rad
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 9 / 13</div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- PAGE 10: TELAAH SOAL 2: MEMBEDAH IDENTITAS KUADRAN             -->
+  <!-- ============================================================== -->
+  <div class="slide-page" id="page-10">
+    <div>
+      <h2 class="slide-header">Telaah Soal 2: Membedah Identitas Kuadran</h2>
+      <div class="box-navy" style="padding: 12px 16px; font-size: 14px; margin-bottom: 18px;">
+        <strong>Kasus:</strong> Diketahui $\sin A = -\frac{4}{5}$ pada interval (180° ≤ A ≤ 270°). Berapa nilai $\cos A + \tan A$?
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+        <div class="box-navy" style="padding: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 13px; margin-bottom: 6px;">
+            <span style="background: #10223e; color: white; padding: 2px 6px; border-radius: 4px;">1</span>
+            <span>Langkah 1: Segitiga Bantuan</span>
+          </div>
+          <div style="text-align: center; margin: 4px 0;">
+            <svg viewBox="0 0 160 80" style="width: 110px;">
+              <polygon points="10,70 110,70 110,10" fill="none" stroke="#10223e" stroke-width="2" />
+              <polyline points="100,70 100,60 110,60" fill="none" stroke="#10223e" stroke-width="1.5" />
+              <text x="115" y="45" font-size="9" font-weight="bold">4 Depan</text>
+              <text x="45" y="78" font-size="9" font-weight="bold">3 Samping</text>
+              <text x="35" y="35" font-size="9" font-weight="bold">5 Miring</text>
+            </svg>
+          </div>
+          <p style="font-size: 10px; line-height: 1.3;">Abaikan minus sejenak: Depan=4, Miring=5 ➔ Samping=3 (Pythagoras).</p>
+        </div>
+        <div class="box-navy" style="padding: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 13px; margin-bottom: 8px;">
+            <span style="background: #10223e; color: white; padding: 2px 6px; border-radius: 4px;">2</span>
+            <span>Langkah 2: Kompas Kuadran</span>
+          </div>
+          <p style="font-size: 11px;">180° - 270° ➔ <strong>Kuadran III</strong>.</p>
+          <div style="font-size: 11px; margin-top: 6px;">
+            <div>• TAN positif (+)</div>
+            <div>• COS negatif (-)</div>
+          </div>
+        </div>
+        <div class="box-navy" style="padding: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 13px; margin-bottom: 8px;">
+            <span style="background: #10223e; color: white; padding: 2px 6px; border-radius: 4px;">3</span>
+            <span>Langkah 3: Eksekusi</span>
+          </div>
+          <div style="font-size: 11px; line-height: 1.6;">
+            <div>$\tan A = \frac{4}{3}$</div>
+            <div>$\cos A = -\frac{3}{5}$</div>
+            <div>$\left(-\frac{3}{5}\right) + \frac{4}{3} = \frac{11}{15}$</div>
+          </div>
+          <div style="background: #d8a436; border: 1.5px solid #10223e; border-radius: 6px; padding: 4px; text-align: center; font-weight: 900; font-size: 15px; margin-top: 6px;">
+            11/15
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 10 / 13</div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- PAGE 11: TELAAH SOAL 3: TRIGONOMETRI DUNIA NYATA               -->
+  <!-- ============================================================== -->
+  <div class="slide-page" id="page-11">
+    <div>
+      <h2 class="slide-header">Telaah Soal 3: Trigonometri Dunia Nyata</h2>
+      <div class="box-navy" style="padding: 12px 16px; font-size: 14px; margin-bottom: 18px;">
+        <strong>Kasus:</strong> Jarak horizontal pengamat ke kaki menara adalah s. Jika tinggi menara 90 m dan sudut elevasi 30°, tentukan persamaan jarak mendatar s.
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+        <div class="box-navy" style="padding: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 13px; margin-bottom: 6px;">
+            <span style="background: #10223e; color: white; padding: 2px 6px; border-radius: 4px;">1</span>
+            <span>Langkah 1: Sketsa Visual</span>
+          </div>
+          <div style="text-align: center;">
+            <svg viewBox="0 0 160 85" style="width: 120px;">
+              <polygon points="10,70 120,70 120,10" fill="none" stroke="#10223e" stroke-width="2" />
+              <polyline points="110,70 110,60 120,60" fill="none" stroke="#10223e" stroke-width="1.5" />
+              <path d="M 35,70 A 25,25 0 0,0 30,59" fill="none" stroke="#10223e" stroke-width="1.5" />
+              <text x="38" y="65" font-size="9" font-weight="bold">30°</text>
+              <text x="125" y="42" font-size="9" font-weight="bold">90 m</text>
+              <text x="55" y="80" font-size="9" font-style="italic" font-weight="bold">s</text>
+            </svg>
+          </div>
+        </div>
+        <div class="box-navy" style="padding: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 13px; margin-bottom: 8px;">
+            <span style="background: #10223e; color: white; padding: 2px 6px; border-radius: 4px;">2</span>
+            <span>Langkah 2: Strategi</span>
+          </div>
+          <p style="font-size: 11px;">• Ada Sisi Depan (90) &amp; mencari Sisi Samping (s).</p>
+          <p style="font-size: 11px; margin-top: 6px;">Gunakan rumus Tangen:<br>$\tan\alpha = \frac{\text{Depan}}{\text{Samping}}$</p>
+        </div>
+        <div class="box-navy" style="padding: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 13px; margin-bottom: 8px;">
+            <span style="background: #10223e; color: white; padding: 2px 6px; border-radius: 4px;">3</span>
+            <span>Langkah 3: Eksekusi</span>
+          </div>
+          <div style="font-size: 11px; line-height: 1.6;">
+            <div>$\tan 30^\circ = \frac{90}{s}$</div>
+            <div>$s = \frac{90}{\tan 30^\circ} = \frac{90}{\frac{1}{\sqrt{3}}}$</div>
+          </div>
+          <div style="background: #d8a436; border: 1.5px solid #10223e; border-radius: 6px; padding: 4px; text-align: center; font-weight: 900; font-size: 15px; margin-top: 6px;">
+            90√3 meter
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 11 / 13</div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- PAGE 12: RANGKUMAN ESENSIAL: TOOLKIT NAVIGASI                  -->
+  <!-- ============================================================== -->
+  <div class="slide-page" id="page-12">
+    <div>
+      <h2 class="slide-header">Rangkuman Esensial: Toolkit Navigasi</h2>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 20px;">
+        <div class="box-navy" style="padding: 16px;">
+          <div style="background: #10223e; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; text-align: center; margin-bottom: 12px;">
+            Skala &amp; Segitiga
+          </div>
+          <div style="font-size: 12px; line-height: 1.7;">
+            <div>• Konversi Emas: $\pi\text{ rad} = 180^\circ$</div>
+            <div>• Siku-Siku (Mnemonik):</div>
+            <div style="padding-left: 10px;">
+              <div>$\text{Sin} = \text{De-Mi}$</div>
+              <div>$\text{Cos} = \text{Sa-Mi}$</div>
+              <div>$\text{Tan} = \text{De-Sa}$</div>
+            </div>
+          </div>
+        </div>
+        <div class="box-navy" style="padding: 16px;">
+          <div style="background: #10223e; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; text-align: center; margin-bottom: 12px;">
+            Kompas Kuadran
+          </div>
+          <div style="font-size: 12px; line-height: 1.7;">
+            <div>• Positif berdasarkan Kuadran:</div>
+            <div style="padding-left: 10px;">
+              <div>I: SEMUA | II: SIN</div>
+              <div>III: TAN | IV: COS</div>
+            </div>
+            <div style="margin-top: 4px;">• Sudut Berelasi ($k \cdot 90^\circ$):</div>
+            <div style="padding-left: 10px; font-size: 11px;">
+              <div>k Ganjil ➔ Fungsi Berubah</div>
+              <div>k Genap ➔ Fungsi Tetap</div>
+            </div>
+          </div>
+        </div>
+        <div class="box-navy" style="padding: 16px;">
+          <div style="background: #10223e; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; text-align: center; margin-bottom: 12px;">
+            Matriks Koordinat
+          </div>
+          <div style="font-size: 12px; line-height: 1.7;">
+            <div>• Kutub ➔ Kartesius:</div>
+            <div style="padding-left: 10px;">
+              <div>$x = r\cos\alpha$</div>
+              <div>$y = r\sin\alpha$</div>
+            </div>
+            <div style="margin-top: 4px;">• Kartesius ➔ Kutub:</div>
+            <div style="padding-left: 10px;">
+              <div>$r = \sqrt{x^2 + y^2}$</div>
+              <div>$\alpha = \tan^{-1}\left(\frac{y}{x}\right)$</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-footer-num">Hal 12 / 13</div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- PAGE 13: KONSEP DIKUASAI. SAATNYA BERAKSI.                     -->
+  <!-- ============================================================== -->
+  <div class="slide-page" id="page-13">
+    <div style="text-align: center; margin: auto 0; padding: 20px 0;">
+      <h2 style="font-size: 42px; font-weight: 900; color: #10223e; line-height: 1.2; margin-bottom: 18px;">
+        Konsep Dikuasai.<br>Saatnya Beraksi.
+      </h2>
+      <p style="font-size: 15px; color: #183256; max-width: 600px; margin: 0 auto 24px; line-height: 1.6;">
+        Anda telah melengkapi Navigator's Toolkit Anda. Mulai dari mengukur sudut, mengekstrak sisi segitiga, menerjemahkan koordinat ruang, hingga selamat dari jebakan tanda kuadran.
+      </p>
+      <div>
+        <a href="/app/kuis/mod-trigo-1" target="_parent" style="background: #d8a436; color: #10223e; border: 2px solid #10223e; padding: 12px 28px; border-radius: 30px; font-size: 15px; font-weight: 900; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+          <span>Lanjut ke Latihan Soal</span>
+          <span>➔</span>
+        </a>
+      </div>
+    </div>
+    <div style="border-top: 2px solid rgba(16, 34, 62, 0.2); padding-top: 10px; font-size: 11px; text-align: center; color: #10223e;">
+      <strong>Mentalitas Ujian:</strong> Trigonometri bukan tentang menghafal 100 rumus berbeda, melainkan menggunakan 4 alat dasar dengan logika spasial yang benar.
+    </div>
+    <div class="page-footer-num">Hal 13 / 13</div>
+  </div>
+
+</body>
+</html>
