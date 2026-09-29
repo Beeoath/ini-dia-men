@@ -6,12 +6,14 @@ import { ProgressBar } from "../components/Primitives";
 import { useTheme } from "../lib/theme";
 import { recordQuizCompletion } from "../lib/userProgress";
 import { FormattedMathText } from "../components/MathView";
+import { useAuth } from "../lib/auth";
 
 export default function Quiz() {
   const { id, moduleId } = useParams();
   const currentId = moduleId || id;
   const navigate = useNavigate();
   const { isDark } = useTheme();
+  const { profile } = useAuth();
 
   const moduleData = MODULES.find((m) => m.id === currentId) || MODULES[0];
   const questions = moduleData.quiz;
@@ -50,7 +52,7 @@ export default function Quiz() {
     });
 
     const score = Math.round((correctCount / questions.length) * 100);
-    recordQuizCompletion(moduleData.id, score);
+    if (profile) recordQuizCompletion(profile.id, moduleData.id, score);
     sessionStorage.setItem(
       `quiz_result_${moduleData.id}`,
       JSON.stringify({

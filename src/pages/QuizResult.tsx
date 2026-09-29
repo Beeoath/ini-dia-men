@@ -9,28 +9,17 @@ import { FormattedMathText } from "../components/MathView";
 export default function QuizResult() {
   const { id, attemptId } = useParams();
   const currentId = attemptId || id;
-  const { updateProfile, profile } = useAuth();
   const { isDark } = useTheme();
   const moduleData = MODULES.find((m) => m.id === currentId) || MODULES[0];
 
   const [result, setResult] = useState<any>(null);
 
   useEffect(() => {
+    // Status "selesai" udah dicatat ke tabel user_progress lewat
+    // recordQuizCompletion() di Quiz.tsx, jadi di sini tinggal baca hasilnya aja.
     try {
       const saved = sessionStorage.getItem(`quiz_result_${moduleData.id}`);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setResult(parsed);
-
-        // Mark completed if passed
-        if (parsed.score >= 60 && profile) {
-          updateProfile({
-            completed_modules: Array.from(
-              new Set([...(profile.completed_modules || []), moduleData.id])
-            ),
-          });
-        }
-      }
+      if (saved) setResult(JSON.parse(saved));
     } catch {
       // ignore
     }

@@ -20,7 +20,7 @@ import { useTheme } from "../lib/theme";
 import { toast } from "sonner";
 
 export default function Login() {
-  const { login, register, profile } = useAuth();
+  const { login, loginWithGoogle, register, profile } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -78,8 +78,8 @@ export default function Login() {
         if (password.length < 6) {
           throw new Error("Password minimal 6 karakter.");
         }
-        if (selectedRole === "teacher" && teacherCode.trim() !== "GURU-DN9") {
-          throw new Error("Kode verifikasi guru salah! Gunakan: GURU-DN9");
+        if (selectedRole === "teacher" && teacherCode.trim() !== "SIGMAGURU2026" && teacherCode.trim() !== "GURU-DN9") {
+          throw new Error("Kode verifikasi guru salah! Gunakan: SIGMAGURU2026");
         }
 
         const user = await register(fullName, email, password, selectedRole, {
@@ -103,34 +103,66 @@ export default function Login() {
         navigate(getDestination(user.role));
       }
     } catch (err: any) {
-      setErrorMsg(err?.message || "Terjadi kesalahan saat otentikasi.");
+      const msg = err?.message || "";
+      if (msg.toLowerCase().includes("invalid login credentials")) {
+        setErrorMsg(
+          "Email atau password salah / belum terdaftar. Jika Anda baru pertama kali menggunakan portal ini, silakan klik tab 'Daftar' di atas untuk membuat akun terlebih dahulu."
+        );
+      } else {
+        setErrorMsg(msg || "Terjadi kesalahan saat otentikasi.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Quick 1-Click Login with Google (Cukup Google)
-  const handleGoogleQuickLogin = async () => {
+  // Google OAuth Login via Supabase
+  const handleGoogleLogin = async () => {
     setErrorMsg("");
     setLoading(true);
     try {
-      const targetRole = selectedRole || "student";
-      const targetEmail =
-        targetRole === "teacher"
-          ? "guru@darunnajah9.sch.id"
-          : "siswa@darunnajah9.sch.id";
-      const targetPass = targetRole === "teacher" ? "password123" : "siswa123";
+      await loginWithGoogle();
+      // Browser will redirect to Google login screen
+    } catch (err: any) {
+      console.error("Google login error:", err);
+      const msg = err?.message || "";
+      if (
+        msg.toLowerCase().includes("provider is not enabled") ||
+        msg.toLowerCase().includes("unsupported provider")
+      ) {
+        setErrorMsg(
+          "Provider Google OAuth belum diaktifkan di dashboard Supabase (Authentication > Providers > Google). Silakan gunakan tab 'Daftar' dengan Email & Password di atas untuk membuat akun."
+        );
+      } else {
+        setErrorMsg(msg || "Gagal menghubungkan ke layanan Google OAuth.");
+      }
+      setLoading(false);
+    }
+  };
 
-      const user = await login(targetEmail, targetPass);
-      toast.success(
-        targetRole === "teacher"
-          ? "Berhasil masuk dengan Google (Akun Guru)!"
-          : "Berhasil masuk dengan Google (Akun Siswa)!"
-      );
-
+  // 1-Click Demo Access for quick evaluation
+  const handleDemoAccess = async (role: "student" | "teacher") => {
+    setErrorMsg("");
+    setLoading(true);
+    try {
+      const demoEmail = role === "teacher" ? "guru.demo@darunnajah9.sch.id" : "siswa.demo@darunnajah9.sch.id";
+      const demoPass = "Sigma2026!";
+      let user: any;
+      try {
+        user = await login(demoEmail, demoPass);
+      } catch {
+        user = await register(
+          role === "teacher" ? "Ust. Ahmad Fauzi, S.Pd. (Demo)" : "Ahmad Rizky Pratama (Demo)",
+          demoEmail,
+          demoPass,
+          role,
+          { class_name: role === "teacher" ? "Guru Pengampu" : "Kelas 11 A", teacher_code: "SIGMAGURU2026" }
+        );
+      }
+      toast.success(`Berhasil masuk sebagai Akun Uji Coba ${role === "teacher" ? "Guru" : "Siswa"}!`);
       navigate(getDestination(user.role));
     } catch (err: any) {
-      setErrorMsg(err?.message || "Gagal masuk dengan Google.");
+      setErrorMsg(err?.message || "Gagal masuk mode uji coba.");
     } finally {
       setLoading(false);
     }
@@ -506,7 +538,7 @@ export default function Login() {
                       <div className="relative">
                         <input
                           type="text"
-                          placeholder="Kode Guru: GURU-DN9"
+                          placeholder="Kode Guru: SIGMAGURU2026"
                           value={teacherCode}
                           onChange={(e) => setTeacherCode(e.target.value)}
                           className={`w-full rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 font-lexend text-xs sm:text-sm outline-none border transition-all ${
@@ -630,12 +662,12 @@ export default function Login() {
                 </span>
               </div>
 
-              {/* Masuk Cepat dengan Google (Cukup Google) */}
+              {/* Masuk dengan Google (OAuth) */}
               <button
                 type="button"
-                onClick={handleGoogleQuickLogin}
+                onClick={handleGoogleLogin}
                 disabled={loading}
-                title="Masuk Cepat dengan Akun Google"
+                title="Masuk dengan Akun Google (Google OAuth)"
                 className={`w-full h-11 sm:h-12 rounded-xl sm:rounded-2xl border flex items-center justify-center gap-3 font-lexend font-semibold text-xs sm:text-sm transition-all cursor-pointer group shadow-sm disabled:opacity-50 active:scale-[0.99] ${
                   isDark
                     ? "border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 text-slate-100"
@@ -662,10 +694,47 @@ export default function Login() {
                 </svg>
                 <span>
                   {language === "ID"
-                    ? "Masuk Cepat dengan Google"
+                    ? isRegisterMode
+                      ? "Daftar dengan Akun Google"
+                      : "Masuk dengan Akun Google"
+                    : isRegisterMode
+                    ? "Sign up with Google"
                     : "Continue with Google"}
                 </span>
               </button>
+
+              {/* Akses Uji Coba Cepat (Demo Mode) */}
+              <div className="pt-2 text-center">
+                <span className={`text-[10px] block mb-2 font-mono ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  Akses instan untuk peninjauan fitur:
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDemoAccess("student")}
+                    disabled={loading}
+                    className={`py-2 px-2.5 rounded-xl border text-[11px] font-semibold transition-all cursor-pointer ${
+                      isDark
+                        ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
+                        : "border-cyan-300 bg-cyan-50 text-cyan-700 hover:bg-cyan-100"
+                    }`}
+                  >
+                    Masuk Akun Siswa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDemoAccess("teacher")}
+                    disabled={loading}
+                    className={`py-2 px-2.5 rounded-xl border text-[11px] font-semibold transition-all cursor-pointer ${
+                      isDark
+                        ? "border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
+                        : "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                    }`}
+                  >
+                    Masuk Akun Guru
+                  </button>
+                </div>
+              </div>
 
               {/* Bottom Toggle: Don't have an account ? Create Account! */}
               <div className="mt-6 text-center font-lexend text-xs">

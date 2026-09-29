@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../lib/auth";
+import { supabase } from "../lib/supabaseClient";
 import { VisionOSWindow } from "../components/VisionOSWindow";
 import { useTheme } from "../lib/theme";
 
@@ -39,34 +40,46 @@ export default function TeacherDashboard() {
   const [students, setStudents] = useState<StudentRecord[]>([]);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("sigma_registered_users_db");
-      if (raw) {
-        const db = JSON.parse(raw);
-        const realStudents: StudentRecord[] = Object.values(db)
-          .filter((u: any) => u.role === "student" && u.id !== "usr-student-1")
-          .map((u: any) => {
-            const completedCount = u.completed_modules?.length || 0;
-            const progressPct = Math.min(100, Math.round((completedCount / 10) * 100));
-            const rawClass = u.class_name || "Kelas 11 A";
-            const cleanClass =
-              rawClass.includes("B") || rawClass.includes("2") ? "Kelas 11 B" : "Kelas 11 A";
-            return {
-              id: u.id,
-              name: u.full_name || "Siswa Baru",
-              class: cleanClass,
-              progress: `${progressPct}%`,
-              avgScore: completedCount > 0 ? 85 : 0,
-              status: completedCount > 0 ? "Aktif" : "Baru Bergabung",
-            };
-          });
-        setStudents(realStudents);
-      } else {
+    (async () => {
+      const { data: studentProfiles, error: profileErr } = await supabase
+        .from("profiles")
+        .select("id, full_name, class_name")
+        .eq("role", "student");
+
+      if (profileErr || !studentProfiles) {
         setStudents([]);
+        return;
       }
-    } catch {
-      setStudents([]);
-    }
+
+      const { data: progressRows } = await supabase
+        .from("user_progress")
+        .select("user_id, completed, quiz_score");
+
+      const realStudents: StudentRecord[] = studentProfiles.map((u) => {
+        const rows = (progressRows || []).filter((p) => p.user_id === u.id);
+        const completedCount = rows.filter((p) => p.completed).length;
+        const scored = rows.filter((p) => p.quiz_score != null);
+        const avgScore =
+          scored.length > 0
+            ? Math.round(scored.reduce((sum, p) => sum + (p.quiz_score || 0), 0) / scored.length)
+            : 0;
+        const progressPct = Math.min(100, Math.round((completedCount / 10) * 100));
+        const rawClass = u.class_name || "Kelas 11 A";
+        const cleanClass =
+          rawClass.includes("B") || rawClass.includes("2") ? "Kelas 11 B" : "Kelas 11 A";
+
+        return {
+          id: u.id,
+          name: u.full_name || "Siswa Baru",
+          class: cleanClass,
+          progress: `${progressPct}%`,
+          avgScore: avgScore || 0,
+          status: completedCount > 0 ? "Aktif" : "Baru Bergabung",
+        };
+      });
+
+      setStudents(realStudents);
+    })();
   }, []);
 
   const filteredStudents = students.filter(
@@ -142,7 +155,7 @@ export default function TeacherDashboard() {
                       : "bg-slate-900 text-white font-bold shadow-sm"
                     : isDark
                     ? "text-slate-300 hover:text-white hover:bg-white/10"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"
                 }`}
               >
                 {tab.label}

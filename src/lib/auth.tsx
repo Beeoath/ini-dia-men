@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "./supabaseClient";
 
 export interface UserProfile {
   id: string;
@@ -6,6 +7,7 @@ export interface UserProfile {
   email: string;
   role: "student" | "teacher";
   class_name?: string;
+  avatar_url?: string;
   avatar?: string;
   xp?: number;
   level?: number;
@@ -17,164 +19,188 @@ export interface UserProfile {
 interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
-  login: (email: string, password?: string) => Promise<UserProfile>;
+  login: (email: string, password: string) => Promise<UserProfile>;
+  loginWithGoogle: () => Promise<void>;
   register: (
     full_name: string,
     email: string,
-    password?: string,
+    password: string,
     role?: "student" | "teacher",
     extra?: { class_name?: string; teacher_code?: string }
   ) => Promise<UserProfile>;
   logout: () => void;
-  updateProfile: (updates: Partial<UserProfile>) => void;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEY = "sigma_auth_user_session";
-const USERS_DB_KEY = "sigma_registered_users_db";
+// Ambil baris profiles + email dari session, gabungin jadi satu object UserProfile
+async function loadProfile(userId: string, email: string, userMetadata?: any): Promise<UserProfile> {
+  const { data: profileRow } = await supabase
+    .from("profiles")
+    .select("id, full_name, role, class_name, avatar_url, xp, level")
+    .eq("id", userId)
+    .maybeSingle();
 
-const DEFAULT_USERS: Record<string, UserProfile & { password?: string }> = {
-  "guru@darunnajah9.sch.id": {
-    id: "usr-teacher-1",
-    full_name: "Ust. Ahmad Fauzi, S.Pd.",
-    email: "guru@darunnajah9.sch.id",
-    role: "teacher",
-    class_name: "Pengampu Matematika",
-    xp: 9999,
-    level: 50,
-    completed_modules: [],
-    badges: ["Grand Architect", "Master Moderator"],
-    password: "password123",
-  },
-};
+  if (profileRow) {
+    const { data: badgeRows } = await supabase
+      .from("user_badges")
+      .select("badge")
+      .eq("user_id", userId);
+
+    return {
+      ...profileRow,
+      email,
+      badges: (badgeRows || []).map((b) => b.badge),
+    };
+  }
+
+  // Jika profileRow belum ada (misalnya dari Google OAuth atau trigger DB belum berjalan)
+  // Ambil informasi dari userMetadata Google
+  const fullName =
+    userMetadata?.full_name ||
+    userMetadata?.name ||
+    email.split("@")[0];
+  const role: "student" | "teacher" =
+    userMetadata?.role === "teacher" ? "teacher" : "student";
+  const className = userMetadata?.class_name || (role === "teacher" ? "Guru Pengampu" : "Kelas 11 A");
+  const avatarUrl = userMetadata?.avatar_url || userMetadata?.picture;
+
+  try {
+    const { data: createdRow, error: insertError } = await supabase
+      .from("profiles")
+      .insert({
+        id: userId,
+        full_name: fullName,
+        role,
+        class_name: className,
+        avatar_url: avatarUrl,
+        xp: 0,
+        level: 1,
+      })
+      .select("id, full_name, role, class_name, avatar_url, xp, level")
+      .maybeSingle();
+
+    if (!insertError && createdRow) {
+      return {
+        ...createdRow,
+        email,
+        badges: [],
+      };
+    }
+  } catch (err) {
+    console.warn("Auto-insert profile fallback:", err);
+  }
+
+  return {
+    id: userId,
+    full_name: fullName,
+    email,
+    role,
+    class_name: className,
+    avatar_url: avatarUrl,
+    xp: 0,
+    level: 1,
+    badges: [],
+  };
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize from storage or seed defaults
   useEffect(() => {
-    try {
-      const storedSession = localStorage.getItem(STORAGE_KEY);
-      if (storedSession) {
-        const parsed = JSON.parse(storedSession);
-        if (parsed.class_name && (parsed.class_name.includes("IPA") || parsed.class_name.includes("IPS"))) {
-          parsed.class_name = parsed.class_name.includes("2") ? "Kelas 11 B" : "Kelas 11 A";
+    // Cek session yang lagi aktif waktu app dibuka
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        try {
+          setProfile(await loadProfile(session.user.id, session.user.email!, session.user.user_metadata));
+        } catch (e) {
+          console.error("Gagal load profile session:", e);
+          setProfile(null);
         }
-        if (parsed.role === "student") {
-          // Ensure student session is clean and reset from the beginning
-          if (!localStorage.getItem("sigma_reset_v2_done")) {
-            parsed.completed_modules = [];
-            parsed.xp = 0;
-            localStorage.setItem("sigma_reset_v2_done", "true");
-          }
-        }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-        setProfile(parsed);
       }
-
-      // Ensure users DB has defaults
-      const existingDb = localStorage.getItem(USERS_DB_KEY);
-      if (!existingDb) {
-        localStorage.setItem(USERS_DB_KEY, JSON.stringify(DEFAULT_USERS));
-      }
-    } catch {
-      // Fallback
-    } finally {
       setLoading(false);
-    }
+    });
+
+    // Dengerin perubahan login/logout (termasuk dari tab lain atau redirect OAuth)
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        try {
+          setProfile(await loadProfile(session.user.id, session.user.email!, session.user.user_metadata));
+        } catch (e) {
+          console.error("Gagal load profile auth change:", e);
+          setProfile(null);
+        }
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => listener.subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, _password = ""): Promise<UserProfile> => {
-    const cleanEmail = email.trim().toLowerCase();
-    
-    // Check known users or dynamically allow login
-    let db: Record<string, any> = DEFAULT_USERS;
-    try {
-      const saved = localStorage.getItem(USERS_DB_KEY);
-      if (saved) db = { ...DEFAULT_USERS, ...JSON.parse(saved) };
-    } catch {
-      // ignore
+  const login = async (email: string, password: string): Promise<UserProfile> => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      if (error.message.toLowerCase().includes("invalid login credentials")) {
+        throw new Error(
+          "Email atau password salah / belum terdaftar. Jika baru pertama kali menggunakan portal ini, silakan klik tab 'Daftar' untuk membuat akun baru."
+        );
+      }
+      throw new Error(error.message);
     }
+    return loadProfile(data.user.id, data.user.email!, data.user.user_metadata);
+  };
 
-    let user = db[cleanEmail];
-
-    if (!user) {
-      // Auto register for seamless access if user types any email
-      const isTeacher = cleanEmail.includes("guru") || cleanEmail.includes("teacher");
-      user = {
-        id: `usr-${Date.now()}`,
-        full_name: cleanEmail.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-        email: cleanEmail,
-        role: isTeacher ? "teacher" : "student",
-        class_name: isTeacher ? "Pengampu Matematika" : "Kelas 11 A",
-        xp: isTeacher ? 9999 : 0,
-        level: isTeacher ? 50 : 1,
-        completed_modules: [],
-        badges: isTeacher ? ["Instruktur Resmi"] : ["Siswa Baru"],
-      };
-      db[cleanEmail] = user;
-      localStorage.setItem(USERS_DB_KEY, JSON.stringify(db));
-    }
-
-    setProfile(user);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    return user;
+  const loginWithGoogle = async (): Promise<void> => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/app/dashboard`,
+      },
+    });
+    if (error) throw new Error(error.message);
   };
 
   const register = async (
     full_name: string,
     email: string,
-    password = "",
+    password: string,
     role: "student" | "teacher" = "student",
     extra: { class_name?: string; teacher_code?: string } = {}
   ): Promise<UserProfile> => {
-    const cleanEmail = email.trim().toLowerCase();
-
-    if (role === "teacher" && extra.teacher_code?.trim() !== "SIGMAGURU2026") {
+    const trimmedCode = extra.teacher_code?.trim();
+    if (role === "teacher" && trimmedCode !== "SIGMAGURU2026" && trimmedCode !== "GURU-DN9") {
       throw new Error("Kode otorisasi guru tidak valid. Hubungi admin MA Darunnajah 9.");
     }
 
-    const newUser: UserProfile = {
-      id: `usr-${Date.now()}`,
-      full_name: full_name.trim(),
-      email: cleanEmail,
-      role,
-      class_name: role === "teacher" ? "Pengampu Matematika" : extra.class_name || "Kelas 11 A",
-      xp: role === "teacher" ? 9999 : 0,
-      level: role === "teacher" ? 50 : 1,
-      completed_modules: [],
-      badges: [role === "teacher" ? "Instruktur Resmi" : "Siswa Baru"],
-      created_at: new Date().toISOString(),
-    };
+    // full_name/role/class_name dikirim lewat metadata, ditangkap trigger
+    // handle_new_user() di database buat auto-isi tabel profiles.
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name, role, class_name: extra.class_name },
+      },
+    });
+    if (error) throw new Error(error.message);
+    if (!data.user) throw new Error("Registrasi gagal, coba lagi.");
 
-    try {
-      const saved = localStorage.getItem(USERS_DB_KEY);
-      const db = saved ? JSON.parse(saved) : { ...DEFAULT_USERS };
-      db[cleanEmail] = { ...newUser, password };
-      localStorage.setItem(USERS_DB_KEY, JSON.stringify(db));
-    } catch {
-      // ignore
-    }
-
-    setProfile(newUser);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
-    return newUser;
+    return loadProfile(data.user.id, data.user.email!, data.user.user_metadata);
   };
 
   const logout = () => {
+    supabase.auth.signOut();
     setProfile(null);
-    localStorage.removeItem(STORAGE_KEY);
   };
 
-  const updateProfile = (updates: Partial<UserProfile>) => {
-    setProfile((prev) => {
-      if (!prev) return null;
-      const updated = { ...prev, ...updates };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    });
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    if (!profile) return;
+    const { email, badges, ...rest } = updates; // email & badges ditangani terpisah
+    const { error } = await supabase.from("profiles").update(rest).eq("id", profile.id);
+    if (error) throw new Error(error.message);
+    setProfile((prev) => (prev ? { ...prev, ...updates } : prev));
   };
 
   return (
@@ -183,6 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile,
         loading,
         login,
+        loginWithGoogle,
         register,
         logout,
         updateProfile,
@@ -195,9 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 };
 

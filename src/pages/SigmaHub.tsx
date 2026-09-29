@@ -130,17 +130,15 @@ export default function SigmaHub() {
     let count = 0;
     for (let dId = 1; dId <= 5; dId++) {
       const dMods = MODULES.filter((m) => m.districtId === dId);
-      const isCompleted = dMods.some(
-        (m) => userProgress[m.id]?.completed || profile?.completed_modules?.includes(m.id)
-      );
+      const isCompleted = dMods.some((m) => userProgress[m.id]?.completed);
       if (isCompleted) {
         count++;
       } else {
         break;
       }
     }
-    return Math.max(count, profile?.completed_modules?.length ?? 0);
-  }, [userProgress, profile]);
+    return count;
+  }, [userProgress]);
   const progressPercent = Math.min(100, Math.round((completedDistrictsCount / 5) * 100));
   const isNewUser = completedDistrictsCount === 0;
 
