@@ -30,29 +30,34 @@ interface AuthContextType {
   ) => Promise<UserProfile>;
   logout: () => void;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  setDemoProfile: (demoProfile: UserProfile | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Ambil baris profiles + email dari session, gabungin jadi satu object UserProfile
 async function loadProfile(userId: string, email: string, userMetadata?: any): Promise<UserProfile> {
-  const { data: profileRow } = await supabase
-    .from("profiles")
-    .select("id, full_name, role, class_name, avatar_url, xp, level")
-    .eq("id", userId)
-    .maybeSingle();
+  try {
+    const { data: profileRow } = await supabase
+      .from("profiles")
+      .select("id, full_name, role, class_name, avatar_url, xp, level")
+      .eq("id", userId)
+      .maybeSingle();
 
-  if (profileRow) {
-    const { data: badgeRows } = await supabase
-      .from("user_badges")
-      .select("badge")
-      .eq("user_id", userId);
+    if (profileRow) {
+      const { data: badgeRows } = await supabase
+        .from("user_badges")
+        .select("badge")
+        .eq("user_id", userId);
 
-    return {
-      ...profileRow,
-      email,
-      badges: (badgeRows || []).map((b) => b.badge),
-    };
+      return {
+        ...profileRow,
+        email,
+        badges: (badgeRows || []).map((b) => b.badge),
+      };
+    }
+  } catch (fetchErr) {
+    console.warn("loadProfile network check:", fetchErr);
   }
 
   // Jika profileRow belum ada (misalnya dari Google OAuth atau trigger DB belum berjalan)
@@ -106,20 +111,55 @@ async function loadProfile(userId: string, email: string, userMetadata?: any): P
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(() => {
+    try {
+      const stored = sessionStorage.getItem("sigma_demo_user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.id === "demo-siswa-id") parsed.id = "00000000-0000-0000-0000-000000000001";
+        if (parsed.id === "demo-guru-id") parsed.id = "00000000-0000-0000-0000-000000000002";
+        return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(true);
+
+  const setDemoProfile = (demo: UserProfile | null) => {
+    setProfile(demo);
+    if (demo) {
+      try {
+        sessionStorage.setItem("sigma_demo_user", JSON.stringify(demo));
+      } catch {
+        // ignore
+      }
+    } else {
+      try {
+        sessionStorage.removeItem("sigma_demo_user");
+      } catch {
+        // ignore
+      }
+    }
+  };
 
   useEffect(() => {
     // Cek session yang lagi aktif waktu app dibuka
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error) {
+        console.warn("Supabase session check notice:", error.message);
+      }
       if (session?.user) {
         try {
           setProfile(await loadProfile(session.user.id, session.user.email!, session.user.user_metadata));
         } catch (e) {
           console.error("Gagal load profile session:", e);
-          setProfile(null);
         }
       }
+      setLoading(false);
+    }).catch((err) => {
+      console.warn("Supabase auth unreachable:", err);
       setLoading(false);
     });
 
@@ -130,10 +170,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(await loadProfile(session.user.id, session.user.email!, session.user.user_metadata));
         } catch (e) {
           console.error("Gagal load profile auth change:", e);
-          setProfile(null);
         }
       } else {
-        setProfile(null);
+        // Jangan hapus profile jika sedang pakai demoProfile
+        if (!sessionStorage.getItem("sigma_demo_user")) {
+          setProfile(null);
+        }
       }
     });
 
@@ -143,14 +185,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<UserProfile> => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      if (error.message.toLowerCase().includes("invalid login credentials")) {
+      const msg = error.message.toLowerCase();
+      if (msg.includes("invalid login credentials")) {
         throw new Error(
           "Email atau password salah / belum terdaftar. Jika baru pertama kali menggunakan portal ini, silakan klik tab 'Daftar' untuk membuat akun baru."
         );
       }
+      if (msg.includes("invalid api key") || msg.includes("apikey")) {
+        throw new Error(
+          "Kunci API Supabase tidak valid (Invalid API key). Pastikan VITE_SUPABASE_ANON_KEY diisi dengan kunci 'anon / public' (berawalan eyJ...) dari Supabase tanpa tanda petik, lalu lakukan Redeploy di Vercel."
+        );
+      }
+      if (msg.includes("failed to fetch")) {
+        throw new Error(
+          "Gagal terhubung ke database Supabase (Failed to fetch). Periksa koneksi internet Anda atau pastikan variabel lingkungan VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY sudah disetel di Vercel lalu lakukan Redeploy."
+        );
+      }
       throw new Error(error.message);
     }
-    return loadProfile(data.user.id, data.user.email!, data.user.user_metadata);
+    const userProf = await loadProfile(data.user.id, data.user.email!, data.user.user_metadata);
+    setProfile(userProf);
+    try {
+      sessionStorage.removeItem("sigma_demo_user");
+    } catch {
+      // ignore
+    }
+    return userProf;
   };
 
   const loginWithGoogle = async (): Promise<void> => {
@@ -160,7 +220,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         redirectTo: `${window.location.origin}/app/dashboard`,
       },
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.message.toLowerCase().includes("failed to fetch")) {
+        throw new Error(
+          "Gagal terhubung ke database Supabase (Failed to fetch). Periksa koneksi internet Anda atau pastikan konfigurasi Vercel sudah sesuai."
+        );
+      }
+      throw new Error(error.message);
+    }
   };
 
   const register = async (
@@ -175,8 +242,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error("Kode otorisasi guru tidak valid. Hubungi admin MA Darunnajah 9.");
     }
 
-    // full_name/role/class_name dikirim lewat metadata, ditangkap trigger
-    // handle_new_user() di database buat auto-isi tabel profiles.
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -184,23 +249,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         data: { full_name, role, class_name: extra.class_name },
       },
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      const msg = error.message.toLowerCase();
+      if (msg.includes("invalid api key") || msg.includes("apikey")) {
+        throw new Error(
+          "Kunci API Supabase tidak valid (Invalid API key). Pastikan VITE_SUPABASE_ANON_KEY diisi dengan kunci 'anon / public' (berawalan eyJ...) dari Supabase tanpa tanda petik, lalu lakukan Redeploy di Vercel."
+        );
+      }
+      if (msg.includes("failed to fetch")) {
+        throw new Error(
+          "Gagal terhubung ke database Supabase (Failed to fetch). Pastikan koneksi internet aktif dan Environment Variables Vercel sudah disetel."
+        );
+      }
+      throw new Error(error.message);
+    }
     if (!data.user) throw new Error("Registrasi gagal, coba lagi.");
 
-    return loadProfile(data.user.id, data.user.email!, data.user.user_metadata);
+    const userProf = await loadProfile(data.user.id, data.user.email!, data.user.user_metadata);
+    setProfile(userProf);
+    try {
+      sessionStorage.removeItem("sigma_demo_user");
+    } catch {
+      // ignore
+    }
+    return userProf;
   };
 
   const logout = () => {
-    supabase.auth.signOut();
+    supabase.auth.signOut().catch(() => {});
     setProfile(null);
+    try {
+      sessionStorage.removeItem("sigma_demo_user");
+    } catch {
+      // ignore
+    }
   };
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!profile) return;
-    const { email, badges, ...rest } = updates; // email & badges ditangani terpisah
-    const { error } = await supabase.from("profiles").update(rest).eq("id", profile.id);
-    if (error) throw new Error(error.message);
-    setProfile((prev) => (prev ? { ...prev, ...updates } : prev));
+    const { email, badges, ...rest } = updates;
+    const isDemoId = profile.id.startsWith("00000000-0000-0000-0000-") || profile.id.startsWith("demo-");
+    if (!isDemoId) {
+      try {
+        const { error } = await supabase.from("profiles").update(rest).eq("id", profile.id);
+        if (error) console.warn("Supabase update profile notice:", error.message);
+      } catch (e) {
+        console.warn("Offline profile update:", e);
+      }
+    }
+    setProfile((prev) => {
+      const updated = prev ? { ...prev, ...updates } : prev;
+      if (updated && sessionStorage.getItem("sigma_demo_user")) {
+        try {
+          sessionStorage.setItem("sigma_demo_user", JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+      }
+      return updated;
+    });
   };
 
   return (
@@ -213,6 +320,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         logout,
         updateProfile,
+        setDemoProfile,
       }}
     >
       {children}

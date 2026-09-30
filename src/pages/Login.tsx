@@ -14,13 +14,15 @@ import {
   Sparkles,
   ChevronDown,
   Compass,
+  AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
+import { isSupabaseConfigured } from "../lib/supabaseClient";
 import { toast } from "sonner";
 
 export default function Login() {
-  const { login, loginWithGoogle, register, profile } = useAuth();
+  const { login, loginWithGoogle, register, profile, setDemoProfile } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -108,6 +110,14 @@ export default function Login() {
         setErrorMsg(
           "Email atau password salah / belum terdaftar. Jika Anda baru pertama kali menggunakan portal ini, silakan klik tab 'Daftar' di atas untuk membuat akun terlebih dahulu."
         );
+      } else if (msg.toLowerCase().includes("invalid api key") || msg.toLowerCase().includes("apikey")) {
+        setErrorMsg(
+          "Kunci API Supabase tidak valid (Invalid API key). Di Vercel, pastikan VITE_SUPABASE_ANON_KEY diisi dengan kunci 'anon public' (panjang dan diawali eyJ...) dari Project Settings > API Supabase tanpa tanda petik, lalu klik Redeploy."
+        );
+      } else if (msg.toLowerCase().includes("failed to fetch")) {
+        setErrorMsg(
+          "Gagal terhubung ke database Supabase (Failed to fetch). Periksa koneksi internet laptop Anda, matikan adblocker/ekstensi VPN, atau jika ini di Vercel, pastikan Environment Variables (VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY) sudah disetel lalu lakukan Redeploy."
+        );
       } else {
         setErrorMsg(msg || "Terjadi kesalahan saat otentikasi.");
       }
@@ -133,6 +143,10 @@ export default function Login() {
         setErrorMsg(
           "Provider Google OAuth belum diaktifkan di dashboard Supabase (Authentication > Providers > Google). Silakan gunakan tab 'Daftar' dengan Email & Password di atas untuk membuat akun."
         );
+      } else if (msg.toLowerCase().includes("failed to fetch")) {
+        setErrorMsg(
+          "Gagal menghubungi server Google/Supabase (Failed to fetch). Periksa jaringan internet atau gunakan tombol akun demo di bawah."
+        );
       } else {
         setErrorMsg(msg || "Gagal menghubungkan ke layanan Google OAuth.");
       }
@@ -140,29 +154,67 @@ export default function Login() {
     }
   };
 
-  // 1-Click Demo Access for quick evaluation
+  // 1-Click Demo Access for quick evaluation (Resilient with offline fallback)
   const handleDemoAccess = async (role: "student" | "teacher") => {
     setErrorMsg("");
     setLoading(true);
+    const demoEmail = role === "teacher" ? "guru.demo@darunnajah9.sch.id" : "siswa.demo@darunnajah9.sch.id";
+    const demoPass = "Sigma2026!";
+    const fallbackProfile = {
+      id: role === "teacher" ? "00000000-0000-0000-0000-000000000002" : "00000000-0000-0000-0000-000000000001",
+      full_name: role === "teacher" ? "Ust. Ahmad Fauzi, S.Pd. (Demo)" : "Ahmad Rizky Pratama (Demo)",
+      email: demoEmail,
+      role,
+      class_name: role === "teacher" ? "Guru Pengampu" : "Kelas 11 A",
+      xp: 250,
+      level: 2,
+      badges: ["perintis-distrik"],
+    };
+
     try {
-      const demoEmail = role === "teacher" ? "guru.demo@darunnajah9.sch.id" : "siswa.demo@darunnajah9.sch.id";
-      const demoPass = "Sigma2026!";
+      if (!isSupabaseConfigured) {
+        setDemoProfile(fallbackProfile);
+        toast.success(`Berhasil masuk sebagai Akun Uji Coba ${role === "teacher" ? "Guru" : "Siswa"}!`);
+        navigate(getDestination(role));
+        return;
+      }
+
       let user: any;
       try {
         user = await login(demoEmail, demoPass);
-      } catch {
-        user = await register(
-          role === "teacher" ? "Ust. Ahmad Fauzi, S.Pd. (Demo)" : "Ahmad Rizky Pratama (Demo)",
-          demoEmail,
-          demoPass,
-          role,
-          { class_name: role === "teacher" ? "Guru Pengampu" : "Kelas 11 A", teacher_code: "SIGMAGURU2026" }
-        );
+      } catch (loginErr: any) {
+        const errMsg = loginErr?.message?.toLowerCase() || "";
+        if (errMsg.includes("failed to fetch")) {
+          setDemoProfile(fallbackProfile);
+          toast.success(`Berhasil masuk mode uji coba ${role === "teacher" ? "Guru" : "Siswa"}!`);
+          navigate(getDestination(role));
+          return;
+        }
+        try {
+          user = await register(
+            role === "teacher" ? "Ust. Ahmad Fauzi, S.Pd. (Demo)" : "Ahmad Rizky Pratama (Demo)",
+            demoEmail,
+            demoPass,
+            role,
+            { class_name: role === "teacher" ? "Guru Pengampu" : "Kelas 11 A", teacher_code: "SIGMAGURU2026" }
+          );
+        } catch (regErr: any) {
+          if (regErr?.message?.toLowerCase()?.includes("failed to fetch")) {
+            setDemoProfile(fallbackProfile);
+            toast.success(`Berhasil masuk mode uji coba ${role === "teacher" ? "Guru" : "Siswa"}!`);
+            navigate(getDestination(role));
+            return;
+          }
+          throw regErr;
+        }
       }
       toast.success(`Berhasil masuk sebagai Akun Uji Coba ${role === "teacher" ? "Guru" : "Siswa"}!`);
       navigate(getDestination(user.role));
     } catch (err: any) {
-      setErrorMsg(err?.message || "Gagal masuk mode uji coba.");
+      console.warn("Demo access network issue, falling back to local demo:", err);
+      setDemoProfile(fallbackProfile);
+      toast.success(`Berhasil masuk mode uji coba ${role === "teacher" ? "Guru" : "Siswa"}!`);
+      navigate(getDestination(role));
     } finally {
       setLoading(false);
     }
@@ -421,6 +473,22 @@ export default function Login() {
                     <span className="font-semibold block text-cyan-200">Akses Peta Belajar Matematika</span>
                     <span className="text-[11px] text-cyan-300/80">
                       Silakan masuk atau daftar akun terlebih dahulu untuk membuka 5 Distrik Peta Belajar dan melacak progres belajarmu.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Warning when Supabase Env is missing on Vercel or other devices */}
+              {!isSupabaseConfigured && (
+                <div className="mb-4 flex items-start gap-2.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
+                  <AlertTriangle size={18} className="shrink-0 text-amber-400 mt-0.5" />
+                  <div className="leading-relaxed">
+                    <span className="font-semibold block text-amber-300">Konfigurasi Database Belum Aktif</span>
+                    <span className="text-[11px] text-amber-400/90 block">
+                      Jika membuka di hosting/Vercel, pastikan <code>VITE_SUPABASE_URL</code> dan <code>VITE_SUPABASE_ANON_KEY</code> sudah disetel di menu Environment Variables Vercel lalu lakukan <em>Redeploy</em>.
+                    </span>
+                    <span className="text-[11px] text-amber-300/80 block mt-1 font-semibold">
+                      Tips: Anda tetap bisa langsung masuk menggunakan tombol "Masuk Akun Siswa/Guru" di bagian bawah!
                     </span>
                   </div>
                 </div>

@@ -205,7 +205,24 @@ html.light .border-sigma-yellow { border-color: #d97706; }
 .text-sigma-void { color: #070913; }
 html.light .text-sigma-void { color: #0f172a; }
 
-/* KaTeX theme adaptation */
+/* KaTeX theme adaptation & typography fixes */
+.katex-mathml {
+  display: none !important;
+}
+
+.katex {
+  font-size: 1.12em;
+  text-rendering: auto;
+  line-height: normal;
+}
+
+.inline-math {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  padding: 0 0.1em;
+}
+
 html.light .katex,
 html.light .katex-html {
   color: #0f172a !important;
@@ -214,6 +231,10 @@ html.light .katex-html {
 html.dark .katex,
 html.dark .katex-html {
   color: #f8fafc !important;
+}
+
+.katex .mfrac .frac-line {
+  border-bottom-width: 1.5px !important;
 }
 
 /* Custom Scrollbar */

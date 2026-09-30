@@ -15,6 +15,13 @@ export interface StudentModuleProgress {
 
 // "Modul terakhir dibuka" cuma preferensi UI, disimpan di browser aja (bukan data penting)
 const LAST_MODULE_KEY = "sigma_last_active_module_v3";
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export const isDemoUser = (userId?: string | null): boolean => {
+  if (!userId) return true;
+  if (userId.startsWith("demo-") || userId.startsWith("00000000-0000-0000-0000-")) return true;
+  return !UUID_REGEX.test(userId);
+};
 
 function rowToProgress(row: any): StudentModuleProgress {
   return {
@@ -29,21 +36,55 @@ function rowToProgress(row: any): StudentModuleProgress {
 }
 
 export async function getAllProgress(userId: string): Promise<Record<string, StudentModuleProgress>> {
-  const { data, error } = await supabase
-    .from("user_progress")
-    .select("*")
-    .eq("user_id", userId);
+  if (isDemoUser(userId)) {
+    try {
+      const stored = localStorage.getItem(`sigma_demo_progress_${userId}`);
+      if (stored) return JSON.parse(stored);
+    } catch {
+      // ignore
+    }
+    // Initial demo progress untuk visualisasi langsung saat mode uji coba
+    return {
+      "mod-bilangan-1": {
+        moduleId: "mod-bilangan-1",
+        slideIdx: 13,
+        totalSlides: 14,
+        percent: 100,
+        lastStudiedAt: new Date().toISOString(),
+        completed: true,
+        quizScore: 90,
+      },
+      "mod-aljabar-2": {
+        moduleId: "mod-aljabar-2",
+        slideIdx: 8,
+        totalSlides: 16,
+        percent: 50,
+        lastStudiedAt: new Date().toISOString(),
+        completed: false,
+      },
+    };
+  }
 
-  if (error) {
-    console.error("Gagal ambil progress", error);
+  try {
+    const { data, error } = await supabase
+      .from("user_progress")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (error) {
+      console.warn("Notice: Gagal ambil progress dari database:", error.message);
+      return {};
+    }
+
+    const map: Record<string, StudentModuleProgress> = {};
+    for (const row of data || []) {
+      map[row.module_id] = rowToProgress(row);
+    }
+    return map;
+  } catch (err) {
+    console.warn("getAllProgress network fallback:", err);
     return {};
   }
-
-  const map: Record<string, StudentModuleProgress> = {};
-  for (const row of data || []) {
-    map[row.module_id] = rowToProgress(row);
-  }
-  return map;
 }
 
 export async function saveModuleProgress(
@@ -54,48 +95,104 @@ export async function saveModuleProgress(
 ) {
   const percent = Math.min(100, Math.round(((slideIdx + 1) / totalSlides) * 100));
 
-  const { error } = await supabase.from("user_progress").upsert(
-    {
-      user_id: userId,
-      module_id: moduleId,
-      slide_idx: slideIdx,
-      total_slides: totalSlides,
-      percent,
-      completed: percent >= 100,
-      last_studied_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,module_id" }
-  );
+  if (isDemoUser(userId)) {
+    try {
+      const key = `sigma_demo_progress_${userId}`;
+      const stored = localStorage.getItem(key);
+      const map = stored ? JSON.parse(stored) : {};
+      map[moduleId] = {
+        moduleId,
+        slideIdx,
+        totalSlides,
+        percent,
+        completed: percent >= 100,
+        lastStudiedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(key, JSON.stringify(map));
+    } catch {
+      // ignore
+    }
+    localStorage.setItem(LAST_MODULE_KEY, moduleId);
+    window.dispatchEvent(new Event("sigma_progress_updated"));
+    return;
+  }
 
-  if (error) console.error("Gagal simpan progress", error);
+  try {
+    const { error } = await supabase.from("user_progress").upsert(
+      {
+        user_id: userId,
+        module_id: moduleId,
+        slide_idx: slideIdx,
+        total_slides: totalSlides,
+        percent,
+        completed: percent >= 100,
+        last_studied_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,module_id" }
+    );
+
+    if (error) console.warn("Gagal simpan progress ke server:", error.message);
+  } catch (e) {
+    console.warn("saveModuleProgress network fallback:", e);
+  }
+
   localStorage.setItem(LAST_MODULE_KEY, moduleId);
   window.dispatchEvent(new Event("sigma_progress_updated"));
 }
 
 export async function recordQuizCompletion(userId: string, moduleId: string, score: number) {
-  // Ambil dulu row yang ada (kalau ada), biar slideIdx/totalSlides gak ketimpa jadi 0
-  const { data: existing } = await supabase
-    .from("user_progress")
-    .select("slide_idx, total_slides, completed")
-    .eq("user_id", userId)
-    .eq("module_id", moduleId)
-    .maybeSingle();
+  if (isDemoUser(userId)) {
+    try {
+      const key = `sigma_demo_progress_${userId}`;
+      const stored = localStorage.getItem(key);
+      const map = stored ? JSON.parse(stored) : {};
+      const existing = map[moduleId];
+      map[moduleId] = {
+        moduleId,
+        slideIdx: existing?.slideIdx ?? 0,
+        totalSlides: existing?.totalSlides ?? 1,
+        percent: 100,
+        quizScore: score,
+        completed: score >= 75 || existing?.completed || false,
+        lastStudiedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(key, JSON.stringify(map));
+    } catch {
+      // ignore
+    }
+    localStorage.setItem(LAST_MODULE_KEY, moduleId);
+    window.dispatchEvent(new Event("sigma_progress_updated"));
+    return;
+  }
 
-  const { error } = await supabase.from("user_progress").upsert(
-    {
-      user_id: userId,
-      module_id: moduleId,
-      slide_idx: existing?.slide_idx ?? 0,
-      total_slides: existing?.total_slides ?? 1,
-      percent: 100,
-      quiz_score: score,
-      completed: score >= 75 || existing?.completed || false,
-      last_studied_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,module_id" }
-  );
+  try {
+    // Ambil dulu row yang ada (kalau ada), biar slideIdx/totalSlides gak ketimpa jadi 0
+    const { data: existing } = await supabase
+      .from("user_progress")
+      .select("slide_idx, total_slides, completed")
+      .eq("user_id", userId)
+      .eq("module_id", moduleId)
+      .maybeSingle();
 
-  if (error) console.error("Gagal simpan hasil quiz", error);
+    const { error } = await supabase.from("user_progress").upsert(
+      {
+        user_id: userId,
+        module_id: moduleId,
+        slide_idx: existing?.slide_idx ?? 0,
+        total_slides: existing?.total_slides ?? 1,
+        percent: 100,
+        quiz_score: score,
+        completed: score >= 75 || existing?.completed || false,
+        last_studied_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,module_id" }
+    );
+
+    if (error) console.warn("Gagal simpan hasil quiz ke server:", error.message);
+  } catch (e) {
+    console.warn("recordQuizCompletion network fallback:", e);
+  }
+
   localStorage.setItem(LAST_MODULE_KEY, moduleId);
   window.dispatchEvent(new Event("sigma_progress_updated"));
 }
@@ -131,7 +228,8 @@ export function useStudentProgress() {
       return;
     }
     setLoading(true);
-    setProgressMap(await getAllProgress(profile.id));
+    const data = await getAllProgress(profile.id);
+    setProgressMap(data);
     setLoading(false);
   }, [profile]);
 

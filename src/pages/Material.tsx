@@ -20,8 +20,8 @@ export default function Material() {
   // Route to the corresponding HTML slide deck based on districtId
   let pdfUrl = "/modul_bilangan.html";
   let pdfTitle = "BAB 1: BILANGAN - Bilangan Real, Bilangan Berpangkat, dan Bentuk Akar";
-  let pageCountBadge = "MODUL RESMI · 15 HALAMAN";
-  let pdfDescription = "Menampilkan 15 slide resmi Bab 1 Bilangan: keluarga bilangan real, 8 sifat eksponen, penyederhanaan bentuk akar, merasionalkan penyebut sekawan, dan telaah soal TKA.";
+  let pageCountBadge = "MODUL RESMI · 14 HALAMAN";
+  let pdfDescription = "Menampilkan 14 slide resmi Bab 1 Bilangan: keluarga bilangan real, 8 sifat eksponen, penyederhanaan bentuk akar, merasionalkan penyebut sekawan, dan telaah soal TKA.";
 
   if (moduleData.districtId === 2 || moduleData.id === "mod-aljabar-2") {
     pdfUrl = "/modul_aljabar.html";
