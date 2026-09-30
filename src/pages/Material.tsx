@@ -1,14 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
   FileText,
   Play,
   Maximize2,
+  Sparkles,
 } from "lucide-react";
 import { MODULES } from "../lib/sigmaData";
 import { useTheme } from "../lib/theme";
 import { PdfFullscreenModal } from "../components/PdfFullscreenModal";
+import { getModulePdfUrl } from "../lib/pdfStorage";
 
 export default function Material() {
   const { id, moduleId } = useParams();
@@ -17,31 +19,84 @@ export default function Material() {
 
   const moduleData = MODULES.find((m) => m.id === currentId) || MODULES[0];
 
-  // Route to the corresponding HTML slide deck based on districtId
-  let pdfUrl = "/modul_bilangan.html";
-  let pdfTitle = "BAB 1: BILANGAN - Bilangan Real, Bilangan Berpangkat, dan Bentuk Akar";
-  let pageCountBadge = "MODUL RESMI · 14 HALAMAN";
-  let pdfDescription = "Menampilkan 14 slide resmi Bab 1 Bilangan: keluarga bilangan real, 8 sifat eksponen, penyederhanaan bentuk akar, merasionalkan penyebut sekawan, dan telaah soal TKA.";
+  // Default system fallback deck based on districtId
+  let defaultPdfUrl = "/modul_bilangan.html";
+  let defaultPdfTitle = "BAB 1: BILANGAN - Bilangan Real, Bilangan Berpangkat, dan Bentuk Akar";
+  let defaultBadge = "MODUL RESMI · 14 HALAMAN";
+  let defaultDescription = "Menampilkan 14 slide resmi Bab 1 Bilangan: keluarga bilangan real, 8 sifat eksponen, penyederhanaan bentuk akar, merasionalkan penyebut sekawan, dan telaah soal TKA.";
 
   if (moduleData.districtId === 2 || moduleData.id === "mod-aljabar-2") {
-    pdfUrl = "/modul_aljabar.html";
-    pdfTitle = "BAB 2: ALJABAR - Sistem Persamaan, Pertidaksamaan, Fungsi, Barisan & Deret";
-    pageCountBadge = "MODUL RESMI · 16 HALAMAN";
-    pdfDescription = "Menampilkan 16 slide resmi Bab 2 Aljabar: SPLDV & SPLTV, daerah pertidaksamaan & optimasi titik pojok, fungsi kuadrat & rasional, komposisi invers cepat, barisan deret, hingga aplikasi keuangan.";
+    defaultPdfUrl = "/modul_aljabar.html";
+    defaultPdfTitle = "BAB 2: ALJABAR - Sistem Persamaan, Pertidaksamaan, Fungsi, Barisan & Deret";
+    defaultBadge = "MODUL RESMI · 16 HALAMAN";
+    defaultDescription = "Menampilkan 16 slide resmi Bab 2 Aljabar: SPLDV & SPLTV, daerah pertidaksamaan & optimasi titik pojok, fungsi kuadrat & rasional, komposisi invers cepat, barisan deret, hingga aplikasi keuangan.";
   } else if (moduleData.districtId === 3 || moduleData.id === "mod-geometri-1") {
-    pdfUrl = "/modul_geometri.html";
-    pdfTitle = "BAB 3: GEOMETRI DAN PENGUKURAN - Hubungan Sudut, Pythagoras, Bangun Ruang & Transformasi";
-    pageCountBadge = "MODUL RESMI · 15 HALAMAN";
-    pdfDescription = "Menampilkan 15 slide resmi Bab 3 Geometri dan Pengukuran: relasi sudut transversal, kesebangunan & Pythagoras, pengukuran 2D/3D kubus rusuk a, proyeksi tegak lurus dimensi tiga, dan komposisi matriks transformasi.";
+    defaultPdfUrl = "/modul_geometri.html";
+    defaultPdfTitle = "BAB 3: GEOMETRI DAN PENGUKURAN - Hubungan Sudut, Pythagoras, Bangun Ruang & Transformasi";
+    defaultBadge = "MODUL RESMI · 15 HALAMAN";
+    defaultDescription = "Menampilkan 15 slide resmi Bab 3 Geometri dan Pengukuran: relasi sudut transversal, kesebangunan & Pythagoras, pengukuran 2D/3D kubus rusuk a, proyeksi tegak lurus dimensi tiga, dan komposisi matriks transformasi.";
   } else if (moduleData.districtId === 4 || moduleData.id === "mod-trigo-1") {
-    pdfUrl = "/modul_trigonometri.html";
-    pdfTitle = "BAB 4: TRIGONOMETRI - Navigasi Sudut, Dimensi, dan Ruang Koordinat";
-    pageCountBadge = "MODUL RESMI · 13 HALAMAN";
-    pdfDescription = "Menampilkan 13 slide resmi Bab 4 Trigonometri: skala sudut, perbandingan segitiga siku-siku, kompas kuadran, dan telaah soal UTBK.";
+    defaultPdfUrl = "/modul_trigonometri.html";
+    defaultPdfTitle = "BAB 4: TRIGONOMETRI - Navigasi Sudut, Dimensi, dan Ruang Koordinat";
+    defaultBadge = "MODUL RESMI · 13 HALAMAN";
+    defaultDescription = "Menampilkan 13 slide resmi Bab 4 Trigonometri: skala sudut, perbandingan segitiga siku-siku, kompas kuadran, dan telaah soal UTBK.";
   }
+
+  // Dynamic states with support for teacher-uploaded PDF
+  const [activePdfUrl, setActivePdfUrl] = useState<string>(defaultPdfUrl);
+  const [isCustomPdf, setIsCustomPdf] = useState<boolean>(false);
+  const [pdfTitle, setPdfTitle] = useState<string>(defaultPdfTitle);
+  const [pdfDescription, setPdfDescription] = useState<string>(defaultDescription);
+  const [pageCountBadge, setPageCountBadge] = useState<string>(defaultBadge);
 
   // Fullscreen PDF Modal State - opened by default so user immediately sees the PDF
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(true);
+
+  // Load custom PDF or fallback to system
+  useEffect(() => {
+    let active = true;
+
+    const loadData = async () => {
+      try {
+        const res = await getModulePdfUrl(moduleData.id, defaultPdfUrl);
+        if (active) {
+          if (res.isCustom && res.url) {
+            setActivePdfUrl(res.url);
+            setIsCustomPdf(true);
+            if (res.data?.title) setPdfTitle(res.data.title);
+            if (res.data?.description) setPdfDescription(res.data.description);
+            setPageCountBadge(
+              res.fileName
+                ? `PDF GURU · ${res.fileName.toUpperCase()}`
+                : `DOKUMEN GURU · ${res.data?.pageCount || 14} HALAMAN`
+            );
+          } else {
+            setActivePdfUrl(defaultPdfUrl);
+            setIsCustomPdf(false);
+            setPdfTitle(defaultPdfTitle);
+            setPdfDescription(defaultDescription);
+            setPageCountBadge(defaultBadge);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load custom PDF:", err);
+      }
+    };
+
+    loadData();
+
+    const handleUpdate = (e: any) => {
+      if (!e.detail || e.detail.moduleId === moduleData.id) {
+        loadData();
+      }
+    };
+    window.addEventListener("sigma_material_updated", handleUpdate);
+
+    return () => {
+      active = false;
+      window.removeEventListener("sigma_material_updated", handleUpdate);
+    };
+  }, [moduleData.id, defaultPdfUrl, defaultPdfTitle, defaultDescription, defaultBadge]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 py-4 sm:py-6 px-3 sm:px-0">
@@ -78,20 +133,27 @@ export default function Material() {
         {/* Module Header Info */}
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-cyan-400/15 text-cyan-400 border border-cyan-400/30">
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-mono font-bold border ${
+                isCustomPdf
+                  ? "bg-amber-400/20 text-amber-300 border-amber-400/40"
+                  : "bg-cyan-400/15 text-cyan-400 border-cyan-400/30"
+              }`}
+            >
+              {isCustomPdf && <Sparkles size={11} className="inline mr-1 -mt-0.5" />}
               {pageCountBadge}
             </span>
-            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-400/15 text-amber-300 border border-amber-400/30">
+            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-cyan-400/15 text-cyan-300 border border-cyan-400/30">
               TARGET UTBK 2026
             </span>
           </div>
 
           <h1 className="font-display text-2xl sm:text-4xl font-black tracking-tight">
-            {moduleData.title}
+            {pdfTitle}
           </h1>
 
           <p className="text-sm sm:text-base text-slate-300 dark:text-slate-300 leading-relaxed max-w-2xl">
-            {moduleData.description}
+            {pdfDescription}
           </p>
         </div>
 
@@ -109,7 +171,7 @@ export default function Material() {
             </div>
             <div className="space-y-1 min-w-0">
               <h3 className="font-display font-black text-lg sm:text-xl">
-                Dokumen Modul PDF Resmi
+                {isCustomPdf ? "Dokumen Modul PDF Guru" : "Dokumen Modul PDF Resmi"}
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                 {pdfDescription}
@@ -156,7 +218,7 @@ export default function Material() {
             }`}
           >
             <iframe
-              src={pdfUrl}
+              src={activePdfUrl}
               title={`Pratinjau Modul PDF ${pdfTitle}`}
               className="w-full h-[520px] sm:h-[640px] border-none"
             />
@@ -170,7 +232,7 @@ export default function Material() {
       <PdfFullscreenModal
         isOpen={isPdfModalOpen}
         onClose={() => setIsPdfModalOpen(false)}
-        pdfUrl={pdfUrl}
+        pdfUrl={activePdfUrl}
         title={pdfTitle}
       />
     </div>

@@ -202,7 +202,7 @@ const DIRECT_CONTACTS: DirectContact[] = [
     id: "dm-sarah",
     name: "Sarah Amelia",
     role: "student",
-    roleLabel: "Kelas 11 A",
+    roleLabel: "Kelas 11",
     avatarColor: "from-purple-400 to-indigo-600",
     status: "online",
     lastMessage: "Belum ada percakapan",
@@ -212,7 +212,7 @@ const DIRECT_CONTACTS: DirectContact[] = [
     id: "dm-faris",
     name: "Faris Al-Ghifari",
     role: "student",
-    roleLabel: "Kelas 11 A",
+    roleLabel: "Kelas 11",
     avatarColor: "from-cyan-400 to-blue-600",
     status: "away",
     lastMessage: "Belum ada percakapan",
@@ -222,7 +222,7 @@ const DIRECT_CONTACTS: DirectContact[] = [
     id: "dm-rayhan",
     name: "Muhammad Rayhan",
     role: "student",
-    roleLabel: "Kelas 11 B",
+    roleLabel: "Kelas 11",
     avatarColor: "from-amber-400 to-orange-500",
     status: "offline",
     lastMessage: "Belum ada percakapan",
@@ -376,7 +376,7 @@ export default function Discussions() {
 
     const userDisplayName = getUserDisplayName(profile, "Ahmad Rizky Pratama");
     const userRole = profile?.role === "teacher" ? "teacher" : "student";
-    const userClass = profile?.class_name || "Kelas 11 A";
+    const userClass = profile?.class_name || "Kelas 11";
 
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
@@ -441,7 +441,7 @@ export default function Discussions() {
 
     const userDisplayName = getUserDisplayName(profile, "Ahmad Rizky Pratama");
     const userRole = profile?.role === "teacher" ? "teacher" : "student";
-    const userClass = profile?.class_name || "Kelas 11 A";
+    const userClass = profile?.class_name || "Kelas 11";
 
     // Map category to channel
     const targetChannel =
@@ -934,7 +934,7 @@ export default function Discussions() {
                       isDark ? "text-cyan-400" : "text-cyan-600"
                     }`}
                   >
-                    {profile?.class_name || "Kelas 11 A"} · Siswa
+                    {profile?.class_name || "Kelas 11"} · Siswa
                   </p>
                 </div>
               </div>

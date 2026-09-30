@@ -64,9 +64,7 @@ export default function TeacherDashboard() {
             ? Math.round(scored.reduce((sum, p) => sum + (p.quiz_score || 0), 0) / scored.length)
             : 0;
         const progressPct = Math.min(100, Math.round((completedCount / 10) * 100));
-        const rawClass = u.class_name || "Kelas 11 A";
-        const cleanClass =
-          rawClass.includes("B") || rawClass.includes("2") ? "Kelas 11 B" : "Kelas 11 A";
+        const cleanClass = "Kelas 11";
 
         return {
           id: u.id,
@@ -296,20 +294,15 @@ export default function TeacherDashboard() {
                 isDark ? "text-white" : "text-slate-900"
               }`}
             >
-              Sebaran Rombel Kelas 11
+              Status Siswa Kelas 11
             </h3>
 
             <div className="space-y-2.5 text-xs">
               {[
                 {
-                  name: "Kelas 11 A",
+                  name: "Kelas 11",
                   status: "Aktif Belajar",
-                  count: `${students.filter((s) => s.class.includes("11 A") || s.class.includes("11A") || s.class.includes("1") || s.class === "Kelas 11").length} Siswa`,
-                },
-                {
-                  name: "Kelas 11 B",
-                  status: "Aktif Belajar",
-                  count: `${students.filter((s) => s.class.includes("11 B") || s.class.includes("11B") || s.class.includes("2")).length} Siswa`,
+                  count: `${students.length} Siswa`,
                 },
               ].map((cls, idx) => (
                 <div

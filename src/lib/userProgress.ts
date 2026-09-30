@@ -35,6 +35,73 @@ function rowToProgress(row: any): StudentModuleProgress {
   };
 }
 
+// Minimum quiz score required to pass a chapter and unlock the next chapter (Nilai 7 / 70%)
+export const MIN_PASSING_SCORE = 70;
+
+export interface ModuleLockStatus {
+  isUnlocked: boolean;
+  requiredModuleTitle?: string;
+  requiredModuleId?: string;
+  minScore: number;
+  reason?: string;
+}
+
+export function getModuleUnlockStatus(
+  moduleId: string,
+  userProgress: Record<string, StudentModuleProgress>
+): ModuleLockStatus {
+  const targetModule = MODULES.find((m) => m.id === moduleId);
+  // Bab 1 (District 1) selalu terbuka untuk semua siswa
+  if (
+    !targetModule ||
+    targetModule.districtId === 1 ||
+    moduleId === "mod-aljabar-1" ||
+    moduleId === "mod-bilangan-1"
+  ) {
+    return { isUnlocked: true, minScore: MIN_PASSING_SCORE };
+  }
+
+  // Cek Bab 1 terlebih dahulu (Wajib selesai & nilai kuis minimal 70)
+  const bab1Progress = userProgress["mod-aljabar-1"] || userProgress["mod-bilangan-1"];
+  const bab1Score = bab1Progress?.quizScore ?? 0;
+  const bab1Passed = Boolean(bab1Progress?.completed && bab1Score >= MIN_PASSING_SCORE);
+
+  if (!bab1Passed) {
+    return {
+      isUnlocked: false,
+      requiredModuleTitle: "BAB 1: BILANGAN",
+      requiredModuleId: "mod-aljabar-1",
+      minScore: MIN_PASSING_SCORE,
+      reason:
+        bab1Progress && bab1Score > 0
+          ? `Nilai kuis Bab 1 kamu (${bab1Score}) belum mencapai batas KKM minimal 70 (nilai 7). Silakan ulangi kuis Bab 1 untuk membuka materi ini.`
+          : "Kamu wajib mengerjakan Bab 1 (Bilangan) dan meraih nilai kuis minimal 70 (nilai 7) terlebih dahulu sebelum dapat membuka bab ini.",
+    };
+  }
+
+  // Jika target bab > 2, cek juga bab sebelumnya secara sekuensial
+  if (targetModule.districtId > 2) {
+    const prevDistrictId = targetModule.districtId - 1;
+    const prevModule = MODULES.find((m) => m.districtId === prevDistrictId);
+    if (prevModule) {
+      const prevProg = userProgress[prevModule.id];
+      const prevScore = prevProg?.quizScore ?? 0;
+      const prevPassed = Boolean(prevProg?.completed && prevScore >= MIN_PASSING_SCORE);
+      if (!prevPassed) {
+        return {
+          isUnlocked: false,
+          requiredModuleTitle: prevModule.title,
+          requiredModuleId: prevModule.id,
+          minScore: MIN_PASSING_SCORE,
+          reason: `Selesaikan ${prevModule.title} dan raih nilai kuis minimal 70 terlebih dahulu untuk membuka bab ini.`,
+        };
+      }
+    }
+  }
+
+  return { isUnlocked: true, minScore: MIN_PASSING_SCORE };
+}
+
 export async function getAllProgress(userId: string): Promise<Record<string, StudentModuleProgress>> {
   if (isDemoUser(userId)) {
     try {
@@ -43,22 +110,13 @@ export async function getAllProgress(userId: string): Promise<Record<string, Stu
     } catch {
       // ignore
     }
-    // Initial demo progress untuk visualisasi langsung saat mode uji coba
+    // Initial demo progress: Siswa mulai dari Bab 1, Bab 2 terkunci
     return {
-      "mod-bilangan-1": {
-        moduleId: "mod-bilangan-1",
-        slideIdx: 13,
+      "mod-aljabar-1": {
+        moduleId: "mod-aljabar-1",
+        slideIdx: 0,
         totalSlides: 14,
-        percent: 100,
-        lastStudiedAt: new Date().toISOString(),
-        completed: true,
-        quizScore: 90,
-      },
-      "mod-aljabar-2": {
-        moduleId: "mod-aljabar-2",
-        slideIdx: 8,
-        totalSlides: 16,
-        percent: 50,
+        percent: 0,
         lastStudiedAt: new Date().toISOString(),
         completed: false,
       },
@@ -153,7 +211,7 @@ export async function recordQuizCompletion(userId: string, moduleId: string, sco
         totalSlides: existing?.totalSlides ?? 1,
         percent: 100,
         quizScore: score,
-        completed: score >= 75 || existing?.completed || false,
+        completed: score >= MIN_PASSING_SCORE || existing?.completed || false,
         lastStudiedAt: new Date().toISOString(),
       };
       localStorage.setItem(key, JSON.stringify(map));
@@ -182,7 +240,7 @@ export async function recordQuizCompletion(userId: string, moduleId: string, sco
         total_slides: existing?.total_slides ?? 1,
         percent: 100,
         quiz_score: score,
-        completed: score >= 75 || existing?.completed || false,
+        completed: score >= MIN_PASSING_SCORE || existing?.completed || false,
         last_studied_at: new Date().toISOString(),
       },
       { onConflict: "user_id,module_id" }

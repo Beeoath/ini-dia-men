@@ -1087,13 +1087,13 @@ export const MODULES: SigmaModule[] = [
       {
         id: 1,
         question: "Sebuah mesin stabil berputar pada kecepatan 1.000 rpm (rotasi per menit). Berapa besar sudut dalam Radian setelah mesin menyala selama 2 menit?",
-        options: ["$2.000\pi\text{ rad}$", "$4.000\pi\text{ rad}$", "$1.000\pi\text{ rad}$", "$6.000\pi\text{ rad}$"],
+        options: ["$2.000\\pi\\text{ rad}$", "$4.000\\pi\\text{ rad}$", "$1.000\\pi\\text{ rad}$", "$6.000\\pi\\text{ rad}$"],
         correctAnswer: 1,
         explanation: "Total putaran = 1.000 rpm × 2 menit = 2.000 putaran. Karena 1 putaran = 2π rad, maka sudut = 2.000 × 2π = 4.000π rad.",
       },
       {
         id: 2,
-        question: "Diketahui $\sin A = -\frac{4}{5}$ pada interval $180^\circ \le A \le 270^\circ$ (Kuadran III). Berapakah nilai dari $\cos A + \tan A$?",
+        question: "Diketahui $\\sin A = -\\frac{4}{5}$ pada interval $180^\\circ \\le A \\le 270^\\circ$ (Kuadran III). Berapakah nilai dari $\\cos A + \\tan A$?",
         options: ["$-\\frac{7}{15}$", "$\\frac{11}{15}$", "$\\frac{7}{15}$", "$-\\frac{11}{15}$"],
         correctAnswer: 1,
         explanation: "Di Kuadran III: Tan bernilai positif (+4/3) dan Cos bernilai negatif (-3/5). Maka cos A + tan A = (-3/5) + 4/3 = (-9/15) + (20/15) = 11/15.",

@@ -14,8 +14,9 @@ export interface MathViewProps {
 export function normalizeMathText(raw: string): string {
   if (!raw) return "";
 
-  // 1. Ganti typo forward-slash umum: /frac{ -> \frac{, /sqrt{ -> \sqrt{, dsb.
+  // 1. Ganti typo forward-slash & escape formfeed
   let text = raw
+    .replace(/\x0crac/g, "\\frac")
     .replace(/\/frac(?=\{)/g, "\\frac")
     .replace(/\/sqrt(?=[{\[])/g, "\\sqrt")
     .replace(/\/cdot\b/g, "\\cdot")
@@ -30,40 +31,57 @@ export function normalizeMathText(raw: string): string {
   // Ubah simbol akar unicode '√' menjadi '\sqrt' jika ada
   text = text.replace(/√(\d+)/g, "\\sqrt{$1}").replace(/√\s*([a-zA-Z])/g, "\\sqrt{$1}");
 
-  // 2. Jika string belum memiliki pembatas math ($ atau $$ atau \[ atau \()
-  const hasDelimiter = text.includes("$") || text.includes("\\[") || text.includes("\\(");
+  // Pisahkan string berdasarkan pembatas matematika ($$...$$, $...$, \[...\], \(...\))
+  // agar bagian di dalam rumus math yang sah TIDAK pernah diotak-atik atau dipecah!
+  const mathBlockRegex = /(\$\$[\s\S]+?\$\$|\$[^\$\n]+?\$|\\\[[\s\S]+?\\\]|\\\([^\n]+?\\\))/g;
 
-  if (!hasDelimiter) {
-    // Deteksi apakah teks ini mengandung perintah LaTeX atau formula matematika
-    const hasLatexCommands =
-      /\\(frac|sqrt|text|pm|times|cdot|circ|le|ge|ne|approx|sim|alpha|beta|theta|pi|sin|cos|tan|csc|sec|cot|log|ln|lim|sum|int|infty|left|right|begin|quad|qquad)\b/.test(
-        text
-      ) ||
-      /\b\d+\/\d+\b/.test(text) || // Pecahan biasa seperti -7/15, 11/15
-      /\^[\w{]/.test(text) || // Pangkat seperti x^2 atau 3^{n-1}
-      /_[\w{]/.test(text); // Indeks seperti x_1
+  const parts: Array<{ isMath: boolean; text: string }> = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
 
-    if (hasLatexCommands) {
-      // Periksa apakah diawali prefix pilihan soal seperti "A. ", "B. ", "1. ", dsb.
-      const prefixMatch = text.match(/^([A-Ea-e]\.\s*)(.*)$/);
-      if (prefixMatch) {
-        const prefix = prefixMatch[1];
-        const mathBody = prefixMatch[2].trim();
-        return `${prefix}$${mathBody}$`;
-      }
-
-      // Bila seluruh string adalah formula matematika
-      return `$${text.trim()}$`;
+  while ((match = mathBlockRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ isMath: false, text: text.slice(lastIndex, match.index) });
     }
+    parts.push({ isMath: true, text: match[0] });
+    lastIndex = mathBlockRegex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    parts.push({ isMath: false, text: text.slice(lastIndex) });
   }
 
-  // 3. Bila string campuran memiliki \frac{...}{...} atau \sqrt{...} yang tercecer di luar pembatas $
-  // Bungkus ekspresi \frac dan \sqrt bebas tersebut dengan $...$
-  text = text.replace(/(?<!\$)\\frac\{[^{}]*\}\{[^{}]*\}(?!\$)/g, (match) => `$${match}$`);
-  text = text.replace(/(?<!\$)\\sqrt\{[^{}]*\}(?!\$)/g, (match) => `$${match}$`);
-  text = text.replace(/(?<!\$)\\sqrt\[[^{}\]]*\]\{[^{}]*\}(?!\$)/g, (match) => `$${match}$`);
+  // 2. Jika seluruh string TIDAK memiliki pembatas $ sama sekali
+  if (parts.length === 1 && !parts[0].isMath) {
+    const plain = parts[0].text;
+    const hasLatexCommands =
+      /\\(frac|sqrt|text|pm|times|cdot|circ|le|ge|ne|approx|sim|alpha|beta|theta|pi|sin|cos|tan|csc|sec|cot|log|ln|lim|sum|int|infty|left|right|begin|quad|qquad)\b/.test(
+        plain
+      ) ||
+      /\b\d+\/\d+\b/.test(plain) ||
+      /\^[\w{]/.test(plain) ||
+      /_[\w{]/.test(plain);
 
-  return text;
+    if (hasLatexCommands) {
+      const prefixMatch = plain.match(/^([A-Ea-e]\.\s*)(.*)$/);
+      if (prefixMatch) {
+        return `${prefixMatch[1]}$${prefixMatch[2].trim()}$`;
+      }
+      return `$${plain.trim()}$`;
+    }
+    return plain;
+  }
+
+  // 3. Hanya bungkus perintah LaTeX bebas (yang tercecer di luar pembatas $) pada bagian non-math
+  return parts
+    .map((part) => {
+      if (part.isMath) return part.text;
+      let nonMath = part.text;
+      nonMath = nonMath.replace(/\\frac\{[^{}]*\}\{[^{}]*\}/g, (m) => `$${m}$`);
+      nonMath = nonMath.replace(/\\sqrt\[[^{}\]]*\]\{[^{}]*\}/g, (m) => `$${m}$`);
+      nonMath = nonMath.replace(/\\sqrt\{[^{}]*\}/g, (m) => `$${m}$`);
+      return nonMath;
+    })
+    .join("");
 }
 
 /**

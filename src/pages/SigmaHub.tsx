@@ -222,7 +222,7 @@ export default function SigmaHub() {
                       : "border-slate-300 bg-white text-slate-700 shadow-sm"
                   }`}
                 >
-                  {profile?.class_name || "Kelas 11 A"} • MAS Darunnajah 9
+                  {profile?.class_name || "Kelas 11"} • MAS Darunnajah 9
                 </span>
               </div>
 

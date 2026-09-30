@@ -1,9 +1,11 @@
 import { useParams, Link } from "react-router-dom";
-import { BookOpen, Play, CheckCircle, ArrowLeft, Clock, Zap, Sparkles, ChevronRight, Compass, FileText } from "lucide-react";
+import { BookOpen, Play, CheckCircle, ArrowLeft, Clock, Zap, Sparkles, ChevronRight, Compass, FileText, Lock, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { MODULES } from "../lib/sigmaData";
 import { Badge } from "../components/Primitives";
 import { useTheme } from "../lib/theme";
+import { getMaterialMetaSync } from "../lib/pdfStorage";
+import { useStudentProgress, getModuleUnlockStatus } from "../lib/userProgress";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -30,6 +32,12 @@ export default function ModuleDetail() {
   const currentId = moduleId || id;
   const { isDark } = useTheme();
   const moduleData = MODULES.find((m) => m.id === currentId) || MODULES[0];
+  const customMeta = getMaterialMetaSync(moduleData.id);
+  const displayTitle = customMeta?.title || moduleData.title;
+  const displayDesc = customMeta?.description || moduleData.description;
+  const displayDuration = customMeta?.durationMinutes || moduleData.durationMinutes;
+  const displayPages = customMeta?.pageCount || moduleData.slides.length;
+  const isCustomPdf = customMeta?.isCustomPdf;
 
   return (
     <motion.div
@@ -80,15 +88,21 @@ export default function ModuleDetail() {
         <div className="relative z-10">
           <div className="flex flex-wrap items-center gap-2.5">
             <Badge variant="cyan">{moduleData.districtName}</Badge>
-            <span
-              className={`rounded-full border px-2.5 py-0.5 font-mono text-[11px] font-semibold ${
-                isDark
-                  ? "border-white/10 bg-white/5 text-slate-300"
-                  : "border-slate-300 bg-white text-slate-700 shadow-sm"
-              }`}
-            >
-              Target TKA: Skor 75+
-            </span>
+            {isCustomPdf ? (
+              <span className="rounded-full border border-amber-400/50 bg-amber-400/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-amber-300 flex items-center gap-1">
+                <Sparkles size={11} /> Dokumen PDF Guru Aktif
+              </span>
+            ) : (
+              <span
+                className={`rounded-full border px-2.5 py-0.5 font-mono text-[11px] font-semibold ${
+                  isDark
+                    ? "border-white/10 bg-white/5 text-slate-300"
+                    : "border-slate-300 bg-white text-slate-700 shadow-sm"
+                }`}
+              >
+                Target TKA: Skor 75+
+              </span>
+            )}
           </div>
 
           <h1
@@ -96,14 +110,14 @@ export default function ModuleDetail() {
               isDark ? "text-white" : "text-slate-950"
             }`}
           >
-            {moduleData.title}
+            {displayTitle}
           </h1>
           <p
             className={`mt-2.5 text-sm sm:text-base leading-relaxed max-w-2xl ${
               isDark ? "text-slate-300" : "text-slate-600"
             }`}
           >
-            {moduleData.description}
+            {displayDesc}
           </p>
 
           <div
@@ -112,11 +126,11 @@ export default function ModuleDetail() {
             }`}
           >
             <span className="flex items-center gap-1.5">
-              <Clock size={14} className="text-cyan-500" /> {moduleData.durationMinutes} Menit Estimasi
+              <Clock size={14} className="text-cyan-500" /> {displayDuration} Menit Estimasi
             </span>
             <span>•</span>
             <span className="flex items-center gap-1.5">
-              <BookOpen size={14} className="text-indigo-400" /> {moduleData.slides.length} Halaman Materi
+              <BookOpen size={14} className="text-indigo-400" /> {displayPages} Halaman Dokumen
             </span>
             <span>•</span>
             <span className="flex items-center gap-1.5">
@@ -132,7 +146,7 @@ export default function ModuleDetail() {
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-xs font-black bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all cursor-pointer"
               >
                 <FileText size={15} />
-                <span>Buka Modul PDF (13 Halaman)</span>
+                <span>Buka Modul PDF ({displayPages} Halaman)</span>
               </Link>
             </motion.div>
 

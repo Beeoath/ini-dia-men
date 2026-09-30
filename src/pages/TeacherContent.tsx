@@ -1,20 +1,27 @@
 import { useState } from "react";
-import { Layers, Plus, Edit, Clock, Zap, Timer, X, Check } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Layers, Plus, Edit, Clock, Zap, Timer, X, Check, FileText, Eye, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { MODULES, DISTRICTS, SigmaModule } from "../lib/sigmaData";
 import { Badge } from "../components/Primitives";
 import { useTheme } from "../lib/theme";
+import { EditMaterialModal } from "../components/EditMaterialModal";
+import { getMaterialMetaSync } from "../lib/pdfStorage";
 
 export default function TeacherContent() {
   const { isDark } = useTheme();
   const [modulesList] = useState<SigmaModule[]>(MODULES);
   const [selectedDistrict, setSelectedDistrict] = useState<number>(0);
+  const [refreshKey, setRefreshKey] = useState<number>(0);
 
   // Teacher timer configuration modal state
   const [timerModalModule, setTimerModalModule] = useState<SigmaModule | null>(null);
   const [modalTimerEnabled, setModalTimerEnabled] = useState<boolean>(true);
   const [modalMinutes, setModalMinutes] = useState<number>(15);
   const [customInput, setCustomInput] = useState<string>("15");
+
+  // Teacher edit material & upload PDF modal state
+  const [editModalModule, setEditModalModule] = useState<SigmaModule | null>(null);
 
   // Helper to get configured timer info for a module
   const getModuleTimerInfo = (mod: SigmaModule) => {
@@ -129,10 +136,16 @@ export default function TeacherContent() {
       <div className="space-y-4">
         {filtered.map((mod) => {
           const timerInfo = getModuleTimerInfo(mod);
+          const customMeta = getMaterialMetaSync(mod.id);
+          const displayTitle = customMeta?.title || mod.title;
+          const displayDesc = customMeta?.description || mod.description;
+          const displayDuration = customMeta?.durationMinutes || mod.durationMinutes;
+          const displayPages = customMeta?.pageCount || mod.slides.length;
+          const isCustomPdf = customMeta?.isCustomPdf;
 
           return (
             <div
-              key={mod.id}
+              key={`${mod.id}-${refreshKey}`}
               className={`rounded-2xl border p-5 sm:p-6 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
                 isDark
                   ? "border-white/10 bg-[#0d1430]/80 text-slate-100"
@@ -155,20 +168,25 @@ export default function TeacherContent() {
                     <Timer size={10} />
                     {timerInfo.isEnabled ? `Waktu Kuis: ${timerInfo.minutes} Menit` : "Kuis: Bebas (Tanpa Timer)"}
                   </span>
+                  {isCustomPdf && (
+                    <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-400/50 bg-amber-400/10 text-amber-500 dark:text-amber-300">
+                      <FileText size={10} /> PDF Guru Aktif {customMeta?.pdfFileName ? `(${customMeta.pdfFileName})` : ""}
+                    </span>
+                  )}
                 </div>
                 <h3
                   className={`font-display text-base sm:text-lg font-bold ${
                     isDark ? "text-white" : "text-slate-950"
                   }`}
                 >
-                  {mod.title}
+                  {displayTitle}
                 </h3>
                 <p
                   className={`text-xs max-w-xl ${
                     isDark ? "text-slate-400" : "text-slate-600"
                   }`}
                 >
-                  {mod.description}
+                  {displayDesc}
                 </p>
                 <div
                   className={`flex flex-wrap items-center gap-3 pt-2 text-[11px] font-mono ${
@@ -176,10 +194,10 @@ export default function TeacherContent() {
                   }`}
                 >
                   <span className="flex items-center gap-1">
-                    <Clock size={12} /> Materi: {mod.durationMinutes} Menit
+                    <Clock size={12} /> Materi: {displayDuration} Menit
                   </span>
                   <span>•</span>
-                  <span>{mod.slides.length} Slide</span>
+                  <span>{displayPages} Halaman / Slide Dokumen</span>
                   <span>•</span>
                   <span>{mod.quiz.length} Soal Kuis</span>
                 </div>
@@ -200,15 +218,28 @@ export default function TeacherContent() {
 
                 <button
                   type="button"
-                  onClick={() => toast.success("Materi siap dipublikasikan ke siswa.")}
-                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full border text-xs font-semibold transition-all cursor-pointer ${
+                  onClick={() => setEditModalModule(mod)}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full border text-xs font-semibold shadow-sm transition-all cursor-pointer ${
                     isDark
-                      ? "border-white/10 text-slate-200 hover:text-white hover:bg-white/5"
-                      : "border-slate-300 text-slate-700 hover:text-slate-950 hover:bg-slate-100"
+                      ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-300 hover:bg-cyan-400/20 hover:text-white"
+                      : "border-cyan-300 bg-cyan-50 text-cyan-900 hover:bg-cyan-100"
                   }`}
                 >
-                  <Edit size={14} /> Edit Materi
+                  <Edit size={14} /> Edit Materi &amp; Upload PDF
                 </button>
+
+                <Link
+                  to={`/app/materi/${mod.id}`}
+                  target="_blank"
+                  className={`inline-flex items-center gap-1 px-3 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                    isDark
+                      ? "border-white/10 text-slate-300 hover:text-white hover:bg-white/5"
+                      : "border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+                  }`}
+                  title="Lihat tampilan dokumen ini dari sisi siswa"
+                >
+                  <Eye size={13} /> Pratinjau Siswa ↗
+                </Link>
               </div>
             </div>
           );
@@ -343,6 +374,14 @@ export default function TeacherContent() {
           </div>
         </div>
       )}
+
+      {/* Teacher Edit Material & Upload PDF Modal */}
+      <EditMaterialModal
+        isOpen={Boolean(editModalModule)}
+        onClose={() => setEditModalModule(null)}
+        module={editModalModule}
+        onSaved={() => setRefreshKey((k) => k + 1)}
+      />
     </div>
   );
 }

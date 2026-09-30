@@ -1,9 +1,8 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { motion, AnimatePresence, useScroll, useTransform, useSpring } from "framer-motion";
+import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import {
   Play,
-  X,
   ArrowRight,
   Shield,
   GraduationCap,
@@ -12,6 +11,7 @@ import {
   Zap,
   Maximize2,
   Minimize2,
+  Lock,
 } from "lucide-react";
 import { MASCOTS } from "../lib/brand";
 import { JusticeLeagueTitle } from "../components/JusticeLeagueTitle";
@@ -26,8 +26,6 @@ export default function Landing() {
   useLenis();
   const { isDark } = useTheme();
   const { profile } = useAuth();
-  const [trailerOpen, setTrailerOpen] = useState(false);
-  const [trailerTitle, setTrailerTitle] = useState("Official Mission Teaser");
   const [activeMascotKey, setActiveMascotKey] = useState("alpha");
 
   // Section Refs for scroll-linked parallax
@@ -214,7 +212,7 @@ export default function Landing() {
                 Distrik &amp; Misi
               </a>
               <Link
-                to={profile ? "/app/hub" : "/masuk?redirect=/app/hub&notice=peta_belajar"}
+                to={profile ? "/app/hub" : `/masuk?redirect=${encodeURIComponent("/app/hub")}&notice=peta_belajar`}
                 className={`transition-colors ${isDark ? "hover:text-cyan-300" : "hover:text-cyan-700"}`}
               >
                 Peta Belajar
@@ -330,9 +328,10 @@ export default function Landing() {
 
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <Link
-                    to={profile ? "/app/dashboard" : "/masuk?redirect=/app/hub&notice=peta_belajar"}
+                    to={profile ? "/app/dashboard" : `/masuk?redirect=${encodeURIComponent("/app/hub")}&notice=peta_belajar`}
                     className="inline-flex items-center gap-2 rounded-full bg-[#00f0ff] hover:bg-cyan-300 text-slate-950 font-lexend font-bold text-sm px-6 py-2.5 tracking-normal shadow-lg shadow-cyan-400/25 hover:shadow-cyan-400/40 hover:-translate-y-0.5 active:translate-y-0 transition-all"
                   >
+                    {!profile && <Lock size={14} className="text-slate-900" />}
                     <span>{profile ? "Lanjutkan Belajar" : "Jelajahi Distrik"}</span>
                     <ArrowRight size={15} />
                   </Link>
@@ -595,16 +594,16 @@ export default function Landing() {
                 >
                   Tersedia 5 Distrik Pembelajaran
                 </span>
-                <button
-                  type="button"
-                  onClick={() => handleOpenTrailer("Trailer Petualangan Distrik Sigma")}
+                <Link
+                  to={profile ? "/app/hub" : `/masuk?redirect=${encodeURIComponent("/app/hub")}&notice=peta_belajar`}
                   className={`inline-flex items-center gap-2 rounded-full font-semibold text-xs px-4 py-2 shadow transition-all group ${
                     isDark
                       ? "bg-white hover:bg-slate-200 text-slate-950"
                       : "bg-slate-900 hover:bg-slate-800 text-white"
                   }`}
                 >
-                  <span>Lihat Trailer</span>
+                  {!profile && <Lock size={12} className="text-cyan-600 dark:text-cyan-400" />}
+                  <span>{profile ? "Buka Sigma Hub" : "Masuk ke Sigma Hub"}</span>
                   <span
                     className={`grid h-5 w-5 place-items-center rounded-full transition-colors ${
                       isDark
@@ -612,9 +611,9 @@ export default function Landing() {
                         : "bg-white text-slate-950 group-hover:bg-[#00f0ff] group-hover:text-black"
                     }`}
                   >
-                    <Play size={9} fill="currentColor" className="ml-0.5" />
+                    <ArrowRight size={10} className="transition-transform group-hover:translate-x-0.5" />
                   </span>
-                </button>
+                </Link>
               </div>
             </div>
           </motion.div>
@@ -632,7 +631,10 @@ export default function Landing() {
                 isDark ? "border-white/10 bg-slate-900" : "border-slate-200 bg-white"
               }`}
             >
-              <div className="relative aspect-[3/4] w-full overflow-hidden bg-black">
+              <Link
+                to={profile ? "/app/hub?module=mod-aljabar-1" : `/masuk?redirect=${encodeURIComponent("/app/hub?module=mod-aljabar-1")}&notice=peta_belajar`}
+                className="relative aspect-[3/4] w-full overflow-hidden bg-black block cursor-pointer"
+              >
                 <motion.img
                   style={{ y: posterImgY, scale: 1.12 }}
                   src="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=700&auto=format&fit=crop&q=80"
@@ -641,17 +643,16 @@ export default function Landing() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#060914] via-[#060914]/40 to-transparent" />
 
-                <button
-                  type="button"
-                  onClick={() => handleOpenTrailer("Distrik 01: Rahasia Matriks & SPLDV")}
-                  className="absolute inset-0 m-auto grid h-14 w-14 place-items-center rounded-full bg-black/60 border border-white/30 text-white backdrop-blur-md group-hover:scale-110 group-hover:bg-[#00f0ff] group-hover:text-black group-hover:border-transparent transition-all shadow-xl"
-                >
-                  <Play size={20} fill="currentColor" className="ml-0.5" />
-                </button>
-
-                <span className="absolute top-4 left-4 rounded-full bg-cyan-400/90 px-3 py-1 font-lexend text-[10px] font-bold text-slate-950 backdrop-blur-sm">
-                  Distrik 01 &bull; Matrix Realm
-                </span>
+                <div className="absolute top-4 left-4 flex items-center gap-1.5">
+                  <span className="rounded-full bg-cyan-400/90 px-3 py-1 font-lexend text-[10px] font-bold text-slate-950 backdrop-blur-sm shadow-md">
+                    Distrik 01 &bull; Matrix Realm
+                  </span>
+                  {!profile && (
+                    <span className="rounded-full bg-black/60 border border-white/20 px-2 py-0.5 font-mono text-[9px] font-bold text-cyan-300 backdrop-blur-md flex items-center gap-1 shadow">
+                      <Lock size={9} /> Perlu Login
+                    </span>
+                  )}
+                </div>
 
                 <div className="absolute inset-x-0 bottom-0 p-5 font-lexend">
                   <span className="text-[11px] font-semibold text-[#00f0ff]">
@@ -665,12 +666,12 @@ export default function Landing() {
                   </p>
                   <div className="mt-3 flex items-center justify-between text-xs text-slate-400 border-t border-white/10 pt-2 font-medium">
                     <span>15 Soal &bull; 20 Menit</span>
-                    <Link to="/masuk" className="text-white hover:text-cyan-300 font-semibold">
-                      Buka &rarr;
-                    </Link>
+                    <span className="text-white group-hover:text-cyan-300 font-semibold inline-flex items-center gap-1 transition-colors">
+                      {profile ? "Buka di Sigma Hub \u2192" : "Masuk ke Sigma Hub \u2192"}
+                    </span>
                   </div>
                 </div>
-              </div>
+              </Link>
             </motion.div>
 
             {/* Poster 2 */}
@@ -684,7 +685,10 @@ export default function Landing() {
                 isDark ? "border-white/10 bg-slate-900" : "border-slate-200 bg-white"
               }`}
             >
-              <div className="relative aspect-[3/4] w-full overflow-hidden bg-black">
+              <Link
+                to={profile ? "/app/hub?module=mod-aljabar-2" : `/masuk?redirect=${encodeURIComponent("/app/hub?module=mod-aljabar-2")}&notice=peta_belajar`}
+                className="relative aspect-[3/4] w-full overflow-hidden bg-black block cursor-pointer"
+              >
                 <motion.img
                   style={{ y: posterImgY, scale: 1.12 }}
                   src="https://images.unsplash.com/photo-1509228468518-180dd4864904?w=700&auto=format&fit=crop&q=80"
@@ -693,17 +697,16 @@ export default function Landing() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#060914] via-[#060914]/40 to-transparent" />
 
-                <button
-                  type="button"
-                  onClick={() => handleOpenTrailer("Distrik 02: Ekspedisi Komposisi Fungsi")}
-                  className="absolute inset-0 m-auto grid h-14 w-14 place-items-center rounded-full bg-black/60 border border-white/30 text-white backdrop-blur-md group-hover:scale-110 group-hover:bg-[#ffd600] group-hover:text-black group-hover:border-transparent transition-all shadow-xl"
-                >
-                  <Play size={20} fill="currentColor" className="ml-0.5" />
-                </button>
-
-                <span className="absolute top-4 left-4 rounded-full bg-amber-400/90 px-3 py-1 font-lexend text-[10px] font-bold text-slate-950 backdrop-blur-sm">
-                  Distrik 02 &bull; Function Tower
-                </span>
+                <div className="absolute top-4 left-4 flex items-center gap-1.5">
+                  <span className="rounded-full bg-amber-400/90 px-3 py-1 font-lexend text-[10px] font-bold text-slate-950 backdrop-blur-sm shadow-md">
+                    Distrik 02 &bull; Function Tower
+                  </span>
+                  {!profile && (
+                    <span className="rounded-full bg-black/60 border border-white/20 px-2 py-0.5 font-mono text-[9px] font-bold text-amber-300 backdrop-blur-md flex items-center gap-1 shadow">
+                      <Lock size={9} /> Perlu Login
+                    </span>
+                  )}
+                </div>
 
                 <div className="absolute inset-x-0 bottom-0 p-5 font-lexend">
                   <span className="text-[11px] font-semibold text-[#ffd600]">
@@ -717,12 +720,12 @@ export default function Landing() {
                   </p>
                   <div className="mt-3 flex items-center justify-between text-xs text-slate-400 border-t border-white/10 pt-2 font-medium">
                     <span>Syarat: Distrik 01 Lulus</span>
-                    <Link to="/masuk" className="text-white hover:text-amber-300 font-semibold">
-                      Buka &rarr;
-                    </Link>
+                    <span className="text-white group-hover:text-amber-300 font-semibold inline-flex items-center gap-1 transition-colors">
+                      {profile ? "Buka di Sigma Hub \u2192" : "Masuk ke Sigma Hub \u2192"}
+                    </span>
                   </div>
                 </div>
-              </div>
+              </Link>
             </motion.div>
 
             {/* Poster 3 */}
@@ -736,7 +739,10 @@ export default function Landing() {
                 isDark ? "border-white/10 bg-slate-900" : "border-slate-200 bg-white"
               }`}
             >
-              <div className="relative aspect-[3/4] w-full overflow-hidden bg-black">
+              <Link
+                to={profile ? "/app/hub?module=mod-stat-1" : `/masuk?redirect=${encodeURIComponent("/app/hub?module=mod-stat-1")}&notice=peta_belajar`}
+                className="relative aspect-[3/4] w-full overflow-hidden bg-black block cursor-pointer"
+              >
                 <motion.img
                   style={{ y: posterImgY, scale: 1.12 }}
                   src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=700&auto=format&fit=crop&q=80"
@@ -745,17 +751,16 @@ export default function Landing() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#060914] via-[#060914]/40 to-transparent" />
 
-                <button
-                  type="button"
-                  onClick={() => handleOpenTrailer("Distrik 04 & 05: Takdir Kombinasi & Statistika")}
-                  className="absolute inset-0 m-auto grid h-14 w-14 place-items-center rounded-full bg-black/60 border border-white/30 text-white backdrop-blur-md group-hover:scale-110 group-hover:bg-[#ff007a] group-hover:text-white group-hover:border-transparent transition-all shadow-xl"
-                >
-                  <Play size={20} fill="currentColor" className="ml-0.5" />
-                </button>
-
-                <span className="absolute top-4 left-4 rounded-full bg-pink-500/90 px-3 py-1 font-lexend text-[10px] font-bold text-white backdrop-blur-sm">
-                  Distrik 04 &bull; Multiverse Data
-                </span>
+                <div className="absolute top-4 left-4 flex items-center gap-1.5">
+                  <span className="rounded-full bg-pink-500/90 px-3 py-1 font-lexend text-[10px] font-bold text-white backdrop-blur-sm shadow-md">
+                    Distrik 04 &bull; Multiverse Data
+                  </span>
+                  {!profile && (
+                    <span className="rounded-full bg-black/60 border border-white/20 px-2 py-0.5 font-mono text-[9px] font-bold text-pink-300 backdrop-blur-md flex items-center gap-1 shadow">
+                      <Lock size={9} /> Perlu Login
+                    </span>
+                  )}
+                </div>
 
                 <div className="absolute inset-x-0 bottom-0 p-5 font-lexend">
                   <span className="text-[11px] font-semibold text-[#ff007a]">
@@ -769,12 +774,12 @@ export default function Landing() {
                   </p>
                   <div className="mt-3 flex items-center justify-between text-xs text-slate-400 border-t border-white/10 pt-2 font-medium">
                     <span>Kunci Sertifikat Akhir</span>
-                    <Link to="/masuk" className="text-white hover:text-pink-300 font-semibold">
-                      Buka &rarr;
-                    </Link>
+                    <span className="text-white group-hover:text-pink-300 font-semibold inline-flex items-center gap-1 transition-colors">
+                      {profile ? "Buka di Sigma Hub \u2192" : "Masuk ke Sigma Hub \u2192"}
+                    </span>
                   </div>
                 </div>
-              </div>
+              </Link>
             </motion.div>
           </div>
         </motion.section>
@@ -867,7 +872,7 @@ export default function Landing() {
 
           <div className="flex items-center gap-6 text-[11px]">
             <Link
-              to={profile ? "/app/hub" : "/masuk?redirect=/app/hub&notice=peta_belajar"}
+              to={profile ? "/app/hub" : `/masuk?redirect=${encodeURIComponent("/app/hub")}&notice=peta_belajar`}
               className="hover:text-cyan-500 transition-colors"
             >
               Peta Belajar
@@ -887,89 +892,6 @@ export default function Landing() {
           </div>
         </div>
       </footer>
-
-      {/* ========================================================================= */}
-      {/* 5. INTERACTIVE MISSION TRAILER MODAL                                      */}
-      {/* ========================================================================= */}
-      <AnimatePresence>
-        {trailerOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md"
-            onClick={() => setTrailerOpen(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className={`relative w-full max-w-3xl overflow-hidden rounded-3xl border shadow-2xl ${
-                isDark
-                  ? "border-white/20 bg-[#090e21]"
-                  : "border-slate-300 bg-white text-slate-900"
-              }`}
-            >
-              {/* Modal header */}
-              <div
-                className={`flex items-center justify-between border-b px-5 py-3.5 ${
-                  isDark ? "border-white/10 bg-[#060a18]" : "border-slate-200 bg-slate-100"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-                  <span
-                    className={`font-display text-xs font-black uppercase tracking-wider ${
-                      isDark ? "text-white" : "text-slate-900"
-                    }`}
-                  >
-                    {trailerTitle}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setTrailerOpen(false)}
-                  className={`rounded-full p-1 transition-colors ${
-                    isDark
-                      ? "text-slate-400 hover:bg-white/10 hover:text-white"
-                      : "text-slate-600 hover:bg-slate-200 hover:text-slate-900"
-                  }`}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Real Marvel Footage Video Player */}
-              <div className="relative aspect-video w-full bg-black flex flex-col items-center justify-center overflow-hidden">
-                <video
-                  src="/assets/marvel_intro.mp4"
-                  controls
-                  autoPlay
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <div className="p-4 bg-slate-900/90 border-t border-white/10 flex items-center justify-between">
-                <div>
-                  <h4 className="font-display text-sm font-black uppercase text-white tracking-wide">
-                    {trailerTitle}
-                  </h4>
-                  <p className="text-xs text-slate-400">
-                    Official Marvel Cinematic Intro • SIGMA UNPAM (Universitas Pamulang)
-                  </p>
-                </div>
-                <Link
-                  to="/masuk"
-                  onClick={() => setTrailerOpen(false)}
-                  className="inline-flex items-center gap-2 rounded-full bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-5 py-2 shadow-lg transition-all"
-                >
-                  Mulai Misi &rarr;
-                </Link>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

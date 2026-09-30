@@ -51,7 +51,7 @@ export const StudentSpatialLayout: React.FC<StudentSpatialLayoutProps> = ({
   const { isFullScreen, toggleFullScreen } = useFullscreen(true);
 
   const displayName = getUserDisplayName(profile, "Ahmad Rizky Pratama");
-  const displayClass = profile?.class_name || "Kelas 11 A";
+  const displayClass = profile?.class_name || "Kelas 11";
 
   const handleLogout = () => {
     logout();

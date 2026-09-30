@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, ExternalLink, FileText } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 
 interface PdfFullscreenModalProps {
   isOpen: boolean;
@@ -63,27 +63,16 @@ export const PdfFullscreenModal: React.FC<PdfFullscreenModalProps> = ({
       className="fixed inset-0 z-[99999] flex flex-col bg-slate-950 w-screen h-screen overflow-hidden select-none animate-in fade-in duration-150"
       style={{ margin: 0, padding: 0 }}
     >
-      {/* 1. FLOATING HIGH-VISIBILITY CLOSE (X) BUTTON IN THE TOP-RIGHT CORNER */}
+      {/* 1. FLOATING HIGH-VISIBILITY KEMBALI BUTTON IN THE TOP-RIGHT CORNER */}
       <div className="fixed top-3 right-3 sm:top-4 sm:right-6 z-[100000] flex items-center gap-2">
-        <a
-          href={pdfUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-600/60 shadow-lg backdrop-blur-md transition-all"
-        >
-          <ExternalLink size={13} />
-          <span>Buka Tab Baru</span>
-        </a>
-
-        {/* Super visible Red Close (X) button with glowing shadow and clear text */}
         <button
           type="button"
           onClick={onClose}
-          aria-label="Tutup Modal"
-          className="inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-black text-xs sm:text-sm border-2 border-white shadow-[0_0_25px_rgba(225,29,72,0.8)] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+          aria-label="Kembali"
+          className="inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 active:bg-slate-950 text-white font-bold text-xs sm:text-sm border border-cyan-400/50 shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:scale-105 active:scale-95 transition-all cursor-pointer backdrop-blur-md"
         >
-          <X size={20} className="stroke-[3]" />
-          <span>TUTUP (X)</span>
+          <ArrowLeft size={18} className="stroke-[2.5] text-cyan-400" />
+          <span>Kembali</span>
         </button>
       </div>
 
@@ -98,7 +87,7 @@ export const PdfFullscreenModal: React.FC<PdfFullscreenModalProps> = ({
               {title}
             </h3>
             <span className="text-[11px] font-mono text-cyan-400 font-semibold block truncate">
-              Dokumen Resmi Modul Trigonometri · 13 Halaman Lengkap
+              Dokumen Resmi Modul Pembelajaran TKA
             </span>
           </div>
         </div>

@@ -21,7 +21,7 @@ export default function Profile() {
 
   const [activeTab, setActiveTab] = useState<string>("Biodata & Akun");
   const [fullName, setFullName] = useState(profile?.full_name || "Ahmad Rizky Pratama");
-  const [className, setClassName] = useState(profile?.class_name || "Kelas 11 A");
+  const [className, setClassName] = useState(profile?.class_name || "Kelas 11");
   const [nisn, setNisn] = useState("0068192341");
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -254,7 +254,7 @@ export default function Profile() {
                       isDark ? "text-slate-400" : "text-slate-600"
                     }`}
                   >
-                    Rombel / Kelas Belajar
+                    Tingkat / Kelas Belajar
                   </label>
                   <select
                     value={className}
@@ -265,8 +265,7 @@ export default function Profile() {
                         : "border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600"
                     }`}
                   >
-                    <option value="Kelas 11 A">Kelas 11 A (IPA)</option>
-                    <option value="Kelas 11 B">Kelas 11 B (IPA)</option>
+                    <option value="Kelas 11">Kelas 11</option>
                   </select>
                 </div>
 

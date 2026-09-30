@@ -15,6 +15,8 @@ import {
   BookOpen,
   ArrowRight,
   Zap,
+  Lock,
+  AlertCircle,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { MODULES } from "../lib/sigmaData";
@@ -24,6 +26,8 @@ import {
   setLastActiveModule,
   useStudentProgress,
   StudentModuleProgress,
+  getModuleUnlockStatus,
+  MIN_PASSING_SCORE,
 } from "../lib/userProgress";
 
 // User provided math artwork & photography
@@ -451,69 +455,102 @@ export default function StudentDashboard() {
               </div>
 
               <div className="space-y-2">
-                {continueLearningList.map((item, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => {
-                      setLastActiveModule(item.id);
-                      navigate(`/app/materi/${item.id}`);
-                    }}
-                    className={`group rounded-2xl border p-3 flex items-center justify-between transition-all cursor-pointer shadow-sm ${
-                      isDark
-                        ? "bg-[#151724]/85 border-white/10 hover:border-cyan-400/30 hover:bg-[#1a1c2c]"
-                        : "bg-white/95 border-slate-200/90 hover:border-cyan-500/60 hover:bg-cyan-50/20"
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1 pr-3">
-                      <h4
-                        className={`text-xs sm:text-sm font-bold truncate transition-colors ${
-                          isDark
-                            ? "text-white group-hover:text-cyan-300"
-                            : "text-slate-900 group-hover:text-cyan-700"
-                        }`}
-                      >
-                        {item.title}
-                      </h4>
-                      <div
-                        className={`text-[11px] font-medium truncate mt-0.5 ${
-                          isDark ? "text-slate-400" : "text-slate-500"
-                        }`}
-                      >
-                        {item.topic}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <div
-                          className={`h-1.5 w-20 sm:w-28 rounded-full overflow-hidden ${
-                            isDark ? "bg-white/10" : "bg-slate-200"
-                          }`}
-                        >
-                          <div
-                            className="h-full bg-cyan-500 rounded-full"
-                            style={{ width: `${item.progress}%` }}
-                          />
+                {continueLearningList.map((item, idx) => {
+                  const itemLockStatus = getModuleUnlockStatus(item.id, userProgress);
+                  const isItemLocked = !itemLockStatus.isUnlocked;
+
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        if (isItemLocked) {
+                          const fullMod = MODULES.find((m) => m.id === item.id);
+                          if (fullMod) setShowModalDetail(fullMod);
+                          return;
+                        }
+                        setLastActiveModule(item.id);
+                        navigate(`/app/materi/${item.id}`);
+                      }}
+                      className={`group rounded-2xl border p-3 flex items-center justify-between transition-all cursor-pointer shadow-sm ${
+                        isItemLocked
+                          ? "opacity-60 border-slate-700/50 bg-[#121422]/60 hover:opacity-85"
+                          : isDark
+                          ? "bg-[#151724]/85 border-white/10 hover:border-cyan-400/30 hover:bg-[#1a1c2c]"
+                          : "bg-white/95 border-slate-200/90 hover:border-cyan-500/60 hover:bg-cyan-50/20"
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1 pr-3">
+                        <div className="flex items-center gap-1.5">
+                          <h4
+                            className={`text-xs sm:text-sm font-bold truncate transition-colors ${
+                              isItemLocked
+                                ? "text-slate-400"
+                                : isDark
+                                ? "text-white group-hover:text-cyan-300"
+                                : "text-slate-900 group-hover:text-cyan-700"
+                            }`}
+                          >
+                            {item.title}
+                          </h4>
+                          {isItemLocked && (
+                            <span className="rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 px-1.5 py-0.2 text-[9px] font-bold font-mono">
+                              TERKUNCI
+                            </span>
+                          )}
                         </div>
-                        <span
-                          className={`text-[10px] font-mono ${
+                        <div
+                          className={`text-[11px] font-medium truncate mt-0.5 ${
                             isDark ? "text-slate-400" : "text-slate-500"
                           }`}
                         >
-                          {item.subtitle}
-                        </span>
+                          {isItemLocked ? "Butuh Kuis Bab 1 Minimal Nilai 70" : item.topic}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <div
+                            className={`h-1.5 w-20 sm:w-28 rounded-full overflow-hidden ${
+                              isDark ? "bg-white/10" : "bg-slate-200"
+                            }`}
+                          >
+                            <div
+                              className={`h-full rounded-full ${
+                                isItemLocked ? "bg-slate-600" : "bg-cyan-500"
+                              }`}
+                              style={{ width: `${item.progress}%` }}
+                            />
+                          </div>
+                          <span
+                            className={`text-[10px] font-mono ${
+                              isItemLocked
+                                ? "text-amber-400 font-semibold"
+                                : isDark
+                                ? "text-slate-400"
+                                : "text-slate-500"
+                            }`}
+                          >
+                            {isItemLocked ? "Terkunci (Bab 1)" : item.subtitle}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Circular Play / Lock Button */}
+                      <div
+                        className={`h-8 w-8 rounded-full border grid place-items-center shrink-0 ml-2 transition-all ${
+                          isItemLocked
+                            ? "bg-slate-800/80 border-slate-700 text-slate-400"
+                            : isDark
+                            ? "bg-white/10 border-white/15 text-white group-hover:bg-white group-hover:text-black"
+                            : "bg-slate-100 border-slate-200/90 text-slate-700 group-hover:bg-slate-900 group-hover:border-slate-900 group-hover:text-white"
+                        }`}
+                      >
+                        {isItemLocked ? (
+                          <Lock size={12} className="text-slate-400" />
+                        ) : (
+                          <Play size={12} className="fill-current ml-0.5" />
+                        )}
                       </div>
                     </div>
-
-                    {/* Circular Play Button */}
-                    <div
-                      className={`h-8 w-8 rounded-full border grid place-items-center shrink-0 ml-2 transition-all ${
-                        isDark
-                          ? "bg-white/10 border-white/15 text-white group-hover:bg-white group-hover:text-black"
-                          : "bg-slate-100 border-slate-200/90 text-slate-700 group-hover:bg-slate-900 group-hover:border-slate-900 group-hover:text-white"
-                      }`}
-                    >
-                      <Play size={12} className="fill-current ml-0.5" />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -538,17 +575,31 @@ export default function StudentDashboard() {
 
               {/* Top Tags Strip */}
               <div className="relative z-10 flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-3 py-1 text-[11px] font-bold text-white">
-                  {currentHero.tag}
-                </span>
-                {currentHero.categories.map((cat) => (
-                  <span
-                    key={cat}
-                    className="rounded-full bg-black/40 backdrop-blur-md border border-white/15 px-3 py-1 text-[11px] font-medium text-slate-300"
-                  >
-                    {cat}
-                  </span>
-                ))}
+                {(() => {
+                  const heroLockStatus = getModuleUnlockStatus(currentHero.id, userProgress);
+                  const isHeroLocked = !heroLockStatus.isUnlocked;
+
+                  return (
+                    <>
+                      {isHeroLocked && (
+                        <span className="rounded-full bg-rose-500/80 backdrop-blur-md border border-rose-300/40 px-3 py-1 text-[11px] font-bold text-white flex items-center gap-1.5 shadow-sm">
+                          <Lock size={12} /> Terkunci (Butuh Nilai Kuis Bab 1 ≥ 70)
+                        </span>
+                      )}
+                      <span className="rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-3 py-1 text-[11px] font-bold text-white">
+                        {currentHero.tag}
+                      </span>
+                      {currentHero.categories.map((cat) => (
+                        <span
+                          key={cat}
+                          className="rounded-full bg-black/40 backdrop-blur-md border border-white/15 px-3 py-1 text-[11px] font-medium text-slate-300"
+                        >
+                          {cat}
+                        </span>
+                      ))}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Center Big Title & Description */}
@@ -567,29 +618,65 @@ export default function StudentDashboard() {
               {/* Bottom Action Strip */}
               <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 pt-2">
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLastActiveModule(currentHero.id);
-                      navigate(`/app/materi/${currentHero.id}`);
-                    }}
-                    className="rounded-full bg-white text-slate-950 px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-black hover:bg-slate-200 transition-all flex items-center gap-2 shadow-xl shadow-white/20 hover:scale-105 cursor-pointer"
-                  >
-                    <Play size={14} className="fill-black" />
-                    <span>Mulai Belajar</span>
-                  </button>
+                  {(() => {
+                    const heroLockStatus = getModuleUnlockStatus(currentHero.id, userProgress);
+                    const isHeroLocked = !heroLockStatus.isUnlocked;
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLastActiveModule(currentHero.id);
-                      navigate(`/app/kuis/${currentHero.id}`);
-                    }}
-                    className="rounded-full bg-white/15 hover:bg-white/25 border border-white/20 backdrop-blur-md px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold text-white transition-all flex items-center gap-2 cursor-pointer"
-                  >
-                    <Award size={14} />
-                    <span>Uji Kuis (75+)</span>
-                  </button>
+                    if (isHeroLocked) {
+                      return (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLastActiveModule("mod-aljabar-1");
+                              navigate("/app/materi/mod-aljabar-1");
+                            }}
+                            className="rounded-full bg-amber-400 text-slate-950 px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-black hover:bg-amber-300 transition-all flex items-center gap-2 shadow-xl shadow-amber-400/20 hover:scale-105 cursor-pointer"
+                          >
+                            <Lock size={14} className="stroke-[2.5]" />
+                            <span>Terkunci • Selesaikan Bab 1 Dulu</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowModalDetail(currentHero)}
+                            className="rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold text-slate-300 transition-all flex items-center gap-2 cursor-pointer"
+                          >
+                            <Lock size={13} />
+                            <span>Syarat Buka</span>
+                          </button>
+                        </>
+                      );
+                    }
+
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLastActiveModule(currentHero.id);
+                            navigate(`/app/materi/${currentHero.id}`);
+                          }}
+                          className="rounded-full bg-white text-slate-950 px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-black hover:bg-slate-200 transition-all flex items-center gap-2 shadow-xl shadow-white/20 hover:scale-105 cursor-pointer"
+                        >
+                          <Play size={14} className="fill-black" />
+                          <span>Mulai Belajar</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLastActiveModule(currentHero.id);
+                            navigate(`/app/kuis/${currentHero.id}`);
+                          }}
+                          className="rounded-full bg-white/15 hover:bg-white/25 border border-white/20 backdrop-blur-md px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold text-white transition-all flex items-center gap-2 cursor-pointer"
+                        >
+                          <Award size={14} />
+                          <span>Uji Kuis (70+)</span>
+                        </button>
+                      </>
+                    );
+                  })()}
 
                   <Link
                     to={`/app/hub?module=${currentHero.id}&category=${encodeURIComponent(
@@ -669,51 +756,88 @@ export default function StudentDashboard() {
 
               {/* 4 Poster Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-3.5">
-                {filteredRecommendations.map((card) => (
-                  <div
-                    key={card.title}
-                    onClick={() => setShowModalDetail(card)}
-                    className={`group relative rounded-2xl overflow-hidden border aspect-[3/4] p-3 flex flex-col justify-between cursor-pointer hover:scale-[1.02] transition-all duration-300 ${
-                      isDark
-                        ? "border-white/10 bg-[#161826] hover:border-cyan-400/40 shadow-lg"
-                        : "border-slate-200/90 bg-slate-950 hover:border-cyan-400/60 shadow-md hover:shadow-xl"
-                    }`}
-                  >
-                    <img
-                      src={card.img}
-                      alt={card.title}
-                      className="absolute inset-0 w-full h-full object-cover opacity-65 group-hover:opacity-85 group-hover:scale-105 transition-all duration-500"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/40 to-black/20" />
+                {filteredRecommendations.map((card) => {
+                  const cardLockStatus = getModuleUnlockStatus(card.id, userProgress);
+                  const isCardLocked = !cardLockStatus.isUnlocked;
 
-                    {/* Top Category Tag */}
-                    <div className="relative z-10 flex items-center justify-between">
-                      <span className="rounded-full bg-black/60 backdrop-blur-md border border-white/15 px-2.5 py-0.5 text-[10px] font-medium text-slate-200">
-                        {card.tag}
-                      </span>
-                      <span className="text-[10px] font-mono text-cyan-300 font-bold">
-                        {card.match}
-                      </span>
-                    </div>
+                  return (
+                    <div
+                      key={card.title}
+                      onClick={() => setShowModalDetail(card)}
+                      className={`group relative rounded-2xl overflow-hidden border aspect-[3/4] p-3 flex flex-col justify-between cursor-pointer hover:scale-[1.02] transition-all duration-300 ${
+                        isCardLocked
+                          ? "border-slate-700/60 bg-[#121422]/80 opacity-75 hover:opacity-95"
+                          : isDark
+                          ? "border-white/10 bg-[#161826] hover:border-cyan-400/40 shadow-lg"
+                          : "border-slate-200/90 bg-slate-950 hover:border-cyan-400/60 shadow-md hover:shadow-xl"
+                      }`}
+                    >
+                      <img
+                        src={card.img}
+                        alt={card.title}
+                        className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${
+                          isCardLocked
+                            ? "opacity-35 grayscale-[0.35] group-hover:opacity-55"
+                            : "opacity-65 group-hover:opacity-85 group-hover:scale-105"
+                        }`}
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/45 to-black/20" />
 
-                    {/* Bottom Title & Actions */}
-                    <div className="relative z-10 flex items-end justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <h4 className="text-xs sm:text-sm font-black text-white leading-tight group-hover:text-cyan-300 transition-colors truncate">
-                          {card.title}
-                        </h4>
-                        <p className="text-[10px] text-slate-300 truncate mt-0.5">
-                          {card.displayTopic}
-                        </p>
+                      {/* Top Category Tag */}
+                      <div className="relative z-10 flex items-center justify-between">
+                        {isCardLocked ? (
+                          <span className="rounded-full bg-rose-500/80 backdrop-blur-md border border-rose-300/40 px-2 py-0.5 text-[9px] font-bold text-white flex items-center gap-1 shadow-sm">
+                            <Lock size={10} /> Terkunci
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-black/60 backdrop-blur-md border border-white/15 px-2.5 py-0.5 text-[10px] font-medium text-slate-200">
+                            {card.tag}
+                          </span>
+                        )}
+                        <span
+                          className={`text-[10px] font-mono font-bold ${
+                            isCardLocked
+                              ? "text-amber-300 bg-black/60 px-1.5 py-0.5 rounded border border-amber-400/30"
+                              : "text-cyan-300"
+                          }`}
+                        >
+                          {isCardLocked ? "Bab 1 ≥ 70" : card.match}
+                        </span>
                       </div>
 
-                      <div className="h-7 w-7 rounded-full bg-white text-slate-950 grid place-items-center shrink-0 shadow-lg group-hover:scale-110 transition-transform">
-                        <Play size={11} className="fill-black ml-0.5" />
+                      {/* Bottom Title & Actions */}
+                      <div className="relative z-10 flex items-end justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs sm:text-sm font-black text-white leading-tight group-hover:text-cyan-300 transition-colors truncate">
+                            {card.title}
+                          </h4>
+                          <p
+                            className={`text-[10px] truncate mt-0.5 ${
+                              isCardLocked ? "text-amber-300/90 font-medium" : "text-slate-300"
+                            }`}
+                          >
+                            {isCardLocked ? "Butuh Kuis Bab 1 ≥ 70" : card.displayTopic}
+                          </p>
+                        </div>
+
+                        <div
+                          className={`h-7 w-7 rounded-full grid place-items-center shrink-0 shadow-lg group-hover:scale-110 transition-transform ${
+                            isCardLocked
+                              ? "bg-slate-800/90 border border-slate-600 text-slate-300"
+                              : "bg-white text-slate-950"
+                          }`}
+                        >
+                          {isCardLocked ? (
+                            <Lock size={11} className="text-amber-300" />
+                          ) : (
+                            <Play size={11} className="fill-black ml-0.5" />
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -722,123 +846,177 @@ export default function StudentDashboard() {
         {/* ================================================================== */}
         {/* MODAL DETAIL POPUP                                                 */}
         {/* ================================================================== */}
-        {showModalDetail && (
-          <div
-            className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all ${
-              isDark ? "bg-black/75 backdrop-blur-xl" : "bg-slate-900/45 backdrop-blur-md"
-            }`}
-          >
+        {showModalDetail && (() => {
+          const modalLockStatus = getModuleUnlockStatus(showModalDetail.id || "mod-aljabar-1", userProgress);
+          const isModalLocked = !modalLockStatus.isUnlocked;
+
+          return (
             <div
-              className={`relative w-full max-w-lg rounded-3xl border p-6 shadow-2xl overflow-hidden ${
-                isDark
-                  ? "border-white/20 bg-[#161826] text-slate-100"
-                  : "border-slate-200/90 bg-white/95 text-slate-900 backdrop-blur-xl"
+              className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all ${
+                isDark ? "bg-black/75 backdrop-blur-xl" : "bg-slate-900/45 backdrop-blur-md"
               }`}
             >
-              {/* Close Button */}
-              <button
-                type="button"
-                onClick={() => setShowModalDetail(null)}
-                className={`absolute top-4 right-4 h-8 w-8 rounded-full grid place-items-center cursor-pointer transition-colors ${
-                  isDark
-                    ? "bg-white/10 text-slate-300 hover:text-white hover:bg-white/20"
-                    : "bg-slate-100 text-slate-500 hover:text-slate-950 hover:bg-slate-200"
-                }`}
-              >
-                <X size={16} />
-              </button>
-
-              <div className="flex items-center gap-2 mb-2">
-                <span
-                  className={`px-2.5 py-0.5 rounded-full border text-[10px] font-black uppercase ${
-                    isDark
-                      ? "bg-cyan-400/20 text-cyan-300 border-cyan-400/40"
-                      : "bg-cyan-50 text-cyan-700 border-cyan-200"
-                  }`}
-                >
-                  {showModalDetail.tag || "Modul TKA"}
-                </span>
-                <span
-                  className={`text-xs font-mono ${
-                    isDark ? "text-slate-400" : "text-slate-500"
-                  }`}
-                >
-                  MAS Darunnajah 9
-                </span>
-              </div>
-
-              <h3
-                className={`text-xl sm:text-2xl font-black leading-tight ${
-                  isDark ? "text-white" : "text-slate-900"
-                }`}
-              >
-                {showModalDetail.title || showModalDetail.displayTitle}
-              </h3>
-              <p
-                className={`text-xs sm:text-sm mt-2.5 leading-relaxed ${
-                  isDark ? "text-slate-300" : "text-slate-600"
-                }`}
-              >
-                {showModalDetail.fullDescription ||
-                  showModalDetail.description ||
-                  `Pelajari materi pembelajaran dan selesaikan tantangan kuis untuk topik ${
-                    showModalDetail.displayTopic || showModalDetail.title
-                  }.`}
-              </p>
-
               <div
-                className={`mt-6 flex flex-wrap items-center gap-3 pt-3 border-t ${
-                  isDark ? "border-white/10" : "border-slate-200"
+                className={`relative w-full max-w-lg rounded-3xl border p-6 shadow-2xl overflow-hidden ${
+                  isDark
+                    ? "border-white/20 bg-[#161826] text-slate-100"
+                    : "border-slate-200/90 bg-white/95 text-slate-900 backdrop-blur-xl"
                 }`}
               >
+                {/* Close Button */}
                 <button
                   type="button"
-                  onClick={() => {
-                    const targetId = showModalDetail.id || "mod-aljabar-1";
-                    setLastActiveModule(targetId);
-                    navigate(`/app/materi/${targetId}`);
-                  }}
-                  className={`flex-1 rounded-full font-black py-2.5 px-4 text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg ${
+                  onClick={() => setShowModalDetail(null)}
+                  className={`absolute top-4 right-4 h-8 w-8 rounded-full grid place-items-center cursor-pointer transition-colors ${
                     isDark
-                      ? "bg-white text-slate-950 hover:bg-slate-200"
-                      : "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20"
+                      ? "bg-white/10 text-slate-300 hover:text-white hover:bg-white/20"
+                      : "bg-slate-100 text-slate-500 hover:text-slate-950 hover:bg-slate-200"
                   }`}
                 >
-                  <Play size={14} className="fill-current" />
-                  <span>Mulai Belajar</span>
+                  <X size={16} />
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    const targetId = showModalDetail.id || "mod-aljabar-1";
-                    setLastActiveModule(targetId);
-                    navigate(`/app/kuis/${targetId}`);
-                  }}
-                  className={`rounded-full border font-bold py-2.5 px-4 text-xs sm:text-sm transition-all cursor-pointer ${
-                    isDark
-                      ? "bg-white/15 hover:bg-white/25 border-white/20 text-white"
-                      : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800"
-                  }`}
-                >
-                  Uji Kuis
-                </button>
+                <div className="flex items-center gap-2 mb-2">
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full border text-[10px] font-black uppercase ${
+                      isModalLocked
+                        ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                        : isDark
+                        ? "bg-cyan-400/20 text-cyan-300 border-cyan-400/40"
+                        : "bg-cyan-50 text-cyan-700 border-cyan-200"
+                    }`}
+                  >
+                    {isModalLocked ? "TERKUNCI" : showModalDetail.tag || "Modul TKA"}
+                  </span>
+                  <span
+                    className={`text-xs font-mono ${
+                      isDark ? "text-slate-400" : "text-slate-500"
+                    }`}
+                  >
+                    MAS Darunnajah 9
+                  </span>
+                </div>
 
-                <Link
-                  to={`/app/hub?module=${showModalDetail.id || "mod-aljabar-1"}`}
-                  className={`rounded-full border font-bold py-2.5 px-4 text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer ${
-                    isDark
-                      ? "bg-cyan-500/15 border-cyan-400/30 text-cyan-300 hover:bg-cyan-500/25"
-                      : "bg-cyan-50 border-cyan-200 text-cyan-800 hover:bg-cyan-100"
+                <h3
+                  className={`text-xl sm:text-2xl font-black leading-tight ${
+                    isDark ? "text-white" : "text-slate-900"
                   }`}
                 >
-                  <BookOpen size={14} />
-                  <span>Buka di Hub</span>
-                </Link>
+                  {showModalDetail.title || showModalDetail.displayTitle}
+                </h3>
+                <p
+                  className={`text-xs sm:text-sm mt-2.5 leading-relaxed ${
+                    isDark ? "text-slate-300" : "text-slate-600"
+                  }`}
+                >
+                  {showModalDetail.fullDescription ||
+                    showModalDetail.description ||
+                    `Pelajari materi pembelajaran dan selesaikan tantangan kuis untuk topik ${
+                      showModalDetail.displayTopic || showModalDetail.title
+                    }.`}
+                </p>
+
+                {/* Locked Banner Notification */}
+                {isModalLocked && (
+                  <div className="mt-4 p-4 rounded-2xl border border-rose-500/40 bg-rose-500/10 text-slate-200 space-y-2">
+                    <div className="flex items-center gap-2 text-rose-400 font-bold text-xs font-mono uppercase tracking-wider">
+                      <Lock size={15} className="stroke-[2.5]" />
+                      <span>Akses Bab Ini Masih Terkunci</span>
+                    </div>
+                    <p className="text-xs leading-relaxed text-slate-300">
+                      {modalLockStatus.reason}
+                    </p>
+                    <div className="text-[11px] font-mono text-amber-300 font-semibold pt-1 border-t border-rose-500/20 flex items-center gap-1.5">
+                      <AlertCircle size={13} className="shrink-0" />
+                      <span>Syarat Buka: Tuntaskan Bab 1 &amp; Raih Nilai Kuis Minimal 70 (Nilai 7)</span>
+                    </div>
+                  </div>
+                )}
+
+                <div
+                  className={`mt-6 flex flex-wrap items-center gap-3 pt-3 border-t ${
+                    isDark ? "border-white/10" : "border-slate-200"
+                  }`}
+                >
+                  {isModalLocked ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowModalDetail(null);
+                          setLastActiveModule("mod-aljabar-1");
+                          navigate("/app/materi/mod-aljabar-1");
+                        }}
+                        className="flex-1 rounded-full font-black py-2.5 px-4 text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-cyan-400/20 hover:scale-105"
+                      >
+                        <Play size={14} className="fill-black" />
+                        <span>Kerjakan Bab 1 Sekarang</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowModalDetail(null);
+                          setLastActiveModule("mod-aljabar-1");
+                          navigate("/app/kuis/mod-aljabar-1");
+                        }}
+                        className="rounded-full border font-bold py-2.5 px-4 text-xs sm:text-sm transition-all cursor-pointer bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                      >
+                        <span>Kuis Bab 1</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const targetId = showModalDetail.id || "mod-aljabar-1";
+                          setLastActiveModule(targetId);
+                          navigate(`/app/materi/${targetId}`);
+                        }}
+                        className={`flex-1 rounded-full font-black py-2.5 px-4 text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg ${
+                          isDark
+                            ? "bg-white text-slate-950 hover:bg-slate-200"
+                            : "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20"
+                        }`}
+                      >
+                        <Play size={14} className="fill-current" />
+                        <span>Mulai Belajar</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const targetId = showModalDetail.id || "mod-aljabar-1";
+                          setLastActiveModule(targetId);
+                          navigate(`/app/kuis/${targetId}`);
+                        }}
+                        className={`rounded-full border font-bold py-2.5 px-4 text-xs sm:text-sm transition-all cursor-pointer ${
+                          isDark
+                            ? "bg-white/15 hover:bg-white/25 border-white/20 text-white"
+                            : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800"
+                        }`}
+                      >
+                        Uji Kuis
+                      </button>
+
+                      <Link
+                        to={`/app/hub?module=${showModalDetail.id || "mod-aljabar-1"}`}
+                        className={`rounded-full border font-bold py-2.5 px-4 text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer ${
+                          isDark
+                            ? "bg-cyan-500/15 border-cyan-400/30 text-cyan-300 hover:bg-cyan-500/25"
+                            : "bg-cyan-50 border-cyan-200 text-cyan-800 hover:bg-cyan-100"
+                        }`}
+                      >
+                        <BookOpen size={14} />
+                        <span>Buka di Hub</span>
+                      </Link>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </StudentSpatialLayout>
   );

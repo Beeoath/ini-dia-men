@@ -35,7 +35,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [className, setClassName] = useState("Kelas 11 A");
+  const [className, setClassName] = useState("Kelas 11");
   const [teacherCode, setTeacherCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -165,7 +165,7 @@ export default function Login() {
       full_name: role === "teacher" ? "Ust. Ahmad Fauzi, S.Pd. (Demo)" : "Ahmad Rizky Pratama (Demo)",
       email: demoEmail,
       role,
-      class_name: role === "teacher" ? "Guru Pengampu" : "Kelas 11 A",
+      class_name: role === "teacher" ? "Guru Pengampu" : "Kelas 11",
       xp: 250,
       level: 2,
       badges: ["perintis-distrik"],
@@ -196,7 +196,7 @@ export default function Login() {
             demoEmail,
             demoPass,
             role,
-            { class_name: role === "teacher" ? "Guru Pengampu" : "Kelas 11 A", teacher_code: "SIGMAGURU2026" }
+            { class_name: role === "teacher" ? "Guru Pengampu" : "Kelas 11", teacher_code: "SIGMAGURU2026" }
           );
         } catch (regErr: any) {
           if (regErr?.message?.toLowerCase()?.includes("failed to fetch")) {
@@ -465,14 +465,16 @@ export default function Login() {
                 </p>
               </div>
 
-              {/* Notice for Peta Belajar redirect */}
+              {/* Notice for Peta Belajar / Sigma Hub redirect */}
               {(searchParams.get("notice") === "peta_belajar" || searchParams.get("redirect")?.includes("/app/hub")) && (
-                <div className="mb-4 flex items-start gap-2.5 p-3 rounded-2xl bg-cyan-400/10 border border-cyan-400/25 text-cyan-300 text-xs">
-                  <Compass size={18} className="shrink-0 text-cyan-400 mt-0.5" />
+                <div className="mb-4 flex items-start gap-2.5 p-3.5 rounded-2xl bg-cyan-400/10 border border-cyan-400/30 text-cyan-300 text-xs shadow-md">
+                  <div className="grid h-7 w-7 shrink-0 place-items-center rounded-xl bg-cyan-400/20 text-cyan-300 mt-0.5">
+                    <Lock size={15} />
+                  </div>
                   <div className="leading-relaxed">
-                    <span className="font-semibold block text-cyan-200">Akses Peta Belajar Matematika</span>
-                    <span className="text-[11px] text-cyan-300/80">
-                      Silakan masuk atau daftar akun terlebih dahulu untuk membuka 5 Distrik Peta Belajar dan melacak progres belajarmu.
+                    <span className="font-bold block text-cyan-200 text-xs">Login Diperlukan untuk Mengakses Sigma Hub</span>
+                    <span className="text-[11px] text-cyan-300/85 block mt-0.5">
+                      Silakan masuk atau daftar akun terlebih dahulu untuk membuka 5 Distrik Belajar di Sigma Hub dan menyimpan progres serta skor petualanganmu.
                     </span>
                   </div>
                 </div>
@@ -596,10 +598,7 @@ export default function Login() {
                               : "bg-slate-50 border-slate-200 focus:border-slate-400 text-slate-900"
                           }`}
                         >
-                          <option value="Kelas 11 A">Kelas 11 A (Putra)</option>
-                          <option value="Kelas 11 B">Kelas 11 B (Putri)</option>
-                          <option value="Kelas 10 A">Kelas 10 A</option>
-                          <option value="Kelas 12 A">Kelas 12 A</option>
+                          <option value="Kelas 11">Kelas 11</option>
                         </select>
                       </div>
                     ) : (

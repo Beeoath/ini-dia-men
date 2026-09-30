@@ -68,7 +68,7 @@ async function loadProfile(userId: string, email: string, userMetadata?: any): P
     email.split("@")[0];
   const role: "student" | "teacher" =
     userMetadata?.role === "teacher" ? "teacher" : "student";
-  const className = userMetadata?.class_name || (role === "teacher" ? "Guru Pengampu" : "Kelas 11 A");
+  const className = userMetadata?.class_name || (role === "teacher" ? "Guru Pengampu" : "Kelas 11");
   const avatarUrl = userMetadata?.avatar_url || userMetadata?.picture;
 
   try {

@@ -63,44 +63,26 @@
       font-weight: bold;
     }
 
-    .btn-print {
-      background: #d8a436;
-      color: #10223e;
-      border: none;
-      padding: 6px 14px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: bold;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: background 0.2s;
-    }
-
-    .btn-print:hover {
-      background: #c2912a;
-    }
-
-    .btn-close-pdf {
-      background: #e11d48;
-      color: white;
-      border: 1.5px solid white;
-      padding: 6px 14px;
+    .btn-back {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 6px 16px;
       border-radius: 20px;
       font-size: 12px;
-      font-weight: 800;
+      font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 6px;
       transition: all 0.2s;
-      box-shadow: 0 0 12px rgba(225, 29, 72, 0.6);
     }
 
-    .btn-close-pdf:hover {
-      background: #be123c;
-      transform: scale(1.05);
+    .btn-back:hover {
+      background: rgba(0, 240, 255, 0.2);
+      border-color: #00f0ff;
+      color: #00f0ff;
+      transform: scale(1.04);
     }
 
     /* Standard 16:9 PDF Slide Page */
@@ -246,11 +228,8 @@
   <div class="toolbar">
     <span class="toolbar-title">📄 BAB 4: TRIGONOMETRI (Modul Pembelajaran Resmi)</span>
     <span class="toolbar-info">13 Slide / Halaman Lengkap</span>
-    <button class="btn-print" onclick="window.print()">
-      🖨️ Cetak / Simpan PDF
-    </button>
-    <button class="btn-close-pdf" onclick="window.parent.postMessage('CLOSE_PDF_MODAL', '*')">
-      ✕ TUTUP (X)
+    <button class="btn-back" onclick="if (window.parent !== window) { window.parent.postMessage('CLOSE_PDF_MODAL', '*'); } else { window.history.back(); }">
+      ← Kembali
     </button>
   </div>
 
