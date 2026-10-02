@@ -156,7 +156,7 @@ export default function Profile() {
                     isDark ? "text-slate-300" : "text-slate-600"
                   }`}
                 >
-                  {displayClass} • MAS Darunnajah 9 Pamulang
+                  {displayClass} • MAS Darunnajah 9
                 </p>
 
                 <div className="flex items-center justify-center sm:justify-start gap-3 pt-1 text-xs font-mono">
@@ -266,6 +266,12 @@ export default function Profile() {
                     }`}
                   >
                     <option value="Kelas 11">Kelas 11</option>
+                    <option value="Kelas 11 IPA">Kelas 11 IPA</option>
+                    <option value="Kelas 11 IPS">Kelas 11 IPS</option>
+                    <option value="Kelas 11-A">Kelas 11-A</option>
+                    <option value="Kelas 11-B">Kelas 11-B</option>
+                    <option value="Kelas 10">Kelas 10</option>
+                    <option value="Kelas 12">Kelas 12</option>
                   </select>
                 </div>
 

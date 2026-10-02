@@ -330,7 +330,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
           }`}
         >
           <div className="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-            <p>© 2026 SIGMA Matematika · MA Darunnajah 9 Pamulang</p>
+            <p>© 2026 SIGMA Matematika · MA Darunnajah 9</p>
             <p
               className={`font-mono text-[11px] ${
                 isDark ? "text-slate-400" : "text-slate-500"

@@ -4,19 +4,13 @@ import {
   Play,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
   X,
   Sparkles,
-  Award,
-  Clock,
-  Compass,
-  LayoutDashboard,
-  CheckCircle2,
   BookOpen,
   ArrowRight,
   Zap,
   Lock,
-  AlertCircle,
+  LayoutDashboard,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { MODULES } from "../lib/sigmaData";
@@ -179,9 +173,9 @@ const RECOMMENDATIONS = [
     id: "mod-geometri-1",
     districtId: 3,
     tag: "Distrik 03",
-    match: "91% Sesuai",
+    match: "92% Sesuai",
     title: "BAB 3: Geometri",
-    displayTopic: "Dimensi Tiga & Transformasi",
+    displayTopic: "Dimensi Tiga & Vektor",
     img: darkPendantImg,
   },
   {
@@ -420,12 +414,11 @@ export default function StudentDashboard() {
                       </div>
                     </div>
 
-                    {/* Circular Play Button */}
                     <div
-                      className={`relative z-10 h-9 w-9 rounded-full grid place-items-center shrink-0 shadow-md group-hover:scale-110 transition-transform ${
+                      className={`h-9 w-9 rounded-full border grid place-items-center shrink-0 relative z-10 transition-all ${
                         isDark
-                          ? "bg-white text-slate-950 shadow-white/20"
-                          : "bg-slate-900 text-white shadow-slate-900/20"
+                          ? "bg-white/10 border-white/20 text-white group-hover:bg-white group-hover:text-slate-950"
+                          : "bg-slate-100 border-slate-200 text-slate-700 group-hover:bg-slate-900 group-hover:text-white"
                       }`}
                     >
                       <Play size={14} className="fill-current ml-0.5" />
@@ -436,7 +429,7 @@ export default function StudentDashboard() {
             </div>
 
             {/* 2. Lanjutkan Belajar */}
-            <div className="space-y-3 pt-1">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3
                   className={`text-xs sm:text-sm font-bold tracking-wide ${
@@ -446,25 +439,25 @@ export default function StudentDashboard() {
                   Lanjutkan Belajar
                 </h3>
                 <span
-                  className={`font-mono text-[10px] ${
+                  className={`text-[11px] font-mono ${
                     isDark ? "text-slate-400" : "text-slate-500"
                   }`}
                 >
-                  Tersinkron dengan Hub
+                  Progres Riwayat
                 </span>
               </div>
 
-              <div className="space-y-2">
-                {continueLearningList.map((item, idx) => {
-                  const itemLockStatus = getModuleUnlockStatus(item.id, userProgress);
-                  const isItemLocked = !itemLockStatus.isUnlocked;
+              <div className="space-y-2.5">
+                {continueLearningList.map((item) => {
+                  const lockStatus = getModuleUnlockStatus(item.id, userProgress);
+                  const isItemLocked = !lockStatus.isUnlocked;
 
                   return (
                     <div
-                      key={idx}
+                      key={item.id}
                       onClick={() => {
                         if (isItemLocked) {
-                          const fullMod = MODULES.find((m) => m.id === item.id);
+                          const fullMod = SIGMA_HERO_FEATURED.find((m) => m.id === item.id);
                           if (fullMod) setShowModalDetail(fullMod);
                           return;
                         }
@@ -669,51 +662,34 @@ export default function StudentDashboard() {
                             setLastActiveModule(currentHero.id);
                             navigate(`/app/kuis/${currentHero.id}`);
                           }}
-                          className="rounded-full bg-white/15 hover:bg-white/25 border border-white/20 backdrop-blur-md px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold text-white transition-all flex items-center gap-2 cursor-pointer"
+                          className="rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold text-white transition-all flex items-center gap-2 cursor-pointer"
                         >
-                          <Award size={14} />
-                          <span>Uji Kuis (70+)</span>
+                          <Zap size={14} className="text-amber-400" />
+                          <span>Kuis Bab</span>
                         </button>
                       </>
                     );
                   })()}
-
-                  <Link
-                    to={`/app/hub?module=${currentHero.id}&category=${encodeURIComponent(
-                      currentHero.categories[0]
-                    )}`}
-                    className="rounded-full bg-cyan-400/20 hover:bg-cyan-400/30 border border-cyan-400/30 backdrop-blur-md px-4 py-2.5 text-xs font-bold text-cyan-200 transition-all flex items-center gap-1.5 cursor-pointer"
-                    title="Buka silabus lengkap di Sigma Hub"
-                  >
-                    <BookOpen size={14} />
-                    <span className="hidden sm:inline">Buka di Sigma Hub</span>
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowModalDetail(currentHero)}
-                    className="grid h-10 w-10 place-items-center rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md text-slate-200 hover:text-white transition-all cursor-pointer"
-                    title="Rincian Silabus Singkat"
-                  >
-                    <MoreHorizontal size={17} />
-                  </button>
                 </div>
 
-                {/* Carousel Navigation Arrows */}
+                {/* Carousel Controls */}
                 <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono text-slate-400 mr-1">
+                    {heroIdx + 1} / {SIGMA_HERO_FEATURED.length}
+                  </span>
                   <button
                     type="button"
                     onClick={handlePrevHero}
-                    className="grid h-9 w-9 place-items-center rounded-full bg-black/40 hover:bg-white/20 border border-white/15 text-slate-300 hover:text-white transition-all cursor-pointer"
-                    title="Distrik Sebelumnya"
+                    className="grid h-8 w-8 place-items-center rounded-full border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-all cursor-pointer"
+                    title="Sebelumnya"
                   >
                     <ChevronLeft size={16} />
                   </button>
                   <button
                     type="button"
                     onClick={handleNextHero}
-                    className="grid h-9 w-9 place-items-center rounded-full bg-black/40 hover:bg-white/20 border border-white/15 text-slate-300 hover:text-white transition-all cursor-pointer"
-                    title="Distrik Selanjutnya"
+                    className="grid h-8 w-8 place-items-center rounded-full border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-all cursor-pointer"
+                    title="Selanjutnya"
                   >
                     <ChevronRight size={16} />
                   </button>
@@ -817,22 +793,18 @@ export default function StudentDashboard() {
                               isCardLocked ? "text-amber-300/90 font-medium" : "text-slate-300"
                             }`}
                           >
-                            {isCardLocked ? "Butuh Kuis Bab 1 ≥ 70" : card.displayTopic}
+                            {card.displayTopic}
                           </p>
                         </div>
 
                         <div
-                          className={`h-7 w-7 rounded-full grid place-items-center shrink-0 shadow-lg group-hover:scale-110 transition-transform ${
+                          className={`h-7 w-7 rounded-full border grid place-items-center shrink-0 transition-all ${
                             isCardLocked
-                              ? "bg-slate-800/90 border border-slate-600 text-slate-300"
-                              : "bg-white text-slate-950"
+                              ? "border-white/15 bg-white/10 text-slate-400"
+                              : "border-white/30 bg-white/20 text-white group-hover:bg-cyan-400 group-hover:text-slate-950 group-hover:border-cyan-400"
                           }`}
                         >
-                          {isCardLocked ? (
-                            <Lock size={11} className="text-amber-300" />
-                          ) : (
-                            <Play size={11} className="fill-black ml-0.5" />
-                          )}
+                          {isCardLocked ? <Lock size={11} /> : <Play size={10} className="fill-current ml-0.5" />}
                         </div>
                       </div>
                     </div>
@@ -842,182 +814,93 @@ export default function StudentDashboard() {
             </div>
           </div>
         </div>
-
-        {/* ================================================================== */}
-        {/* MODAL DETAIL POPUP                                                 */}
-        {/* ================================================================== */}
-        {showModalDetail && (() => {
-          const modalLockStatus = getModuleUnlockStatus(showModalDetail.id || "mod-aljabar-1", userProgress);
-          const isModalLocked = !modalLockStatus.isUnlocked;
-
-          return (
-            <div
-              className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all ${
-                isDark ? "bg-black/75 backdrop-blur-xl" : "bg-slate-900/45 backdrop-blur-md"
-              }`}
-            >
-              <div
-                className={`relative w-full max-w-lg rounded-3xl border p-6 shadow-2xl overflow-hidden ${
-                  isDark
-                    ? "border-white/20 bg-[#161826] text-slate-100"
-                    : "border-slate-200/90 bg-white/95 text-slate-900 backdrop-blur-xl"
-                }`}
-              >
-                {/* Close Button */}
-                <button
-                  type="button"
-                  onClick={() => setShowModalDetail(null)}
-                  className={`absolute top-4 right-4 h-8 w-8 rounded-full grid place-items-center cursor-pointer transition-colors ${
-                    isDark
-                      ? "bg-white/10 text-slate-300 hover:text-white hover:bg-white/20"
-                      : "bg-slate-100 text-slate-500 hover:text-slate-950 hover:bg-slate-200"
-                  }`}
-                >
-                  <X size={16} />
-                </button>
-
-                <div className="flex items-center gap-2 mb-2">
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full border text-[10px] font-black uppercase ${
-                      isModalLocked
-                        ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
-                        : isDark
-                        ? "bg-cyan-400/20 text-cyan-300 border-cyan-400/40"
-                        : "bg-cyan-50 text-cyan-700 border-cyan-200"
-                    }`}
-                  >
-                    {isModalLocked ? "TERKUNCI" : showModalDetail.tag || "Modul TKA"}
-                  </span>
-                  <span
-                    className={`text-xs font-mono ${
-                      isDark ? "text-slate-400" : "text-slate-500"
-                    }`}
-                  >
-                    MAS Darunnajah 9
-                  </span>
-                </div>
-
-                <h3
-                  className={`text-xl sm:text-2xl font-black leading-tight ${
-                    isDark ? "text-white" : "text-slate-900"
-                  }`}
-                >
-                  {showModalDetail.title || showModalDetail.displayTitle}
-                </h3>
-                <p
-                  className={`text-xs sm:text-sm mt-2.5 leading-relaxed ${
-                    isDark ? "text-slate-300" : "text-slate-600"
-                  }`}
-                >
-                  {showModalDetail.fullDescription ||
-                    showModalDetail.description ||
-                    `Pelajari materi pembelajaran dan selesaikan tantangan kuis untuk topik ${
-                      showModalDetail.displayTopic || showModalDetail.title
-                    }.`}
-                </p>
-
-                {/* Locked Banner Notification */}
-                {isModalLocked && (
-                  <div className="mt-4 p-4 rounded-2xl border border-rose-500/40 bg-rose-500/10 text-slate-200 space-y-2">
-                    <div className="flex items-center gap-2 text-rose-400 font-bold text-xs font-mono uppercase tracking-wider">
-                      <Lock size={15} className="stroke-[2.5]" />
-                      <span>Akses Bab Ini Masih Terkunci</span>
-                    </div>
-                    <p className="text-xs leading-relaxed text-slate-300">
-                      {modalLockStatus.reason}
-                    </p>
-                    <div className="text-[11px] font-mono text-amber-300 font-semibold pt-1 border-t border-rose-500/20 flex items-center gap-1.5">
-                      <AlertCircle size={13} className="shrink-0" />
-                      <span>Syarat Buka: Tuntaskan Bab 1 &amp; Raih Nilai Kuis Minimal 70 (Nilai 7)</span>
-                    </div>
-                  </div>
-                )}
-
-                <div
-                  className={`mt-6 flex flex-wrap items-center gap-3 pt-3 border-t ${
-                    isDark ? "border-white/10" : "border-slate-200"
-                  }`}
-                >
-                  {isModalLocked ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowModalDetail(null);
-                          setLastActiveModule("mod-aljabar-1");
-                          navigate("/app/materi/mod-aljabar-1");
-                        }}
-                        className="flex-1 rounded-full font-black py-2.5 px-4 text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-cyan-400/20 hover:scale-105"
-                      >
-                        <Play size={14} className="fill-black" />
-                        <span>Kerjakan Bab 1 Sekarang</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowModalDetail(null);
-                          setLastActiveModule("mod-aljabar-1");
-                          navigate("/app/kuis/mod-aljabar-1");
-                        }}
-                        className="rounded-full border font-bold py-2.5 px-4 text-xs sm:text-sm transition-all cursor-pointer bg-white/10 hover:bg-white/20 border-white/20 text-white"
-                      >
-                        <span>Kuis Bab 1</span>
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const targetId = showModalDetail.id || "mod-aljabar-1";
-                          setLastActiveModule(targetId);
-                          navigate(`/app/materi/${targetId}`);
-                        }}
-                        className={`flex-1 rounded-full font-black py-2.5 px-4 text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg ${
-                          isDark
-                            ? "bg-white text-slate-950 hover:bg-slate-200"
-                            : "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20"
-                        }`}
-                      >
-                        <Play size={14} className="fill-current" />
-                        <span>Mulai Belajar</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const targetId = showModalDetail.id || "mod-aljabar-1";
-                          setLastActiveModule(targetId);
-                          navigate(`/app/kuis/${targetId}`);
-                        }}
-                        className={`rounded-full border font-bold py-2.5 px-4 text-xs sm:text-sm transition-all cursor-pointer ${
-                          isDark
-                            ? "bg-white/15 hover:bg-white/25 border-white/20 text-white"
-                            : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800"
-                        }`}
-                      >
-                        Uji Kuis
-                      </button>
-
-                      <Link
-                        to={`/app/hub?module=${showModalDetail.id || "mod-aljabar-1"}`}
-                        className={`rounded-full border font-bold py-2.5 px-4 text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer ${
-                          isDark
-                            ? "bg-cyan-500/15 border-cyan-400/30 text-cyan-300 hover:bg-cyan-500/25"
-                            : "bg-cyan-50 border-cyan-200 text-cyan-800 hover:bg-cyan-100"
-                        }`}
-                      >
-                        <BookOpen size={14} />
-                        <span>Buka di Hub</span>
-                      </Link>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
       </div>
+
+      {/* Modal Detail / Unlock Requirement Dialog */}
+      {showModalDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in">
+          <div
+            className={`relative w-full max-w-lg rounded-3xl border p-6 sm:p-7 shadow-2xl transition-all ${
+              isDark
+                ? "bg-[#141624] border-white/15 text-white"
+                : "bg-white border-slate-200 text-slate-900"
+            }`}
+          >
+            <button
+              onClick={() => setShowModalDetail(null)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-2 text-xs font-mono text-cyan-400 uppercase font-bold mb-2">
+              <Sparkles size={14} />
+              <span>Detail Modul TKA</span>
+            </div>
+
+            <h3 className="font-display text-xl sm:text-2xl font-black">
+              {showModalDetail.displayTitle || showModalDetail.title}
+            </h3>
+            <p className="text-xs text-cyan-300 font-mono mt-0.5">
+              {showModalDetail.districtName || showModalDetail.displayTopic}
+            </p>
+
+            <p className={`text-xs sm:text-sm mt-3 leading-relaxed ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+              {showModalDetail.fullDescription || showModalDetail.description || "Modul resmi matematika terintegrasi TKA."}
+            </p>
+
+            {/* Lock Status Info Box */}
+            {(() => {
+              const lockStatus = getModuleUnlockStatus(showModalDetail.id, userProgress);
+              if (!lockStatus.isUnlocked) {
+                return (
+                  <div
+                    className={`mt-4 p-4 rounded-2xl border ${
+                      isDark
+                        ? "bg-rose-500/10 border-rose-500/30 text-rose-200"
+                        : "bg-rose-50 border-rose-200 text-rose-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 font-bold text-xs">
+                      <Lock size={14} className="text-rose-400" />
+                      <span>Modul Ini Masih Terkunci</span>
+                    </div>
+                    <p className="text-xs mt-1 leading-relaxed">
+                      Siswa wajib menyelesaikan <strong>Bab 1 (Bilangan Real)</strong> dan memperoleh nilai kuis minimal <strong>{MIN_PASSING_SCORE}</strong> (nilai 7) sebelum dapat mengakses materi ini.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setShowModalDetail(null);
+                        setLastActiveModule("mod-aljabar-1");
+                        navigate("/app/materi/mod-aljabar-1");
+                      }}
+                      className="mt-3 inline-flex items-center gap-2 rounded-xl bg-amber-400 text-slate-950 font-bold px-4 py-2 text-xs hover:bg-amber-300 transition-all cursor-pointer"
+                    >
+                      <Play size={13} className="fill-black" />
+                      <span>Kerjakan Bab 1 Sekarang</span>
+                    </button>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="mt-5 flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setLastActiveModule(showModalDetail.id);
+                      navigate(`/app/materi/${showModalDetail.id}`);
+                    }}
+                    className="rounded-full bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black px-6 py-2.5 text-xs transition-all flex items-center gap-2 cursor-pointer shadow-lg"
+                  >
+                    <Play size={13} className="fill-black" />
+                    <span>Buka Materi</span>
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </StudentSpatialLayout>
   );
 }

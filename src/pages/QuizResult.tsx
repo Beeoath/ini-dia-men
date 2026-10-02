@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Award, CheckCircle2, XCircle, ArrowRight, RotateCcw, Sparkles, Clock } from "lucide-react";
+import { Award, CheckCircle2, XCircle, ArrowRight, RotateCcw, Sparkles, Clock, AlertCircle } from "lucide-react";
 import { MODULES } from "../lib/sigmaData";
 import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
 import { FormattedMathText } from "../components/MathView";
+import { MIN_PASSING_SCORE } from "../lib/userProgress";
 
 export default function QuizResult() {
   const { id, attemptId } = useParams();
@@ -26,7 +27,7 @@ export default function QuizResult() {
   }, [moduleData.id]);
 
   const score = result?.score ?? 100;
-  const isPassed = score >= 60;
+  const isPassed = score >= MIN_PASSING_SCORE;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 py-4 sm:py-6 px-3 sm:px-0">
@@ -60,7 +61,7 @@ export default function QuizResult() {
               isDark ? "text-white" : "text-slate-950"
             }`}
           >
-            {isPassed ? "Distrik Berhasil Dikuasai!" : "Perlu Belajar Lagi"}
+            {isPassed ? "Distrik Berhasil Dikuasai! (Lulus KKM ≥ 70)" : "Perlu Belajar Lagi (Belum Lulus)"}
           </h1>
         </div>
 
@@ -79,7 +80,7 @@ export default function QuizResult() {
               isDark ? "text-slate-400" : "text-slate-500"
             }`}
           >
-            Nilai Akhir • {isPassed ? "LULUS KKM (Tuntas)" : "Belum Mencapai KKM"}
+            Nilai Akhir • {isPassed ? "LULUS KKM (Tuntas • Nilai ≥ 70)" : "Belum Mencapai KKM (Minimal Nilai 70 / 7)"}
           </p>
         </div>
 
@@ -89,9 +90,13 @@ export default function QuizResult() {
           </div>
         )}
 
-        {isPassed && (
+        {isPassed ? (
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-1.5 font-mono text-xs font-bold text-emerald-400 shadow-sm">
-            <Sparkles size={14} /> Modul Telah Berhasil Diselesaikan!
+            <Sparkles size={14} /> Nilai ≥ 70 Tercapai! Bab Berikutnya Telah Terbuka!
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-2 rounded-full border border-rose-400/40 bg-rose-400/10 px-4 py-1.5 font-mono text-xs font-bold text-rose-400 shadow-sm">
+            <AlertCircle size={14} /> Nilai belum mencapai 70 (nilai 7). Bab selanjutnya belum terbuka, silakan coba lagi.
           </div>
         )}
 
@@ -106,6 +111,16 @@ export default function QuizResult() {
           >
             <RotateCcw size={15} /> Coba Lagi
           </Link>
+
+          {isPassed && (moduleData.id === "mod-aljabar-1" || moduleData.districtId === 1) && (
+            <Link
+              to="/app/materi/mod-aljabar-2"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-black shadow-lg transition-all cursor-pointer bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 hover:opacity-95 shadow-emerald-500/20"
+            >
+              Lanjut ke Bab 2: Aljabar <ArrowRight size={15} />
+            </Link>
+          )}
+
           <Link
             to="/app/dashboard"
             className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-black shadow-lg transition-all cursor-pointer ${

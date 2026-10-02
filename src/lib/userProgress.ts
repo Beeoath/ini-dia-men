@@ -297,5 +297,5 @@ export function useStudentProgress() {
     return () => window.removeEventListener("sigma_progress_updated", refreshProgress);
   }, [refreshProgress]);
 
-  return { progressMap, loading, refreshProgress };
+  return { progressMap, userProgress: progressMap, loading, refreshProgress };
 }

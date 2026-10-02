@@ -6,11 +6,14 @@ import {
   Play,
   Maximize2,
   Sparkles,
+  Lock,
+  AlertCircle,
 } from "lucide-react";
 import { MODULES } from "../lib/sigmaData";
 import { useTheme } from "../lib/theme";
 import { PdfFullscreenModal } from "../components/PdfFullscreenModal";
 import { getModulePdfUrl } from "../lib/pdfStorage";
+import { useStudentProgress, getModuleUnlockStatus } from "../lib/userProgress";
 
 export default function Material() {
   const { id, moduleId } = useParams();
@@ -18,6 +21,9 @@ export default function Material() {
   const { isDark } = useTheme();
 
   const moduleData = MODULES.find((m) => m.id === currentId) || MODULES[0];
+  const { userProgress } = useStudentProgress();
+  const lockStatus = getModuleUnlockStatus(moduleData.id, userProgress);
+  const isLocked = !lockStatus.isUnlocked;
 
   // Default system fallback deck based on districtId
   let defaultPdfUrl = "/modul_bilangan.html";
@@ -97,6 +103,86 @@ export default function Material() {
       window.removeEventListener("sigma_material_updated", handleUpdate);
     };
   }, [moduleData.id, defaultPdfUrl, defaultPdfTitle, defaultDescription, defaultBadge]);
+
+  if (isLocked) {
+    return (
+      <div className="max-w-xl mx-auto py-12 px-4 text-center space-y-6">
+        <div
+          className={`inline-flex h-20 w-20 items-center justify-center rounded-3xl border shadow-lg ${
+            isDark
+              ? "bg-rose-500/10 border-rose-500/30 text-rose-400"
+              : "bg-rose-50 border-rose-200 text-rose-600"
+          }`}
+        >
+          <Lock size={38} className="stroke-[2.5]" />
+        </div>
+
+        <div className="space-y-2">
+          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold border border-rose-500/30 bg-rose-500/10 text-rose-400 uppercase">
+            Akses Bab Terkunci
+          </span>
+          <h1
+            className={`font-display text-2xl sm:text-3xl font-black ${
+              isDark ? "text-white" : "text-slate-950"
+            }`}
+          >
+            {moduleData.title}
+          </h1>
+          <p
+            className={`text-sm leading-relaxed max-w-md mx-auto pt-2 ${
+              isDark ? "text-slate-300" : "text-slate-600"
+            }`}
+          >
+            {lockStatus.reason}
+          </p>
+        </div>
+
+        <div
+          className={`p-4 rounded-2xl border text-xs sm:text-sm font-medium space-y-1.5 max-w-md mx-auto ${
+            isDark
+              ? "bg-amber-400/10 border-amber-400/30 text-amber-200"
+              : "bg-amber-50 border-amber-200 text-amber-900"
+          }`}
+        >
+          <div className="flex items-center justify-center gap-1.5 font-bold font-mono">
+            <AlertCircle size={15} />
+            <span>Syarat Kelulusan KKM</span>
+          </div>
+          <p className="text-xs">
+            Selesaikan Bab 1 (Bilangan) dan raih nilai kuis minimal 70 (nilai 7) terlebih dahulu untuk membuka materi ini.
+          </p>
+        </div>
+
+        <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to="/app/materi/mod-aljabar-1"
+            className="px-6 py-3 rounded-full text-xs font-black bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition-all shadow-lg shadow-cyan-400/20 flex items-center gap-2 cursor-pointer"
+          >
+            <Play size={14} className="fill-black" />
+            <span>Kerjakan Bab 1 Sekarang</span>
+          </Link>
+          <Link
+            to="/app/kuis/mod-aljabar-1"
+            className={`px-5 py-3 rounded-full text-xs font-bold border transition-all cursor-pointer ${
+              isDark
+                ? "border-white/15 bg-white/5 text-slate-200 hover:text-white"
+                : "border-slate-300 bg-white text-slate-700 hover:text-slate-950"
+            }`}
+          >
+            <span>Kuis Bab 1 (Nilai ≥ 70)</span>
+          </Link>
+          <Link
+            to="/app/dashboard"
+            className={`px-5 py-3 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              isDark ? "text-slate-400 hover:text-white" : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            Kembali ke Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 py-4 sm:py-6 px-3 sm:px-0">

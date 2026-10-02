@@ -690,7 +690,7 @@ export default function SigmaHub() {
                                   Selesaikan Distrik 0{dist.id - 1} untuk membuka.
                                 </p>
                                 <p className="text-xs leading-relaxed text-slate-400 dark:text-slate-500">
-                                  Tuntaskan modul &amp; raih skor kelulusan kuis minimal 75 pada distrik sebelumnya untuk membuka akses.
+                                  Tuntaskan modul &amp; raih skor kelulusan kuis minimal 70 (nilai 7) pada distrik sebelumnya untuk membuka akses.
                                 </p>
                               </div>
                             </div>

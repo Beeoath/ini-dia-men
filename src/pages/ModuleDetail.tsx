@@ -38,6 +38,9 @@ export default function ModuleDetail() {
   const displayDuration = customMeta?.durationMinutes || moduleData.durationMinutes;
   const displayPages = customMeta?.pageCount || moduleData.slides.length;
   const isCustomPdf = customMeta?.isCustomPdf;
+  const { userProgress } = useStudentProgress();
+  const lockStatus = getModuleUnlockStatus(moduleData.id, userProgress);
+  const isLocked = !lockStatus.isUnlocked;
 
   return (
     <motion.div
@@ -88,6 +91,11 @@ export default function ModuleDetail() {
         <div className="relative z-10">
           <div className="flex flex-wrap items-center gap-2.5">
             <Badge variant="cyan">{moduleData.districtName}</Badge>
+            {isLocked && (
+              <span className="rounded-full border border-rose-500/50 bg-rose-500/20 px-2.5 py-0.5 font-mono text-[11px] font-bold text-rose-300 flex items-center gap-1.5 shadow-sm">
+                <Lock size={12} /> Modul Terkunci (Butuh Nilai Bab 1 ≥ 70)
+              </span>
+            )}
             {isCustomPdf ? (
               <span className="rounded-full border border-amber-400/50 bg-amber-400/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-amber-300 flex items-center gap-1">
                 <Sparkles size={11} /> Dokumen PDF Guru Aktif
@@ -100,7 +108,7 @@ export default function ModuleDetail() {
                     : "border-slate-300 bg-white text-slate-700 shadow-sm"
                 }`}
               >
-                Target TKA: Skor 75+
+                Target TKA: Skor 70+
               </span>
             )}
           </div>
@@ -119,6 +127,23 @@ export default function ModuleDetail() {
           >
             {displayDesc}
           </p>
+
+          {/* Locked Notice Banner */}
+          {isLocked && (
+            <div className="mt-5 p-4 rounded-2xl border border-rose-500/40 bg-rose-500/10 text-slate-200 space-y-2">
+              <div className="flex items-center gap-2 text-rose-400 font-bold text-xs font-mono uppercase tracking-wider">
+                <Lock size={15} className="stroke-[2.5]" />
+                <span>Akses Bab Ini Masih Terkunci</span>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                {lockStatus.reason}
+              </p>
+              <div className="text-[11px] font-mono text-amber-300 font-semibold pt-1 border-t border-rose-500/20 flex items-center gap-1.5">
+                <AlertCircle size={13} className="shrink-0" />
+                <span>Syarat Kelulusan: Tuntaskan Bab 1 (Bilangan) dan raih nilai kuis minimal 70 (nilai 7)</span>
+              </div>
+            </div>
+          )}
 
           <div
             className={`mt-6 flex flex-wrap items-center gap-4 text-xs font-mono border-y py-3.5 ${
@@ -140,43 +165,72 @@ export default function ModuleDetail() {
 
           {/* Action Buttons with Micro-interactions */}
           <div className="mt-8 flex flex-wrap items-center gap-3.5">
-            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-              <Link
-                to={`/app/materi/${moduleData.id}`}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-xs font-black bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all cursor-pointer"
-              >
-                <FileText size={15} />
-                <span>Buka Modul PDF ({displayPages} Halaman)</span>
-              </Link>
-            </motion.div>
+            {isLocked ? (
+              <>
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Link
+                    to="/app/materi/mod-aljabar-1"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-xs font-black bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all cursor-pointer"
+                  >
+                    <Play size={15} className="fill-black" />
+                    <span>Kerjakan Bab 1 Sekarang</span>
+                  </Link>
+                </motion.div>
 
-            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-              <Link
-                to={`/app/kuis/${moduleData.id}`}
-                className={`inline-flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold border transition-all cursor-pointer ${
-                  isDark
-                    ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-300 hover:bg-cyan-400/20"
-                    : "border-cyan-500/40 bg-cyan-50 text-cyan-800 hover:bg-cyan-100 shadow-sm"
-                }`}
-              >
-                <Play size={15} fill="currentColor" />
-                <span>Mulai Kuis TKA</span>
-              </Link>
-            </motion.div>
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Link
+                    to="/app/kuis/mod-aljabar-1"
+                    className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs font-bold border transition-all cursor-pointer ${
+                      isDark
+                        ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-300 hover:bg-cyan-400/20"
+                        : "border-cyan-500/40 bg-cyan-50 text-cyan-800 hover:bg-cyan-100 shadow-sm"
+                    }`}
+                  >
+                    <span>Kuis Bab 1 (Nilai ≥ 70)</span>
+                  </Link>
+                </motion.div>
+              </>
+            ) : (
+              <>
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Link
+                    to={`/app/materi/${moduleData.id}`}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-xs font-black bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all cursor-pointer"
+                  >
+                    <FileText size={15} />
+                    <span>Buka Modul PDF ({displayPages} Halaman)</span>
+                  </Link>
+                </motion.div>
 
-            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-              <Link
-                to={`/app/kuis/${moduleData.id}`}
-                className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
-                  isDark
-                    ? "border-white/15 bg-white/5 text-slate-200 hover:text-white hover:bg-white/10"
-                    : "border-slate-300 bg-white text-slate-700 hover:text-slate-950 hover:bg-slate-100 shadow-sm"
-                }`}
-              >
-                <span>Langsung Uji Kuis</span>
-                <ChevronRight size={14} />
-              </Link>
-            </motion.div>
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Link
+                    to={`/app/kuis/${moduleData.id}`}
+                    className={`inline-flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold border transition-all cursor-pointer ${
+                      isDark
+                        ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-300 hover:bg-cyan-400/20"
+                        : "border-cyan-500/40 bg-cyan-50 text-cyan-800 hover:bg-cyan-100 shadow-sm"
+                    }`}
+                  >
+                    <Play size={15} fill="currentColor" />
+                    <span>Mulai Kuis TKA</span>
+                  </Link>
+                </motion.div>
+
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Link
+                    to={`/app/kuis/${moduleData.id}`}
+                    className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                      isDark
+                        ? "border-white/15 bg-white/5 text-slate-200 hover:text-white hover:bg-white/10"
+                        : "border-slate-300 bg-white text-slate-700 hover:text-slate-950 hover:bg-slate-100 shadow-sm"
+                    }`}
+                  >
+                    <span>Langsung Uji Kuis</span>
+                    <ChevronRight size={14} />
+                  </Link>
+                </motion.div>
+              </>
+            )}
           </div>
         </div>
       </motion.div>
