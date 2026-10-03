@@ -30,38 +30,68 @@ interface AuthContextType {
   ) => Promise<UserProfile>;
   logout: () => void;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  addXp: (amount: number) => Promise<void>;
+  refreshProfile: () => Promise<void>;
   setDemoProfile: (demoProfile: UserProfile | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Ambil baris profiles + email dari session, gabungin jadi satu object UserProfile
+// Ambil baris profiles dari database dengan retry (2-3x, jeda 500ms) tanpa insert/upsert client
 async function loadProfile(userId: string, email: string, userMetadata?: any): Promise<UserProfile> {
-  try {
-    const { data: profileRow } = await supabase
-      .from("profiles")
-      .select("id, full_name, role, class_name, avatar_url, xp, level")
-      .eq("id", userId)
-      .maybeSingle();
+  const maxRetries = 3;
+  let profileRow: any = null;
 
-    if (profileRow) {
-      const { data: badgeRows } = await supabase
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, role, class_name, avatar_url, xp, level")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error(`[loadProfile] Supabase error saat memuat profil (percobaan ${attempt}/${maxRetries}):`, error);
+      } else if (data) {
+        profileRow = data;
+        break;
+      }
+    } catch (fetchErr) {
+      console.error(`[loadProfile] Network exception saat memuat profil (percobaan ${attempt}/${maxRetries}):`, fetchErr);
+    }
+
+    if (attempt < maxRetries) {
+      // Jeda 500ms menunggu trigger database selesai membuat profile
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+
+  if (profileRow) {
+    let badges: string[] = [];
+    try {
+      const { data: badgeRows, error: badgeErr } = await supabase
         .from("user_badges")
         .select("badge")
         .eq("user_id", userId);
 
-      return {
-        ...profileRow,
-        email,
-        badges: (badgeRows || []).map((b) => b.badge),
-      };
+      if (badgeErr) {
+        console.error("[loadProfile] Supabase error saat memuat user_badges:", badgeErr);
+      } else if (badgeRows) {
+        badges = badgeRows.map((b: any) => b.badge);
+      }
+    } catch (badgeCatch) {
+      console.error("[loadProfile] Exception saat memuat user_badges:", badgeCatch);
     }
-  } catch (fetchErr) {
-    console.warn("loadProfile network check:", fetchErr);
+
+    return {
+      ...profileRow,
+      email,
+      badges,
+    };
   }
 
-  // Jika profileRow belum ada (misalnya dari Google OAuth atau trigger DB belum berjalan)
-  // Ambil informasi dari userMetadata Google
+  // Fallback ke metadata sesi HANYA di memori klien (TIDAK melakukan insert/upsert ke profiles)
+  console.warn("[loadProfile] Profil belum ditemukan di database setelah 3x percobaan (menunggu trigger). Menggunakan data sesi sementara.");
   const fullName =
     userMetadata?.full_name ||
     userMetadata?.name ||
@@ -70,32 +100,6 @@ async function loadProfile(userId: string, email: string, userMetadata?: any): P
     userMetadata?.role === "teacher" ? "teacher" : "student";
   const className = userMetadata?.class_name || (role === "teacher" ? "Guru Pengampu" : "Kelas 11");
   const avatarUrl = userMetadata?.avatar_url || userMetadata?.picture;
-
-  try {
-    const { data: createdRow, error: insertError } = await supabase
-      .from("profiles")
-      .insert({
-        id: userId,
-        full_name: fullName,
-        role,
-        class_name: className,
-        avatar_url: avatarUrl,
-        xp: 0,
-        level: 1,
-      })
-      .select("id, full_name, role, class_name, avatar_url, xp, level")
-      .maybeSingle();
-
-    if (!insertError && createdRow) {
-      return {
-        ...createdRow,
-        email,
-        badges: [],
-      };
-    }
-  } catch (err) {
-    console.warn("Auto-insert profile fallback:", err);
-  }
 
   return {
     id: userId,
@@ -287,18 +291,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!profile) return;
-    const { email, badges, ...rest } = updates;
     const isDemoId = profile.id.startsWith("00000000-0000-0000-0000-") || profile.id.startsWith("demo-");
-    if (!isDemoId) {
+
+    // Sesuai aturan keamanan Supabase baru:
+    // Client HANYA boleh UPDATE kolom: full_name, class_name, avatar_url.
+    // Kolom role, xp, dan level tidak boleh diubah langsung dari client.
+    const allowedFields: { full_name?: string; class_name?: string; avatar_url?: string } = {};
+    if (updates.full_name !== undefined) allowedFields.full_name = updates.full_name;
+    if (updates.class_name !== undefined) allowedFields.class_name = updates.class_name;
+    if (updates.avatar_url !== undefined) {
+      allowedFields.avatar_url = updates.avatar_url;
+    } else if (updates.avatar !== undefined) {
+      allowedFields.avatar_url = updates.avatar;
+    }
+
+    if (!isDemoId && Object.keys(allowedFields).length > 0) {
       try {
-        const { error } = await supabase.from("profiles").update(rest).eq("id", profile.id);
-        if (error) console.warn("Supabase update profile notice:", error.message);
+        const { error } = await supabase.from("profiles").update(allowedFields).eq("id", profile.id);
+        if (error) {
+          console.error("[updateProfile] Supabase error saat update profil:", error);
+        }
       } catch (e) {
-        console.warn("Offline profile update:", e);
+        console.error("[updateProfile] Exception saat update profil:", e);
       }
     }
+
     setProfile((prev) => {
-      const updated = prev ? { ...prev, ...updates } : prev;
+      const updated = prev ? { ...prev, ...allowedFields } : prev;
       if (updated && sessionStorage.getItem("sigma_demo_user")) {
         try {
           sessionStorage.setItem("sigma_demo_user", JSON.stringify(updated));
@@ -308,6 +327,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return updated;
     });
+  };
+
+  const addXp = async (amount: number) => {
+    if (!profile || amount <= 0) return;
+    const isDemoId = profile.id.startsWith("00000000-0000-0000-0000-") || profile.id.startsWith("demo-");
+
+    if (isDemoId) {
+      setProfile((prev) => {
+        if (!prev) return null;
+        const newXp = (prev.xp || 0) + amount;
+        const newLevel = Math.floor(newXp / 100) + 1;
+        const updated = { ...prev, xp: newXp, level: newLevel };
+        try {
+          sessionStorage.setItem("sigma_demo_user", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+      return;
+    }
+
+    try {
+      // Sesuai fungsi RPC database baru: add_xp(amount int) maksimal 100 per panggilan
+      let remaining = Math.round(amount);
+      while (remaining > 0) {
+        const chunk = Math.min(remaining, 100);
+        const { error } = await supabase.rpc("add_xp", { amount: chunk });
+        if (error) {
+          console.error(`[addXp] Supabase error saat memanggil RPC add_xp (amount=${chunk}):`, error);
+          break;
+        }
+        remaining -= chunk;
+      }
+
+      await refreshProfile();
+    } catch (e) {
+      console.error("[addXp] Exception saat menambah XP via RPC add_xp:", e);
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (!profile) return;
+    const isDemoId = profile.id.startsWith("00000000-0000-0000-0000-") || profile.id.startsWith("demo-");
+    if (isDemoId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, role, class_name, avatar_url, xp, level")
+        .eq("id", profile.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("[refreshProfile] Supabase error saat memuat profil terbaru:", error);
+      } else if (data) {
+        setProfile((prev) => (prev ? { ...prev, ...data } : null));
+      }
+    } catch (err) {
+      console.error("[refreshProfile] Exception saat memuat ulang profil:", err);
+    }
   };
 
   return (
@@ -320,6 +398,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         logout,
         updateProfile,
+        addXp,
+        refreshProfile,
         setDemoProfile,
       }}
     >
@@ -327,6 +407,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
+
+// Fungsi helper mandiri untuk memanggil RPC add_xp dari mana saja (maksimal 100 per panggilan)
+export async function addXpRpc(amount: number): Promise<void> {
+  if (amount <= 0) return;
+  try {
+    let remaining = Math.round(amount);
+    while (remaining > 0) {
+      const chunk = Math.min(remaining, 100);
+      const { error } = await supabase.rpc("add_xp", { amount: chunk });
+      if (error) {
+        console.error(`[addXpRpc] Supabase error saat memanggil RPC add_xp (chunk=${chunk}):`, error);
+        break;
+      }
+      remaining -= chunk;
+    }
+  } catch (err) {
+    console.error("[addXpRpc] Exception saat memanggil RPC add_xp:", err);
+  }
+}
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
