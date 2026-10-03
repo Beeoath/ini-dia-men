@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Send, Clock, Lock, AlertCircle, Play } from "lucide-react";
+import { ArrowLeft, Send, Clock, Lock, AlertCircle, Play, Sparkles } from "lucide-react";
 import { MODULES } from "../lib/sigmaData";
 import { ProgressBar } from "../components/Primitives";
 import { useTheme } from "../lib/theme";
 import { recordQuizCompletion, useStudentProgress, getModuleUnlockStatus } from "../lib/userProgress";
 import { FormattedMathText } from "../components/MathView";
 import { useAuth } from "../lib/auth";
+import { getAssessmentResult } from "../lib/testAssessmentData";
 
 export default function Quiz() {
   const { id, moduleId } = useParams();
@@ -101,6 +102,64 @@ export default function Quiz() {
     const s = secs % 60;
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
+
+  const isBab1 = moduleData.id === "mod-aljabar-1" || moduleData.districtId === 1;
+  const pretest = isBab1 ? getAssessmentResult("mod-aljabar-1", "pretest") : null;
+  const isPretestMissing = isBab1 && !pretest;
+
+  if (isPretestMissing) {
+    return (
+      <div className="max-w-xl mx-auto py-12 px-4 text-center space-y-6">
+        <div
+          className={`inline-flex h-20 w-20 items-center justify-center rounded-3xl border shadow-lg ${
+            isDark
+              ? "bg-cyan-500/10 border-cyan-400/30 text-cyan-400 shadow-[0_0_30px_rgba(0,240,255,0.25)]"
+              : "bg-cyan-50 border-cyan-200 text-cyan-700 shadow-cyan-100"
+          }`}
+        >
+          <Lock size={38} className="stroke-[2.5]" />
+        </div>
+
+        <div className="space-y-2">
+          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold border border-cyan-400/40 bg-cyan-400/10 text-cyan-400 uppercase tracking-wider">
+            Pre-Test Wajib Diisi Terlebih Dahulu
+          </span>
+          <h1
+            className={`font-display text-2xl sm:text-3xl font-black ${
+              isDark ? "text-white" : "text-slate-950"
+            }`}
+          >
+            Kuis {moduleData.title}
+          </h1>
+          <p
+            className={`text-sm leading-relaxed max-w-md mx-auto pt-2 ${
+              isDark ? "text-slate-300" : "text-slate-600"
+            }`}
+          >
+            Sebelum mengerjakan kuis evaluasi Bab 1, kamu <strong>wajib mengisi Pre-Test Persepsi & Pengalaman Belajar</strong> terlebih dahulu.
+          </p>
+        </div>
+
+        <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to="/app/pretest/mod-aljabar-1"
+            className="px-7 py-3 rounded-full text-xs font-black bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition-all shadow-lg shadow-cyan-400/30 flex items-center gap-2 cursor-pointer"
+          >
+            <Sparkles size={15} />
+            <span>Isi Pre-Test Sekarang</span>
+          </Link>
+          <Link
+            to={`/app/modul/${moduleData.id}`}
+            className={`px-5 py-3 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+              isDark ? "border-white/10 text-slate-300 hover:text-white" : "border-slate-300 text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Kembali ke Detail Bab
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (isLocked) {
     return (

@@ -14,6 +14,8 @@ import Material from "./pages/Material";
 import ModuleDetail from "./pages/ModuleDetail";
 import Quiz from "./pages/Quiz";
 import QuizResult from "./pages/QuizResult";
+import Pretest from "./pages/Pretest";
+import Posttest from "./pages/Posttest";
 import Discussions from "./pages/Discussions";
 import ThreadDetail from "./pages/ThreadDetail";
 import Profile from "./pages/Profile";
@@ -203,6 +205,26 @@ export default function App() {
                 <ProtectedRoute>
                   <AppShell>
                     <QuizResult />
+                  </AppShell>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/app/pretest/:id"
+              element={
+                <ProtectedRoute>
+                  <AppShell>
+                    <Pretest />
+                  </AppShell>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/app/posttest/:id"
+              element={
+                <ProtectedRoute>
+                  <AppShell>
+                    <Posttest />
                   </AppShell>
                 </ProtectedRoute>
               }

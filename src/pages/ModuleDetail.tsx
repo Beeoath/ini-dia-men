@@ -1,11 +1,31 @@
 import { useParams, Link } from "react-router-dom";
-import { BookOpen, Play, CheckCircle, ArrowLeft, Clock, Zap, Sparkles, ChevronRight, Compass, FileText, Lock, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  BookOpen,
+  Play,
+  CheckCircle,
+  ArrowLeft,
+  Clock,
+  Zap,
+  Sparkles,
+  ChevronRight,
+  Compass,
+  FileText,
+  Lock,
+  AlertCircle,
+  Award,
+  TrendingUp,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { MODULES } from "../lib/sigmaData";
 import { Badge } from "../components/Primitives";
 import { useTheme } from "../lib/theme";
 import { getMaterialMetaSync } from "../lib/pdfStorage";
-import { useStudentProgress, getModuleUnlockStatus } from "../lib/userProgress";
+import { useStudentProgress, getModuleUnlockStatus, MIN_PASSING_SCORE } from "../lib/userProgress";
+import {
+  getAssessmentResult,
+  calculateNGain,
+} from "../lib/testAssessmentData";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -41,6 +61,22 @@ export default function ModuleDetail() {
   const { userProgress } = useStudentProgress();
   const lockStatus = getModuleUnlockStatus(moduleData.id, userProgress);
   const isLocked = !lockStatus.isUnlocked;
+
+  // Pre-test & Post-test state for Bab 1
+  const isBab1 = moduleData.id === "mod-aljabar-1" || moduleData.districtId === 1;
+  const [assessmentUpdated, setAssessmentUpdated] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => setAssessmentUpdated((v) => v + 1);
+    window.addEventListener("sigma_assessment_updated", handleUpdate);
+    return () => window.removeEventListener("sigma_assessment_updated", handleUpdate);
+  }, []);
+
+  const pretest = isBab1 ? getAssessmentResult("mod-aljabar-1", "pretest") : null;
+  const posttest = isBab1 ? getAssessmentResult("mod-aljabar-1", "posttest") : null;
+  const quizScore = userProgress[moduleData.id]?.quizScore ?? 0;
+  const isQuizPassed = Boolean(userProgress[moduleData.id]?.completed && quizScore >= MIN_PASSING_SCORE);
+  const nGain = pretest && posttest ? calculateNGain(pretest.score, posttest.score) : null;
 
   return (
     <motion.div
@@ -190,6 +226,46 @@ export default function ModuleDetail() {
                   </Link>
                 </motion.div>
               </>
+            ) : isBab1 && !pretest ? (
+              <>
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Link
+                    to="/app/pretest/mod-aljabar-1"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-xs font-black bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all cursor-pointer"
+                  >
+                    <Zap size={15} className="fill-black" />
+                    <span>Wajib: Isi Pre-Test Dulu</span>
+                  </Link>
+                </motion.div>
+
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Link
+                    to="/app/pretest/mod-aljabar-1"
+                    className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                      isDark
+                        ? "border-white/10 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+                        : "border-slate-300 bg-white text-slate-500 hover:text-slate-900 shadow-sm"
+                    }`}
+                  >
+                    <Lock size={13} />
+                    <span>Modul PDF (Terkunci)</span>
+                  </Link>
+                </motion.div>
+
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Link
+                    to="/app/pretest/mod-aljabar-1"
+                    className={`inline-flex items-center gap-2 px-5 py-3 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                      isDark
+                        ? "border-white/10 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+                        : "border-slate-300 bg-white text-slate-500 hover:text-slate-900 shadow-sm"
+                    }`}
+                  >
+                    <Lock size={13} />
+                    <span>Kuis TKA (Terkunci)</span>
+                  </Link>
+                </motion.div>
+              </>
             ) : (
               <>
                 <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
@@ -234,6 +310,254 @@ export default function ModuleDetail() {
           </div>
         </div>
       </motion.div>
+
+      {/* 3-Stage Assessment Journey for Bab 1 */}
+      {isBab1 && (
+        <motion.div
+          variants={itemVariants}
+          className={`rounded-3xl border p-6 sm:p-7 shadow-xl backdrop-blur-xl space-y-5 transition-all ${
+            isDark
+              ? "border-cyan-500/25 bg-gradient-to-br from-[#0c1430] via-[#090e24] to-[#060a17] text-white"
+              : "border-cyan-100 bg-gradient-to-br from-white via-cyan-50/30 to-slate-50 text-slate-900 shadow-md"
+          }`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4 border-slate-200 dark:border-white/10">
+            <div>
+              <span className="text-[11px] font-mono uppercase tracking-wider text-cyan-400 font-bold flex items-center gap-1.5">
+                <Sparkles size={13} />
+                Alur Evaluasi Terpadu Bab 1 (Pre-Test & Post-Test)
+              </span>
+              <h2 className="text-lg sm:text-xl font-bold font-display mt-0.5">
+                Alur Belajar: Pre-Test $\to$ Modul/Kuis $\to$ Post-Test
+              </h2>
+            </div>
+            {nGain && (
+              <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
+                <TrendingUp size={13} /> N-Gain: {nGain.nGain} ({nGain.category})
+              </span>
+            )}
+          </div>
+
+          {/* 3 Interactive Columns */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Step 1: Pre-Test */}
+            <div
+              className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                pretest
+                  ? isDark
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-white"
+                    : "border-emerald-200 bg-emerald-50/60 text-slate-900"
+                  : isDark
+                  ? "border-cyan-400/40 bg-cyan-400/10 text-white ring-1 ring-cyan-400/30"
+                  : "border-cyan-400 bg-cyan-50 text-slate-900 ring-1 ring-cyan-300"
+              }`}
+            >
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-cyan-400">
+                    Tahap 1 • Sebelum Modul
+                  </span>
+                  {pretest ? (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
+                      Skor: {pretest.score}/100
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 font-bold">
+                      Wajib Diikuti
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-bold text-sm font-display flex items-center gap-1.5">
+                  <Zap size={15} className="text-cyan-400" />
+                  Pre-Test Diagnostik
+                </h3>
+                <p className={`text-xs leading-relaxed ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                  {pretest
+                    ? "Kamu telah menyelesaikan pemetaan kemampuan awal sebelum membaca materi."
+                    : "Ukur penguasaan dasar bilangan dan eksponen sebelum mempelajari 14 slide materi."}
+                </p>
+              </div>
+
+              <div className="pt-4">
+                <Link
+                  to="/app/pretest/mod-aljabar-1"
+                  className={`w-full py-2 px-3 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    pretest
+                      ? isDark
+                        ? "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                        : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                      : "bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-[0_0_15px_rgba(0,240,255,0.4)]"
+                  }`}
+                >
+                  <span>{pretest ? "Lihat Review Pre-Test" : "Mulai Pre-Test Sekarang"}</span>
+                  <ChevronRight size={14} />
+                </Link>
+              </div>
+            </div>
+
+            {/* Step 2: Learning & Quiz */}
+            <div
+              className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                isDark
+                  ? "border-white/10 bg-white/5 text-white"
+                  : "border-slate-200 bg-slate-50 text-slate-900"
+              }`}
+            >
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-blue-400">
+                    Tahap 2 • Materi & Latihan
+                  </span>
+                  <span
+                    className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                      !pretest
+                        ? "bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1"
+                        : isQuizPassed
+                        ? "bg-emerald-500/20 text-emerald-300"
+                        : quizScore > 0
+                        ? "bg-amber-500/20 text-amber-300"
+                        : "bg-slate-500/20 text-slate-400"
+                    }`}
+                  >
+                    {!pretest ? (
+                      <>
+                        <Lock size={10} /> Butuh Pre-Test
+                      </>
+                    ) : isQuizPassed ? (
+                      `Lolos Kuis (${quizScore}/100)`
+                    ) : quizScore > 0 ? (
+                      `Kuis: ${quizScore} (KKM 70)`
+                    ) : (
+                      "Belum Kuis"
+                    )}
+                  </span>
+                </div>
+                <h3 className="font-bold text-sm font-display flex items-center gap-1.5">
+                  <BookOpen size={15} className="text-blue-400" />
+                  Modul PDF & Kuis Bab 1
+                </h3>
+                <p className={`text-xs leading-relaxed ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                  {!pretest
+                    ? "Materi modul dan kuis evaluasi terkunci. Selesaikan Pre-Test terlebih dahulu untuk membuka akses."
+                    : "Pelajari 14 slide materi bilangan dan kerjakan kuis TKA dengan batas kelulusan minimal nilai 70."}
+                </p>
+              </div>
+
+              <div className="pt-4 flex gap-2">
+                {!pretest ? (
+                  <Link
+                    to="/app/pretest/mod-aljabar-1"
+                    className="w-full py-2 px-3 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 border border-cyan-400/30 bg-cyan-400/10 text-cyan-300 hover:bg-cyan-400/20 transition-all cursor-pointer"
+                  >
+                    <Lock size={13} />
+                    <span>Wajib Isi Pre-Test Terlebih Dahulu</span>
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      to="/app/materi/mod-aljabar-1"
+                      className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1 border transition-all cursor-pointer ${
+                        isDark
+                          ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-300 hover:bg-cyan-400/20"
+                          : "border-cyan-500/40 bg-cyan-50 text-cyan-800 hover:bg-cyan-100"
+                      }`}
+                    >
+                      <FileText size={13} />
+                      <span>Modul</span>
+                    </Link>
+                    <Link
+                      to="/app/kuis/mod-aljabar-1"
+                      className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1 border transition-all cursor-pointer ${
+                        isDark
+                          ? "border-white/10 bg-white/5 text-slate-200 hover:bg-white/10"
+                          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      <Play size={13} />
+                      <span>Kuis</span>
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Step 3: Post-Test */}
+            <div
+              className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                posttest
+                  ? isDark
+                    ? "border-purple-500/40 bg-purple-500/10 text-white"
+                    : "border-purple-200 bg-purple-50/70 text-slate-900"
+                  : isQuizPassed
+                  ? isDark
+                    ? "border-purple-400 bg-purple-500/15 text-white ring-1 ring-purple-400/30"
+                    : "border-purple-400 bg-purple-50 text-slate-900 ring-1 ring-purple-300"
+                  : isDark
+                  ? "border-white/5 bg-black/20 text-slate-500 opacity-60"
+                  : "border-slate-200 bg-slate-100 text-slate-400 opacity-70"
+              }`}
+            >
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-purple-400">
+                    Tahap 3 • Setelah Lolos Kuis
+                  </span>
+                  {posttest ? (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold">
+                      Skor: {posttest.score}/100
+                    </span>
+                  ) : isQuizPassed ? (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold animate-pulse">
+                      Terbuka!
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-500/20 text-slate-400 flex items-center gap-1 font-bold">
+                      <Lock size={10} /> Butuh Kuis ≥ 70
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-bold text-sm font-display flex items-center gap-1.5">
+                  <Award size={15} className="text-purple-400" />
+                  Post-Test Akhir
+                </h3>
+                <p className={`text-xs leading-relaxed ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                  {posttest
+                    ? "Evaluasi retensi pemahaman tuntas. Skor siap dikomparasi dengan pre-test."
+                    : isQuizPassed
+                    ? "Kuis Bab 1 sudah lolos! Uji retensi akhir untuk melihat kenaikan kompetensi."
+                    : "Post-test otomatis terbuka setelah kamu menyelesaikan kuis Bab 1 dengan nilai ≥ 70."}
+                </p>
+              </div>
+
+              <div className="pt-4">
+                {isQuizPassed ? (
+                  <Link
+                    to="/app/posttest/mod-aljabar-1"
+                    className={`w-full py-2 px-3 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      posttest
+                        ? isDark
+                          ? "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                          : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                        : "bg-gradient-to-r from-purple-500 to-cyan-400 hover:opacity-95 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]"
+                    }`}
+                  >
+                    <span>{posttest ? "Lihat Hasil Post-Test" : "Mulai Post-Test Sekarang"}</span>
+                    <ChevronRight size={14} />
+                  </Link>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full py-2 px-3 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 border border-white/5 bg-white/5 text-slate-500 cursor-not-allowed"
+                  >
+                    <Lock size={13} />
+                    <span>Terkunci</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Curriculum Breakdown with Staggered Items */}
       <motion.div variants={itemVariants} className="space-y-3 pt-2">

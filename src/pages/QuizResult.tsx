@@ -100,6 +100,38 @@ export default function QuizResult() {
           </div>
         )}
 
+        {isPassed && (moduleData.id === "mod-aljabar-1" || moduleData.districtId === 1) && (
+          <div
+            className={`p-4 sm:p-5 rounded-2xl border text-left space-y-2.5 transition-all ${
+              isDark
+                ? "border-purple-500/40 bg-gradient-to-r from-purple-500/15 via-pink-500/10 to-cyan-500/10 text-slate-100"
+                : "border-purple-200 bg-gradient-to-r from-purple-50 via-pink-50 to-cyan-50 text-slate-900"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 text-xs font-mono font-bold uppercase tracking-wider text-purple-400">
+                <Sparkles size={15} />
+                Tahap Evaluasi Akhir Terbuka: Post-Test Bab 1
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-purple-400/40 bg-purple-500/20 text-purple-300 font-bold">
+                Lolos Kuis ≥ 70
+              </span>
+            </div>
+            <p className="text-xs leading-relaxed text-slate-300 dark:text-slate-300">
+              Selamat! Kamu telah menguasai kuis Bab 1 dengan nilai <strong>{score}</strong>. Sekarang ikuti <strong>Post-Test Akhir</strong> untuk memverifikasi retensi pemahaman dan menghitung peningkatan kompetensi (N-Gain) kamu.
+            </p>
+            <div className="pt-1">
+              <Link
+                to="/app/posttest/mod-aljabar-1"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-black shadow-lg transition-all cursor-pointer bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-400 text-white hover:opacity-95 shadow-purple-500/30"
+              >
+                <span>Kerjakan Post-Test Bab 1</span>
+                <ArrowRight size={15} />
+              </Link>
+            </div>
+          </div>
+        )}
+
         <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
           <Link
             to={`/app/kuis/${moduleData.id}`}

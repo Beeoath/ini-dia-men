@@ -8,12 +8,15 @@ import {
   Sparkles,
   Lock,
   AlertCircle,
+  Zap,
+  ArrowRight,
 } from "lucide-react";
 import { MODULES } from "../lib/sigmaData";
 import { useTheme } from "../lib/theme";
 import { PdfFullscreenModal } from "../components/PdfFullscreenModal";
 import { getModulePdfUrl } from "../lib/pdfStorage";
 import { useStudentProgress, getModuleUnlockStatus } from "../lib/userProgress";
+import { getAssessmentResult } from "../lib/testAssessmentData";
 
 export default function Material() {
   const { id, moduleId } = useParams();
@@ -108,6 +111,80 @@ export default function Material() {
       window.removeEventListener("sigma_material_updated", handleUpdate);
     };
   }, [moduleData.id, defaultPdfUrl, defaultPdfTitle, defaultDescription, defaultBadge]);
+
+  const isBab1 = moduleData.id === "mod-aljabar-1" || moduleData.districtId === 1;
+  const pretest = isBab1 ? getAssessmentResult("mod-aljabar-1", "pretest") : null;
+  const isPretestMissing = isBab1 && !pretest;
+
+  if (isPretestMissing) {
+    return (
+      <div className="max-w-xl mx-auto py-12 px-4 text-center space-y-6">
+        <div
+          className={`inline-flex h-20 w-20 items-center justify-center rounded-3xl border shadow-lg ${
+            isDark
+              ? "bg-cyan-500/10 border-cyan-400/30 text-cyan-400 shadow-[0_0_30px_rgba(0,240,255,0.25)]"
+              : "bg-cyan-50 border-cyan-200 text-cyan-700 shadow-cyan-100"
+          }`}
+        >
+          <Lock size={38} className="stroke-[2.5]" />
+        </div>
+
+        <div className="space-y-2">
+          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold border border-cyan-400/40 bg-cyan-400/10 text-cyan-400 uppercase tracking-wider">
+            Pre-Test Wajib Diisi Terlebih Dahulu
+          </span>
+          <h1
+            className={`font-display text-2xl sm:text-3xl font-black ${
+              isDark ? "text-white" : "text-slate-950"
+            }`}
+          >
+            {moduleData.title}
+          </h1>
+          <p
+            className={`text-sm leading-relaxed max-w-md mx-auto pt-2 ${
+              isDark ? "text-slate-300" : "text-slate-600"
+            }`}
+          >
+            Untuk memastikan pemetaan pemahaman awal berjalan optimal, kamu <strong>wajib mengisi Pre-Test Persepsi & Pengalaman Belajar</strong> terlebih dahulu sebelum membaca materi modul Bab 1.
+          </p>
+        </div>
+
+        <div
+          className={`p-4 rounded-2xl border text-xs sm:text-sm font-medium space-y-2 max-w-md mx-auto ${
+            isDark
+              ? "bg-cyan-400/10 border-cyan-400/30 text-cyan-200"
+              : "bg-cyan-50 border-cyan-200 text-cyan-900"
+          }`}
+        >
+          <div className="flex items-center justify-center gap-1.5 font-bold font-mono">
+            <Sparkles size={14} className="text-cyan-400" />
+            <span>Survei Singkat (5 Butir Pernyataan)</span>
+          </div>
+          <p className="text-xs leading-relaxed text-slate-300 dark:text-slate-300">
+            Hanya butuh 1-2 menit. Tidak ada jawaban benar/salah. Setelah mengisi, modul PDF 14 halaman akan langsung terbuka otomatis!
+          </p>
+        </div>
+
+        <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to="/app/pretest/mod-aljabar-1"
+            className="px-7 py-3 rounded-full text-xs font-black bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition-all shadow-lg shadow-cyan-400/30 flex items-center gap-2 cursor-pointer"
+          >
+            <Sparkles size={15} />
+            <span>Mulai Isi Pre-Test Sekarang</span>
+          </Link>
+          <Link
+            to={`/app/modul/${moduleData.id}`}
+            className={`px-5 py-3 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+              isDark ? "border-white/10 text-slate-300 hover:text-white" : "border-slate-300 text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Kembali ke Detail Bab
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (isLocked) {
     return (
@@ -212,6 +289,38 @@ export default function Material() {
           <span>Buka PDF Fullscreen</span>
         </button>
       </div>
+
+      {/* Pre-Test Suggestion Banner for Bab 1 */}
+      {isBab1 && !pretest && (
+        <div
+          className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-3 transition-all ${
+            isDark
+              ? "border-cyan-400/40 bg-gradient-to-r from-cyan-400/15 to-blue-500/10 text-white"
+              : "border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50 text-slate-900"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-cyan-400/20 text-cyan-400 grid place-items-center shrink-0">
+              <Zap size={18} />
+            </div>
+            <div>
+              <div className="text-[11px] font-mono uppercase font-bold text-cyan-400">
+                Tahap Awal Pembelajaran
+              </div>
+              <p className="text-xs text-slate-300 dark:text-slate-300 leading-tight">
+                Sebelum membaca modul Bab 1, ikuti <strong>Pre-Test Diagnostik</strong> (5 soal singkat) untuk mengukur pemahaman awalmu.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/app/pretest/mod-aljabar-1"
+            className="px-4 py-2 rounded-xl text-xs font-black bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-md transition-all inline-flex items-center gap-1.5 shrink-0 cursor-pointer"
+          >
+            <span>Mulai Pre-Test Sekarang</span>
+            <ArrowRight size={13} />
+          </Link>
+        </div>
+      )}
 
       {/* Main Module Card */}
       <div
