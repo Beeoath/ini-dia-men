@@ -870,7 +870,7 @@ export default function Landing() {
             </span>
           </div>
 
-          <div className="flex items-center gap-6 text-[11px]">
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-[11px]">
             <Link
               to={profile ? "/app/hub" : `/masuk?redirect=${encodeURIComponent("/app/hub")}&notice=peta_belajar`}
               className="hover:text-cyan-500 transition-colors"
@@ -888,6 +888,19 @@ export default function Landing() {
               className="hover:text-amber-500 text-amber-500 font-bold transition-colors"
             >
               Portal Guru
+            </Link>
+            <span className="hidden sm:inline text-slate-400 dark:text-slate-600">|</span>
+            <Link
+              to="/privacy"
+              className="hover:text-cyan-400 transition-colors text-slate-400 dark:text-slate-400"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              to="/terms"
+              className="hover:text-cyan-400 transition-colors text-slate-400 dark:text-slate-400"
+            >
+              Terms of Service
             </Link>
           </div>
         </div>

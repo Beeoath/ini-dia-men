@@ -329,8 +329,17 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
               : "border-slate-200 bg-white/60 text-slate-600 shadow-sm"
           }`}
         >
-          <div className="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <div className="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p>© 2026 SIGMA Matematika · MA Darunnajah 9</p>
+            <div className="flex items-center gap-4 text-[11px] font-mono">
+              <Link to="/privacy" className="hover:text-cyan-400 transition-colors">
+                Privacy Policy
+              </Link>
+              <span>•</span>
+              <Link to="/terms" className="hover:text-cyan-400 transition-colors">
+                Terms of Service
+              </Link>
+            </div>
             <p
               className={`font-mono text-[11px] ${
                 isDark ? "text-slate-400" : "text-slate-500"

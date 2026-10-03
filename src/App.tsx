@@ -22,6 +22,8 @@ import Profile from "./pages/Profile";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import TeacherContent from "./pages/TeacherContent";
 import TeacherModeration from "./pages/TeacherModeration";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 export default function App() {
   return (
@@ -35,6 +37,8 @@ export default function App() {
             <Route path="/masuk" element={<Login />} />
             <Route path="/login" element={<Navigate to="/masuk" replace />} />
             <Route path="/daftar" element={<Navigate to="/masuk?mode=daftar" replace />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
 
             {/* Student Spatial Views (Protected) */}
             <Route
