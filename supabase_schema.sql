@@ -112,3 +112,54 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- 4. Tabel Modul & Materi Pembelajaran PDF (Cloud Storage)
+CREATE TABLE IF NOT EXISTS public.module_materials (
+  module_id TEXT PRIMARY KEY,
+  district_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  duration_minutes INTEGER DEFAULT 25,
+  page_count INTEGER DEFAULT 14,
+  pdf_file_name TEXT,
+  pdf_url TEXT,
+  is_custom_pdf BOOLEAN DEFAULT FALSE,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.module_materials ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Semua pengguna dapat melihat data materi modul"
+  ON public.module_materials FOR SELECT
+  TO authenticated, anon
+  USING (true);
+
+CREATE POLICY "Pengguna terotentikasi dapat menyimpan atau memperbarui materi modul"
+  ON public.module_materials FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- Seed Modul Bab 5 Data & Peluang ke database Supabase
+INSERT INTO public.module_materials (module_id, district_id, title, description, duration_minutes, page_count, pdf_file_name, pdf_url, is_custom_pdf)
+VALUES (
+  'mod-stat-1',
+  5,
+  'BAB 5: DATA DAN PELUANG (Statistika & Peluang)',
+  'Menampilkan 14 slide resmi Bab 5 Data dan Peluang: penyajian data grafik/tabel, ukuran pemusatan (mean, median, modus), kuartil/desil/persentil, ukuran penyebaran, kaidah pencacahan, faktorial/permutasi/kombinasi, peluang bersyarat, dan frekuensi harapan.',
+  25,
+  14,
+  'BAB_5_DATA_DAN_PELUANG.pdf',
+  '/modul_peluang.html',
+  TRUE
+)
+ON CONFLICT (module_id) DO UPDATE SET
+  title = EXCLUDED.title,
+  description = EXCLUDED.description,
+  duration_minutes = EXCLUDED.duration_minutes,
+  page_count = EXCLUDED.page_count,
+  pdf_file_name = EXCLUDED.pdf_file_name,
+  pdf_url = EXCLUDED.pdf_url,
+  is_custom_pdf = EXCLUDED.is_custom_pdf,
+  updated_at = NOW();
+

@@ -46,6 +46,11 @@ export default function Material() {
     defaultPdfTitle = "BAB 4: TRIGONOMETRI - Navigasi Sudut, Dimensi, dan Ruang Koordinat";
     defaultBadge = "MODUL RESMI · 13 HALAMAN";
     defaultDescription = "Menampilkan 13 slide resmi Bab 4 Trigonometri: skala sudut, perbandingan segitiga siku-siku, kompas kuadran, dan telaah soal UTBK.";
+  } else if (moduleData.districtId === 5 || moduleData.id === "mod-stat-1") {
+    defaultPdfUrl = "/modul_peluang.html";
+    defaultPdfTitle = "BAB 5: DATA DAN PELUANG - Statistika & Teori Peluang Kejadian";
+    defaultBadge = "MODUL RESMI · 14 HALAMAN";
+    defaultDescription = "Menampilkan 14 slide resmi Bab 5 Data dan Peluang: penyajian data grafik/tabel, ukuran pemusatan (mean, median, modus), kuartil/desil/persentil, ukuran penyebaran, kaidah pencacahan, faktorial/permutasi/kombinasi, peluang bersyarat, dan frekuensi harapan.";
   }
 
   // Dynamic states with support for teacher-uploaded PDF

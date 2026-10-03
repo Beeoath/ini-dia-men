@@ -113,18 +113,18 @@ const SIGMA_HERO_FEATURED = [
     districtId: 5,
     tag: "Distrik Unggulan",
     districtName: "Distrik 5 • Peluang & Analisis Data",
-    categories: ["Peluang & Statistika", "Level 5", "Modul Inti"],
-    title: "Permutasi, Kombinasi & Kuartil Data Berkelompok",
-    displayTitle: "Peluang & Statistika",
-    subTitle: "Kaidah Pencacahan, Peluang Kejadian Majemuk & Ogive",
+    categories: ["Statistika", "Peluang", "Kaidah Pencacahan", "Modul Inti"],
+    title: "BAB 5: DATA DAN PELUANG (Statistika & Peluang)",
+    displayTitle: "BAB 5: DATA DAN PELUANG",
+    subTitle: "Statistika Deskriptif & Teori Peluang TKA",
     description:
-      "Kombinasikan nCr dan nPr pada soal cerita bersyarat, serta hitung median, kuartil bawah, dan ragam simpangan baku dari tabel distribusi frekuensi berkelompok.",
+      "Pelajari penyajian data, ukuran pemusatan (mean, median, modus), kuartil, desil, persentil, ukuran penyebaran, serta kaidah pencacahan, permutasi, kombinasi, dan frekuensi harapan.",
     fullDescription:
-      "Materi pamungkas TKA Matematika: permutasi siklis, kombinasi pemilihan objek, hukum penjumlahan dan perkalian peluang majemuk, serta interpolasi kuartil dan desil data berkelompok.",
+      "Modul resmi BAB 5 Data dan Peluang MA Darunnajah 9: membedah statistika deskriptif (tabel frekuensi, ukuran pemusatan, letak, dan sebaran) serta peluang teoritis (faktorial, permutasi, kombinasi, kejadian majemuk, dan frekuensi harapan).",
     bgImage:
       "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1400&auto=format&fit=crop",
     gradient: "from-[#1a1205]/95 via-[#120c03]/80 to-[#080501]/90",
-    accentColor: "#F59E0B",
+    accentColor: "#A855F7",
     targetScore: 75,
   },
 ];
@@ -146,6 +146,14 @@ const NEW_LEARNING_MODULES = [
     tag: "Distrik 2",
     duration: "25 Menit",
     img: neonPhysicsImg,
+  },
+  {
+    id: "mod-stat-1",
+    title: "BAB 5: Data & Peluang",
+    topic: "Statistika & Pencacahan",
+    tag: "Distrik 5",
+    duration: "25 Menit",
+    img: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=600&auto=format&fit=crop",
   },
 ];
 
@@ -186,6 +194,15 @@ const RECOMMENDATIONS = [
     title: "BAB 4: Trigonometri",
     displayTopic: "Sudut Rangkap",
     img: ipadCalculusImg,
+  },
+  {
+    id: "mod-stat-1",
+    districtId: 5,
+    tag: "Distrik 05",
+    match: "96% Sesuai",
+    title: "BAB 5: Data & Peluang",
+    displayTopic: "Statistika & Pencacahan",
+    img: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=600&auto=format&fit=crop",
   },
 ];
 
@@ -730,8 +747,8 @@ export default function StudentDashboard() {
                 </Link>
               </div>
 
-              {/* 4 Poster Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-3.5">
+              {/* 5 District Poster Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-3.5">
                 {filteredRecommendations.map((card) => {
                   const cardLockStatus = getModuleUnlockStatus(card.id, userProgress);
                   const isCardLocked = !cardLockStatus.isUnlocked;

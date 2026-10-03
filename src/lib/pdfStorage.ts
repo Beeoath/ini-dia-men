@@ -1,5 +1,6 @@
 // Service for storing and managing custom PDF files and module materials
-// Uses browser IndexedDB for robust large file storage (up to hundreds of MBs)
+// Uses browser IndexedDB for robust large file storage (up to hundreds of MBs) and syncs with Supabase
+import { supabase } from "./supabase";
 
 export interface CustomMaterialData {
   moduleId: string;
@@ -21,6 +22,22 @@ const DB_VERSION = 1;
 
 let dbInstance: IDBDatabase | null = null;
 const blobUrlCache = new Map<string, string>();
+
+// Default seeded materials
+const SEED_MATERIALS: Record<string, Partial<CustomMaterialData>> = {
+  "mod-stat-1": {
+    moduleId: "mod-stat-1",
+    title: "BAB 5: DATA DAN PELUANG (Statistika & Peluang)",
+    description:
+      "Menampilkan 14 slide resmi Bab 5 Data dan Peluang: penyajian data grafik/tabel, ukuran pemusatan (mean, median, modus), kuartil/desil/persentil, ukuran penyebaran, kaidah pencacahan, faktorial/permutasi/kombinasi, peluang bersyarat, dan frekuensi harapan.",
+    durationMinutes: 25,
+    pageCount: 14,
+    pdfFileName: "BAB_5_DATA_DAN_PELUANG.pdf",
+    externalPdfUrl: "/modul_peluang.html",
+    isCustomPdf: true,
+    updatedAt: Date.now(),
+  },
+};
 
 async function getDB(): Promise<IDBDatabase> {
   if (dbInstance) return dbInstance;
@@ -90,6 +107,28 @@ export async function saveCustomMaterial(data: CustomMaterialData): Promise<void
         blobUrlCache.delete(data.moduleId);
       }
 
+      // Asynchronously sync to Supabase database if table exists
+      (async () => {
+        try {
+          await supabase
+            .from("module_materials")
+            .upsert({
+              module_id: data.moduleId,
+              district_id: data.moduleId === "mod-stat-1" ? 5 : 1,
+              title: data.title,
+              description: data.description,
+              duration_minutes: data.durationMinutes,
+              page_count: data.pageCount || 14,
+              pdf_file_name: data.pdfFileName || "modul.pdf",
+              pdf_url: data.externalPdfUrl || "/modul_peluang.html",
+              is_custom_pdf: data.isCustomPdf,
+              updated_at: new Date().toISOString(),
+            });
+        } catch {
+          // ignore if table does not exist yet
+        }
+      })();
+
       // Notify other components (like Material.tsx)
       window.dispatchEvent(
         new CustomEvent("sigma_material_updated", {
@@ -119,15 +158,34 @@ export async function getCustomMaterial(moduleId: string): Promise<CustomMateria
       const request = store.get(moduleId);
 
       request.onsuccess = () => {
-        resolve(request.result || null);
+        if (request.result) {
+          resolve(request.result);
+        } else if (SEED_MATERIALS[moduleId]) {
+          const seeded = SEED_MATERIALS[moduleId] as CustomMaterialData;
+          // Seed to IndexedDB in background
+          try {
+            const writeTx = db.transaction([STORE_NAME], "readwrite");
+            writeTx.objectStore(STORE_NAME).put(seeded);
+          } catch {}
+          resolve(seeded);
+        } else {
+          resolve(null);
+        }
       };
 
       request.onerror = () => {
-        reject(request.error);
+        if (SEED_MATERIALS[moduleId]) {
+          resolve(SEED_MATERIALS[moduleId] as CustomMaterialData);
+        } else {
+          reject(request.error);
+        }
       };
     });
   } catch (err) {
     console.error("Error fetching material:", err);
+    if (SEED_MATERIALS[moduleId]) {
+      return SEED_MATERIALS[moduleId] as CustomMaterialData;
+    }
     return null;
   }
 }
@@ -141,6 +199,12 @@ export function getMaterialMetaSync(moduleId: string): Partial<CustomMaterialDat
     if (raw) return JSON.parse(raw);
   } catch (e) {
     console.warn("Failed to parse cached material meta:", e);
+  }
+  if (SEED_MATERIALS[moduleId]) {
+    try {
+      localStorage.setItem(`sigma_material_meta_${moduleId}`, JSON.stringify(SEED_MATERIALS[moduleId]));
+    } catch {}
+    return SEED_MATERIALS[moduleId];
   }
   return null;
 }

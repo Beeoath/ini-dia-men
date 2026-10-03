@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BAB 5: DATA DAN PELUANG - Modul Pembelajaran TKA</title>
+  <!-- KaTeX for formula rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #1e2230;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #10223e;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+
+    /* Fixed Top Toolbar inside iframe */
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(16, 34, 62, 0.95);
+      backdrop-filter: blur(8px);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      width: 100%;
+      max-width: 960px;
+    }
+
+    .toolbar-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .toolbar-info {
+      font-size: 12px;
+      color: #a855f7;
+      font-family: monospace;
+      font-weight: bold;
+    }
+
+    .btn-action {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+      background: rgba(168, 85, 247, 0.25);
+      border-color: #a855f7;
+      color: #d8b4fe;
+      transform: scale(1.04);
+    }
+
+    /* Standard 16:9 PDF Slide Page */
+    .slide-page {
+      background: #f4f3ec;
+      width: 100%;
+      max-width: 960px;
+      aspect-ratio: 16 / 9;
+      border-radius: 6px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+      padding: 36px 46px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      .slide-page {
+        aspect-ratio: auto;
+        min-height: 520px;
+        padding: 24px 20px;
+      }
+    }
+
+    /* Slide Header */
+    .slide-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 2px solid #10223e;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+
+    .slide-main-title {
+      font-size: 26px;
+      font-weight: 900;
+      color: #10223e;
+      letter-spacing: -0.5px;
+    }
+
+    .slide-sub-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    .slide-content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    /* Footer styling */
+    .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 800;
+      color: #475569;
+      padding-top: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Card containers */
+    .card-rounded {
+      background: #fdfbf7;
+      border: 1.5px solid #10223e;
+      border-radius: 16px;
+      padding: 18px 20px;
+      position: relative;
+    }
+
+    .badge-icon {
+      position: absolute;
+      top: -12px;
+      left: 16px;
+      background: #10223e;
+      color: white;
+      font-size: 12px;
+      font-weight: 900;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Amber / Golden Callout Box */
+    .box-golden {
+      background: linear-gradient(135deg, #fbe8c5 0%, #f7dfad 100%);
+      border: 1.5px solid #d49e35;
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #2b2108;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(212, 158, 53, 0.15);
+    }
+
+    /* Grid columns */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .grid-2, .grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Formula Box */
+    .formula-pill {
+      background: linear-gradient(135deg, #fcebc9 0%, #f6deab 100%);
+      border: 1.5px solid #d99f36;
+      border-radius: 10px;
+      padding: 8px 14px;
+      text-align: center;
+      margin: 8px 0;
+      font-size: 15px;
+      font-weight: bold;
+      color: #10223e;
+    }
+
+    /* Table styling */
+    .freq-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: center;
+    }
+    .freq-table th {
+      background: #10223e;
+      color: white;
+      padding: 6px 12px;
+      font-weight: bold;
+    }
+    .freq-table td {
+      padding: 5px 12px;
+      border-bottom: 1px solid #cbd5e1;
+      font-weight: 600;
+    }
+    .freq-table tr:nth-child(even) td {
+      background: rgba(16, 34, 62, 0.04);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Sticky Navigation -->
+  <div class="toolbar">
+    <div class="toolbar-title">MATEMATIKA KELAS 11 • BAB 5: DATA DAN PELUANG</div>
+    <div class="toolbar-info">14 SLIDE LENGKAP</div>
+    <button class="btn-action" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">↑ Awal</button>
+  </div>
+
+  <!-- SLIDE 1: Peta Jalan Materi & Tujuan Akhir -->
+  <div class="slide-page" id="slide-1">
+    <div>
+      <h1 class="slide-main-title" style="font-size: 34px; margin-bottom: 8px;">BAB 5: DATA DAN PELUANG</h1>
+      <div style="font-size: 16px; font-weight: 700; color: #10223e; margin-bottom: 24px; line-height: 1.6;">
+        A. Statistika<br>
+        B. Peluang
+      </div>
+
+      <div style="margin-top: 10px;">
+        <div style="font-size: 18px; font-weight: 800; color: #10223e; margin-bottom: 14px;">Peta Jalan Materi</div>
+        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+          <!-- Node 1 -->
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 44px; height: 44px; border: 2.5px solid #10223e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; background: white;">1</div>
+            <div>
+              <div style="font-size: 13px; font-weight: 800; color: #10223e;">Statistika</div>
+              <div style="font-size: 11px; color: #64748b;">Penyajian data</div>
+            </div>
+          </div>
+          <div style="font-size: 20px; font-weight: bold; color: #10223e;">➜</div>
+          <!-- Node 2 -->
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 44px; height: 44px; border: 2.5px solid #10223e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; background: white;">2</div>
+            <div>
+              <div style="font-size: 13px; font-weight: 800; color: #10223e;">Ukuran Statistik</div>
+              <div style="font-size: 11px; color: #64748b;">Pemusatan &amp; penyebaran</div>
+            </div>
+          </div>
+          <div style="font-size: 20px; font-weight: bold; color: #10223e;">➜</div>
+          <!-- Node 3 -->
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 44px; height: 44px; border: 2.5px solid #10223e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; background: white;">3</div>
+            <div>
+              <div style="font-size: 13px; font-weight: 800; color: #10223e;">Peluang</div>
+              <div style="font-size: 11px; color: #64748b;">Pencacahan &amp; kejadian</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tujuan Akhir Container -->
+    <div style="border: 2px solid #10223e; border-radius: 20px; padding: 18px 24px; background: white;">
+      <div style="font-size: 16px; font-weight: 900; color: #10223e; margin-bottom: 6px;">Tujuan Akhir</div>
+      <div style="font-size: 14px; color: #334155; line-height: 1.5; font-weight: 500;">
+        Memahami cara menyajikan data, menentukan ukuran pemusatan dan penyebaran, serta menghitung peluang suatu kejadian.
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>MATEMATIKA • BAB 5</span>
+      <span>1</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: A. Statistika - Konsep Dasar -->
+  <div class="slide-page" id="slide-2">
+    <div class="slide-header-bar">
+      <div class="slide-main-title">A. Statistika</div>
+      <div class="slide-sub-label">Konsep dasar</div>
+    </div>
+
+    <div class="slide-content-area">
+      <div class="grid-2">
+        <!-- Kolom Kiri -->
+        <div class="card-rounded">
+          <div class="badge-icon">A</div>
+          <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 10px; margin-left: 18px;">Statistika</div>
+          <p style="font-size: 13.5px; line-height: 1.5; color: #1e293b; margin-bottom: 14px;">
+            Statistika adalah ilmu yang mempelajari cara merencanakan, mengumpulkan, mengolah, menganalisis, menginterpretasikan, dan menyajikan data.
+          </p>
+          <div class="box-golden" style="font-size: 12.5px; margin-bottom: 14px;">
+            Data ➜ Pengolahan ➜ Analisis ➜ Interpretasi
+          </div>
+          <p style="font-size: 13px; color: #334155; line-height: 1.4;">
+            Penyajian data membuat informasi lebih mudah dibaca, dibandingkan, dan dipahami.
+          </p>
+        </div>
+
+        <!-- Kolom Kanan -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 12px;">Penyajian Data</div>
+            <ul style="font-size: 13.5px; color: #1e293b; line-height: 1.6; padding-left: 20px;">
+              <li>Diagram garis</li>
+              <li>Diagram batang</li>
+              <li>Diagram lingkaran</li>
+              <li>Piktogram</li>
+              <li>Histogram</li>
+              <li>Poligon frekuensi</li>
+              <li>Tabel distribusi frekuensi</li>
+            </ul>
+          </div>
+          <div class="box-golden" style="font-size: 12px; margin-top: 14px;">
+            Grafik dan tabel membantu menampilkan pola data.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>MATEMATIKA • BAB 5</span>
+      <span>2</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: Penyajian Data Visualisasi -->
+  <div class="slide-page" id="slide-3">
+    <div class="slide-header-bar">
+      <div class="slide-main-title">Penyajian Data</div>
+      <div class="slide-sub-label">Visualisasi</div>
+    </div>
+
+    <div class="slide-content-area">
+      <div class="grid-3">
+        <!-- Diagram Garis -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 250px;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 8px;">Diagram Garis</div>
+            <div style="height: 120px; display: flex; align-items: center; justify-content: center;">
+              <!-- SVG Line Chart -->
+              <svg width="180" height="100" viewBox="0 0 180 100">
+                <line x1="20" y1="10" x2="20" y2="85" stroke="#10223e" stroke-width="2.5"/>
+                <line x1="20" y1="85" x2="170" y2="85" stroke="#10223e" stroke-width="2.5"/>
+                <polyline points="30,75 60,50 90,65 130,25 160,40" fill="none" stroke="#10223e" stroke-width="3"/>
+                <polyline points="30,75 60,50 90,65 130,25 160,40" fill="none" stroke="#d49e35" stroke-width="2"/>
+                <circle cx="30" cy="75" r="4" fill="#d49e35"/>
+                <circle cx="60" cy="50" r="4" fill="#d49e35"/>
+                <circle cx="90" cy="65" r="4" fill="#d49e35"/>
+                <circle cx="130" cy="25" r="4" fill="#d49e35"/>
+                <circle cx="160" cy="40" r="4" fill="#d49e35"/>
+              </svg>
+            </div>
+          </div>
+          <p style="font-size: 12px; color: #334155; line-height: 1.4; text-align: center;">
+            Menunjukkan perubahan data dari waktu ke waktu.
+          </p>
+        </div>
+
+        <!-- Diagram Batang -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 250px;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 8px;">Diagram Batang</div>
+            <div style="height: 120px; display: flex; align-items: center; justify-content: center;">
+              <!-- SVG Bar Chart -->
+              <svg width="180" height="100" viewBox="0 0 180 100">
+                <rect x="25" y="55" width="22" height="40" fill="#10223e" rx="2"/>
+                <rect x="55" y="35" width="22" height="60" fill="#10223e" rx="2"/>
+                <rect x="85" y="45" width="22" height="50" fill="#10223e" rx="2"/>
+                <rect x="115" y="15" width="22" height="80" fill="#10223e" rx="2"/>
+                <rect x="145" y="30" width="22" height="65" fill="#10223e" rx="2"/>
+              </svg>
+            </div>
+          </div>
+          <p style="font-size: 12px; color: #334155; line-height: 1.4; text-align: center;">
+            Membandingkan frekuensi antar kategori.
+          </p>
+        </div>
+
+        <!-- Diagram Lingkaran -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 250px;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 8px;">Diagram Lingkaran</div>
+            <div style="height: 120px; display: flex; align-items: center; justify-content: center;">
+              <!-- SVG Pie Chart -->
+              <svg width="120" height="120" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="#fbe8c5" stroke="#10223e" stroke-width="2"/>
+                <!-- Pie slice cut out -->
+                <path d="M50 50 L95 50 A45 45 0 0 1 50 95 Z" fill="#10223e" stroke="#10223e" stroke-width="1.5"/>
+              </svg>
+            </div>
+          </div>
+          <p style="font-size: 12px; color: #334155; line-height: 1.4; text-align: center;">
+            Proporsi tiap kategori terhadap total.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>MATEMATIKA • BAB 5</span>
+      <span>3</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: Penyajian Data Distribusi Frekuensi -->
+  <div class="slide-page" id="slide-4">
+    <div class="slide-header-bar">
+      <div class="slide-main-title">Penyajian Data</div>
+      <div class="slide-sub-label">Distribusi frekuensi</div>
+    </div>
+
+    <div class="slide-content-area">
+      <div class="grid-2">
+        <!-- Histogram & Poligon -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 8px;">Histogram &amp; Poligon Frekuensi</div>
+            <div style="height: 120px; display: flex; align-items: center; justify-content: center;">
+              <svg width="220" height="110" viewBox="0 0 220 110">
+                <!-- Histogram bars -->
+                <rect x="20" y="70" width="30" height="35" fill="#10223e" stroke="#fff" stroke-width="1"/>
+                <rect x="50" y="45" width="30" height="60" fill="#10223e" stroke="#fff" stroke-width="1"/>
+                <rect x="80" y="20" width="30" height="85" fill="#10223e" stroke="#fff" stroke-width="1"/>
+                <rect x="110" y="35" width="30" height="70" fill="#10223e" stroke="#fff" stroke-width="1"/>
+                <rect x="140" y="55" width="30" height="50" fill="#10223e" stroke="#fff" stroke-width="1"/>
+                <rect x="170" y="80" width="30" height="25" fill="#10223e" stroke="#fff" stroke-width="1"/>
+                <!-- Poligon line -->
+                <polyline points="10,85 35,70 65,45 95,20 125,35 155,55 185,80 205,95" fill="none" stroke="#d49e35" stroke-width="2.5"/>
+              </svg>
+            </div>
+          </div>
+          <p style="font-size: 11.5px; color: #334155; line-height: 1.4; margin-top: 8px;">
+            Histogram menampilkan distribusi frekuensi data kuantitatif kontinu. Poligon menghubungkan titik-titik frekuensi dengan garis lurus.
+          </p>
+        </div>
+
+        <!-- Tabel Distribusi Frekuensi -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 8px;">Tabel Distribusi Frekuensi</div>
+            <table class="freq-table">
+              <thead>
+                <tr>
+                  <th>Nilai</th>
+                  <th>Frekuensi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>20</td><td>4</td></tr>
+                <tr><td>30</td><td>7</td></tr>
+                <tr><td>40</td><td>13</td></tr>
+                <tr><td>50</td><td>9</td></tr>
+                <tr><td>60</td><td>5</td></tr>
+                <tr><td>70</td><td>2</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="box-golden" style="font-size: 11.5px; margin-top: 8px;">
+            Tabel mengelompokkan data dan menunjukkan frekuensinya.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>MATEMATIKA • BAB 5</span>
+      <span>4</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: Ukuran Pemusatan - Mean / Rata-rata -->
+  <div class="slide-page" id="slide-5">
+    <div class="slide-header-bar">
+      <div class="slide-main-title">Ukuran Pemusatan</div>
+      <div class="slide-sub-label">Mean / rata-rata</div>
+    </div>
+
+    <div class="slide-content-area">
+      <div class="grid-2">
+        <div class="card-rounded">
+          <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 6px;">Rata-rata Data Tunggal</div>
+          <p style="font-size: 13px; color: #1e293b;">Jika data $x_1, x_2, \dots, x_n$, maka:</p>
+          <div class="formula-pill">
+            $$\bar{x} = \frac{x_1 + x_2 + \dots + x_n}{n}$$
+          </div>
+          <div style="text-align: center; font-size: 12px; font-weight: bold; color: #64748b; margin: 4px 0;">atau</div>
+          <div class="formula-pill">
+            $$\bar{x} = \frac{\sum x_i}{n}$$
+          </div>
+          <div style="font-size: 14px; font-weight: 700; color: #10223e; margin-top: 10px; margin-bottom: 4px;">Untuk data berfrekuensi:</div>
+          <div class="formula-pill">
+            $$\bar{x} = \frac{\sum f_i x_i}{\sum f_i}$$
+          </div>
+        </div>
+
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 12px;">Makna Mean</div>
+            <ul style="font-size: 13.5px; color: #1e293b; line-height: 1.7; padding-left: 20px;">
+              <li>Menunjukkan nilai rata-rata data.</li>
+              <li>Semua nilai data diperhitungkan.</li>
+              <li>Dapat digunakan untuk data tunggal maupun berfrekuensi.</li>
+            </ul>
+          </div>
+          <div class="box-golden" style="font-size: 14px;">
+            Contoh : $6, 7, 8 \rightarrow \bar{x} = 7$
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>MATEMATIKA • BAB 5</span>
+      <span>5</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: Ukuran Pemusatan - Modus & Median -->
+  <div class="slide-page" id="slide-6">
+    <div class="slide-header-bar">
+      <div class="slide-main-title">Ukuran Pemusatan</div>
+      <div class="slide-sub-label">Modus &amp; median</div>
+    </div>
+
+    <div class="slide-content-area">
+      <div class="grid-2">
+        <!-- Modus -->
+        <div class="card-rounded">
+          <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 6px;">Modus</div>
+          <p style="font-size: 13px; color: #1e293b; margin-bottom: 8px;">
+            Modus adalah nilai yang paling sering muncul atau memiliki frekuensi tertinggi.
+          </p>
+          <div class="formula-pill">
+            $$Mo = T_b + \frac{d_1}{d_1 + d_2} \times c$$
+          </div>
+          <div style="font-size: 12px; color: #475569; line-height: 1.5; margin-top: 10px;">
+            $T_b$ = tepi bawah kelas modus<br>
+            $d_1, d_2$ = selisih frekuensi kelas modus dengan kelas sebelumnya &amp; sesudahnya<br>
+            $c$ = panjang kelas
+          </div>
+        </div>
+
+        <!-- Median -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 6px;">Median</div>
+            <p style="font-size: 13px; color: #1e293b; margin-bottom: 8px;">
+              Median adalah nilai tengah setelah data diurutkan.
+            </p>
+            <div class="formula-pill">
+              $$Me = T_b + \frac{\frac{1}{2}n - F}{f_{Me}} \times c$$
+            </div>
+            <p style="font-size: 12px; color: #475569; line-height: 1.5; margin-top: 8px;">
+              Untuk data berkelompok, median ditentukan dari kelas median dan frekuensi kumulatif sebelumnya.
+            </p>
+          </div>
+          <div class="box-golden" style="font-size: 12.5px; margin-top: 8px;">
+            Urutkan data ➜ tentukan posisi tengah ➜ median
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>MATEMATIKA • BAB 5</span>
+      <span>6</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: Ukuran Letak - Kuartil, Desil, Persentil -->
+  <div class="slide-page" id="slide-7">
+    <div class="slide-header-bar">
+      <div class="slide-main-title">Ukuran Letak</div>
+      <div class="slide-sub-label">Kuartil, desil, persentil</div>
+    </div>
+
+    <div class="slide-content-area">
+      <div class="grid-3">
+        <!-- Kuartil -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 6px;">Kuartil</div>
+            <p style="font-size: 12.5px; color: #334155; margin-bottom: 8px;">Membagi data menjadi 4 bagian sama banyak.</p>
+            <div class="formula-pill" style="font-size: 13px;">
+              $$Q_k = T_b + \frac{\left(\frac{k}{4}\right)n - F}{f_k} \times c$$
+            </div>
+          </div>
+          <p style="font-size: 11.5px; color: #64748b; text-align: center;">
+            Menentukan posisi data berdasarkan bagian yang dibutuhkan.
+          </p>
+        </div>
+
+        <!-- Desil -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 6px;">Desil</div>
+            <p style="font-size: 12.5px; color: #334155; margin-bottom: 8px;">Membagi data menjadi 10 bagian sama banyak.</p>
+            <div class="formula-pill" style="font-size: 13px;">
+              $$D_k = T_b + \frac{\left(\frac{k}{10}\right)n - F}{f_k} \times c$$
+            </div>
+          </div>
+          <p style="font-size: 11.5px; color: #64748b; text-align: center;">
+            Menentukan posisi data berdasarkan bagian yang dibutuhkan.
+          </p>
+        </div>
+
+        <!-- Persentil -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 6px;">Persentil</div>
+            <p style="font-size: 12.5px; color: #334155; margin-bottom: 8px;">Membagi data menjadi 100 bagian sama banyak.</p>
+            <div class="formula-pill" style="font-size: 13px;">
+              $$P_k = T_b + \frac{\left(\frac{k}{100}\right)n - F}{f_k} \times c$$
+            </div>
+          </div>
+          <p style="font-size: 11.5px; color: #64748b; text-align: center;">
+            Menentukan posisi data berdasarkan bagian yang dibutuhkan.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>MATEMATIKA • BAB 5</span>
+      <span>7</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 8: Ukuran Penyebaran -->
+  <div class="slide-page" id="slide-8">
+    <div class="slide-header-bar">
+      <div class="slide-main-title">Ukuran Penyebaran</div>
+      <div class="slide-sub-label">Sebaran data</div>
+    </div>
+
+    <div class="slide-content-area">
+      <div class="grid-2" style="gap: 14px;">
+        <!-- 1. Jangkauan -->
+        <div class="card-rounded" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 18px;">
+          <div style="font-size: 14px; font-weight: 800; color: #10223e;">Jangkauan</div>
+          <div class="formula-pill" style="margin: 0; padding: 6px 14px; font-size: 13px;">
+            $$X_{\max} - X_{\min}$$
+          </div>
+        </div>
+
+        <!-- 2. Jangkauan Kuartil -->
+        <div class="card-rounded" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 18px;">
+          <div style="font-size: 14px; font-weight: 800; color: #10223e;">Jangkauan kuartil</div>
+          <div class="formula-pill" style="margin: 0; padding: 6px 14px; font-size: 13px;">
+            $$Q_3 - Q_1$$
+          </div>
+        </div>
+
+        <!-- 3. Simpangan Kuartil -->
+        <div class="card-rounded" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 18px;">
+          <div style="font-size: 14px; font-weight: 800; color: #10223e;">Simpangan kuartil</div>
+          <div class="formula-pill" style="margin: 0; padding: 6px 14px; font-size: 13px;">
+            $$\frac{Q_3 - Q_1}{2}$$
+          </div>
+        </div>
+
+        <!-- 4. Simpangan Rata-rata -->
+        <div class="card-rounded" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 18px;">
+          <div style="font-size: 14px; font-weight: 800; color: #10223e;">Simpangan rata-rata</div>
+          <div class="formula-pill" style="margin: 0; padding: 6px 14px; font-size: 13px;">
+            $$\frac{\sum |x_i - \bar{x}|}{n}$$
+          </div>
+        </div>
+
+        <!-- 5. Simpangan Baku -->
+        <div class="card-rounded" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 18px;">
+          <div style="font-size: 14px; font-weight: 800; color: #10223e;">Simpangan baku</div>
+          <div class="formula-pill" style="margin: 0; padding: 6px 14px; font-size: 13px;">
+            $$\sqrt{\frac{\sum (x_i - \bar{x})^2}{n}}$$
+          </div>
+        </div>
+
+        <!-- 6. Varians -->
+        <div class="card-rounded" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 18px;">
+          <div style="font-size: 14px; font-weight: 800; color: #10223e;">Varians</div>
+          <div class="formula-pill" style="margin: 0; padding: 6px 14px; font-size: 13px;">
+            $$\frac{1}{n}\sum (x_i - \bar{x})^2$$
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>MATEMATIKA • BAB 5</span>
+      <span>8</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 9: Telaah Soal Statistika -->
+  <div class="slide-page" id="slide-9">
+    <div class="slide-header-bar">
+      <div class="slide-main-title">Telaah Soal</div>
+      <div class="slide-sub-label">Statistika</div>
+    </div>
+
+    <div class="slide-content-area">
+      <div class="card-rounded">
+        <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 6px;">Contoh Analisis</div>
+        <p style="font-size: 15px; font-weight: 700; color: #10223e; margin-bottom: 12px;">
+          Data: $4, 6, 7, 7, 8, 10, 12$
+        </p>
+
+        <div class="grid-3" style="margin-bottom: 16px;">
+          <div class="formula-pill">
+            $$\text{Mean} = \frac{54}{7} \approx 7{,}71$$
+          </div>
+          <div class="formula-pill">
+            $$\text{Modus} = 7$$
+          </div>
+          <div class="formula-pill">
+            $$\text{Median} = 7$$
+          </div>
+        </div>
+
+        <div style="font-size: 15px; font-weight: 800; color: #10223e; margin-bottom: 4px;">Interpretasi:</div>
+        <p style="font-size: 13.5px; color: #334155; line-height: 1.5;">
+          Nilai pusat data berada sekitar 7–8, sedangkan nilai yang paling sering muncul adalah 7.
+        </p>
+      </div>
+
+      <div class="box-golden" style="margin-top: 10px; font-size: 13px;">
+        Langkah: urutkan data ➜ pilih ukuran statistik ➜ hitung ➜ interpretasikan.
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>MATEMATIKA • BAB 5</span>
+      <span>9</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 10: B. Peluang - Konsep Dasar -->
+  <div class="slide-page" id="slide-10">
+    <div class="slide-header-bar">
+      <div class="slide-main-title">B. Peluang</div>
+      <div class="slide-sub-label">Konsep dasar</div>
+    </div>
+
+    <div class="slide-content-area">
+      <div class="grid-2">
+        <!-- Kaidah Pencacahan -->
+        <div class="card-rounded">
+          <div class="badge-icon">B</div>
+          <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 8px; margin-left: 18px;">Kaidah Pencacahan</div>
+          <p style="font-size: 13px; color: #1e293b; margin-bottom: 10px;">
+            Digunakan untuk menghitung banyaknya kemungkinan hasil dari suatu percobaan.
+          </p>
+          <div class="formula-pill">
+            $$K = k_1 \times k_2 \times \dots \times k_n$$
+          </div>
+          <ul style="font-size: 13.5px; color: #1e293b; line-height: 1.6; padding-left: 20px; margin-top: 10px;">
+            <li>Teknik membilang</li>
+            <li>Faktorial</li>
+            <li>Permutasi</li>
+            <li>Kombinasi</li>
+          </ul>
+        </div>
+
+        <!-- Peluang Suatu Kejadian -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 8px;">Peluang Suatu Kejadian</div>
+            <p style="font-size: 13px; color: #1e293b; margin-bottom: 8px;">
+              Untuk ruang sampel $S$ dan kejadian $A$:
+            </p>
+            <div class="formula-pill">
+              $$P(A) = \frac{n(A)}{n(S)}$$
+            </div>
+            <div class="formula-pill">
+              $$0 \le P(A) \le 1$$
+            </div>
+            <div class="formula-pill">
+              $$P(A^c) = 1 - P(A)$$
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>MATEMATIKA • BAB 5</span>
+      <span>10</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 11: Pencacahan - Faktorial, Permutasi, Kombinasi -->
+  <div class="slide-page" id="slide-11">
+    <div class="slide-header-bar">
+      <div class="slide-main-title">Pencacahan</div>
+      <div class="slide-sub-label">Faktorial, permutasi, kombinasi</div>
+    </div>
+
+    <div class="slide-content-area">
+      <div class="grid-3">
+        <!-- Faktorial -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 8px; text-align: center;">Faktorial</div>
+            <div class="formula-pill" style="font-size: 13px;">
+              $$n! = 1 \times 2 \times \dots \times n$$
+            </div>
+          </div>
+          <p style="font-size: 12px; color: #334155; text-align: center; margin-top: 10px;">
+            Perkalian bilangan bulat positif.
+          </p>
+        </div>
+
+        <!-- Permutasi -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 8px; text-align: center;">Permutasi</div>
+            <div class="formula-pill" style="font-size: 14px;">
+              $$P^r_n = \frac{n!}{(n-r)!}$$
+            </div>
+          </div>
+          <p style="font-size: 12px; color: #334155; text-align: center; margin-top: 10px;">
+            Penyusunan objek dengan memperhatikan urutan.
+          </p>
+        </div>
+
+        <!-- Kombinasi -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 8px; text-align: center;">Kombinasi</div>
+            <div class="formula-pill" style="font-size: 14px;">
+              $$C^r_n = \frac{n!}{(n-r)! \, r!}$$
+            </div>
+          </div>
+          <p style="font-size: 12px; color: #334155; text-align: center; margin-top: 10px;">
+            Pemilihan objek tanpa memperhatikan urutan.
+          </p>
+        </div>
+      </div>
+
+      <div class="box-golden" style="margin-top: 12px; font-size: 13px;">
+        Kunci: permutasi memperhatikan urutan, kombinasi tidak.
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>MATEMATIKA • BAB 5</span>
+      <span>11</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 12: Kejadian dalam Peluang -->
+  <div class="slide-page" id="slide-12">
+    <div class="slide-header-bar">
+      <div class="slide-main-title">Kejadian dalam Peluang</div>
+      <div class="slide-sub-label">Relasi antar kejadian</div>
+    </div>
+
+    <div class="slide-content-area">
+      <div class="grid-3">
+        <!-- Saling Lepas -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 6px;">Saling Lepas</div>
+            <p style="font-size: 12px; color: #334155; margin-bottom: 10px;">
+              Tidak memiliki anggota kejadian yang sama.
+            </p>
+          </div>
+          <div class="formula-pill" style="font-size: 13px;">
+            $$P(A \cup B) = P(A) + P(B)$$
+          </div>
+        </div>
+
+        <!-- Saling Bebas -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 6px;">Saling Bebas</div>
+            <p style="font-size: 12px; color: #334155; margin-bottom: 10px;">
+              Satu kejadian tidak memengaruhi kejadian lain.
+            </p>
+          </div>
+          <div class="formula-pill" style="font-size: 13px;">
+            $$P(A \cap B) = P(A) \times P(B)$$
+          </div>
+        </div>
+
+        <!-- Bersyarat -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 6px;">Bersyarat</div>
+            <p style="font-size: 12px; color: #334155; margin-bottom: 10px;">
+              Peluang ketika kejadian lain telah diketahui.
+            </p>
+          </div>
+          <div class="formula-pill" style="font-size: 13px;">
+            $$P(A \mid B) = \frac{P(A \cap B)}{P(B)}$$
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>MATEMATIKA • BAB 5</span>
+      <span>12</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 13: Frekuensi Harapan -->
+  <div class="slide-page" id="slide-13">
+    <div class="slide-header-bar">
+      <div class="slide-main-title">Frekuensi Harapan</div>
+      <div class="slide-sub-label">Peluang dan percobaan</div>
+    </div>
+
+    <div class="slide-content-area">
+      <div class="grid-2">
+        <!-- Definisi Frekuensi Harapan -->
+        <div class="card-rounded">
+          <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 8px;">Frekuensi Harapan</div>
+          <p style="font-size: 13px; color: #1e293b; margin-bottom: 12px; line-height: 1.5;">
+            Frekuensi harapan menunjukkan banyaknya kemunculan suatu kejadian yang diharapkan dari sejumlah percobaan.
+          </p>
+          <div class="formula-pill">
+            $$F_h = n \times P(A)$$
+          </div>
+          <div style="font-size: 12.5px; color: #475569; line-height: 1.6; margin-top: 10px;">
+            $n$ = banyak percobaan<br>
+            $P(A)$ = peluang kejadian A
+          </div>
+        </div>
+
+        <!-- Contoh -->
+        <div class="card-rounded" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #10223e; margin-bottom: 8px;">Contoh</div>
+            <p style="font-size: 13px; color: #1e293b; line-height: 1.5; margin-bottom: 10px;">
+              Dadu dilempar 60 kali. Peluang muncul angka 6 adalah $1/6$.
+            </p>
+            <div class="formula-pill">
+              $$F_h = 60 \times \frac{1}{6} = 10$$
+            </div>
+          </div>
+          <p style="font-size: 12.5px; color: #334155; line-height: 1.4; margin-top: 8px;">
+            Secara teori, angka 6 diharapkan muncul sekitar 10 kali.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>MATEMATIKA • BAB 5</span>
+      <span>13</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 14: Rangkuman Esensial -->
+  <div class="slide-page" id="slide-14">
+    <div class="slide-header-bar">
+      <div class="slide-main-title">Rangkuman Esensial</div>
+      <div class="slide-sub-label">Bab 5</div>
+    </div>
+
+    <div class="slide-content-area">
+      <div class="grid-3">
+        <!-- Statistika -->
+        <div class="card-rounded" style="background: #10223e; color: white;">
+          <div style="font-size: 16px; font-weight: 800; color: #a855f7; margin-bottom: 12px; text-align: center;">Statistika</div>
+          <ul style="font-size: 13px; line-height: 1.7; padding-left: 20px; color: #e2e8f0;">
+            <li>Penyajian data</li>
+            <li>Mean • Median • Modus</li>
+            <li>Kuartil • Desil • Persentil</li>
+          </ul>
+        </div>
+
+        <!-- Penyebaran -->
+        <div class="card-rounded" style="background: #10223e; color: white;">
+          <div style="font-size: 16px; font-weight: 800; color: #38bdf8; margin-bottom: 12px; text-align: center;">Penyebaran</div>
+          <ul style="font-size: 13px; line-height: 1.7; padding-left: 20px; color: #e2e8f0;">
+            <li>Jangkauan</li>
+            <li>Simpangan rata-rata</li>
+            <li>Simpangan baku • Varians</li>
+          </ul>
+        </div>
+
+        <!-- Peluang -->
+        <div class="card-rounded" style="background: #10223e; color: white;">
+          <div style="font-size: 16px; font-weight: 800; color: #ffd600; margin-bottom: 12px; text-align: center;">Peluang</div>
+          <ul style="font-size: 13px; line-height: 1.7; padding-left: 20px; color: #e2e8f0;">
+            <li>Kaidah pencacahan</li>
+            <li>Permutasi • Kombinasi</li>
+            <li>P(A) • Frekuensi harapan</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="box-golden" style="margin-top: 14px; font-size: 13.5px;">
+        Pahami konsep ➜ susun langkah ➜ hitung ➜ interpretasikan hasil.
+      </div>
+    </div>
+
+    <div class="slide-footer">
+      <span>MATEMATIKA • BAB 5</span>
+      <span>14</span>
+    </div>
+  </div>
+
+</body>
+</html>

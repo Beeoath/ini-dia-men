@@ -147,8 +147,9 @@ export default function TeacherDashboard() {
   const [modulesList] = useState<SigmaModule[]>(MODULES);
   const [refreshKey, setRefreshKey] = useState<number>(0);
 
-  // Student metrics & submissions cleared to 0 (sesuai instruksi: "siswa clear ke 0")
+  // Student metrics & submissions
   const [totalStudents, setTotalStudents] = useState<number>(0);
+  const [completedModulesCount, setCompletedModulesCount] = useState<number>(0);
   const [studentSubmissions, setStudentSubmissions] = useState<StudentSubmission[]>([]);
 
   // Teacher edit material & upload PDF modal state
@@ -227,26 +228,84 @@ export default function TeacherDashboard() {
     } catch {}
   }, [madrasahAgenda]);
 
-  // Query real students from Supabase (defaults to 0 if none)
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("id, full_name, class_name")
-          .eq("role", "student");
+  // Query real students and submissions from Supabase
+  const loadTeacherMetrics = async () => {
+    try {
+      const { data: students, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, class_name")
+        .eq("role", "student");
 
-        if (!error && data && data.length > 0) {
-          setTotalStudents(data.length);
+      if (!error && students) {
+        setTotalStudents(students.length);
+
+        const { data: progressRows } = await supabase
+          .from("user_progress")
+          .select("id, user_id, module_id, quiz_score, completed, last_studied_at")
+          .order("last_studied_at", { ascending: false });
+
+        if (progressRows && progressRows.length > 0) {
+          const completedCount = progressRows.filter((p) => p.completed).length;
+          setCompletedModulesCount(completedCount);
+
+          const studentMap = new Map(students.map((s) => [s.id, s]));
+          const submissions: StudentSubmission[] = progressRows
+            .filter((p) => studentMap.has(p.user_id) && p.quiz_score !== null && p.quiz_score !== undefined)
+            .map((p) => {
+              const st = studentMap.get(p.user_id)!;
+              const mod = MODULES.find((m) => m.id === p.module_id);
+              const score = Number(p.quiz_score) || 0;
+              const isPassed = score >= 70;
+              return {
+                id: String(p.id || `${p.user_id}-${p.module_id}`),
+                name: st.full_name || "Siswa",
+                grade: st.class_name || "Kelas 11",
+                subject: "Matematika",
+                topic: mod?.title || p.module_id,
+                score: `${score}/100`,
+                status: isPassed ? "Lulus KKM (Terbuka)" : "Remedial KKM",
+                statusVariant: isPassed ? "cyan" : "amber",
+              };
+            });
+          setStudentSubmissions(submissions);
         } else {
-          setTotalStudents(0);
+          setCompletedModulesCount(0);
           setStudentSubmissions([]);
         }
-      } catch {
+      } else {
         setTotalStudents(0);
+        setCompletedModulesCount(0);
         setStudentSubmissions([]);
       }
-    })();
+    } catch {
+      setTotalStudents(0);
+      setCompletedModulesCount(0);
+      setStudentSubmissions([]);
+    }
+  };
+
+  useEffect(() => {
+    loadTeacherMetrics();
+
+    const onProgressUpdated = () => {
+      loadTeacherMetrics();
+    };
+    window.addEventListener("sigma_progress_updated", onProgressUpdated);
+
+    const channel = supabase
+      .channel("teacher-dashboard-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => {
+        loadTeacherMetrics();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_progress" }, () => {
+        loadTeacherMetrics();
+      })
+      .subscribe();
+
+    return () => {
+      window.removeEventListener("sigma_progress_updated", onProgressUpdated);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Handlers for Tasks
@@ -448,7 +507,7 @@ export default function TeacherDashboard() {
           </div>
           <div>
             <div className={`text-2xl font-black font-display ${isDark ? "text-white" : "text-slate-950"}`}>
-              0 / 5
+              {completedModulesCount}
             </div>
             <div className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
               Modul Tuntas Siswa
