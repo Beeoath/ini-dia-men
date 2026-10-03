@@ -110,7 +110,7 @@ export async function saveCustomMaterial(data: CustomMaterialData): Promise<void
       // Asynchronously sync to Supabase database if table exists
       (async () => {
         try {
-          await supabase
+          const { error } = await supabase
             .from("module_materials")
             .upsert({
               module_id: data.moduleId,
@@ -124,8 +124,11 @@ export async function saveCustomMaterial(data: CustomMaterialData): Promise<void
               is_custom_pdf: data.isCustomPdf,
               updated_at: new Date().toISOString(),
             });
-        } catch {
-          // ignore if table does not exist yet
+          if (error) {
+            console.error("[pdfStorage] Supabase error saat menyimpan module_materials:", error);
+          }
+        } catch (err) {
+          console.error("[pdfStorage] Exception saat sinkronisasi ke Supabase:", err);
         }
       })();
 

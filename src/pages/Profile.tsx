@@ -74,11 +74,12 @@ export default function Profile() {
     },
   ];
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfile({
+    await updateProfile({
       full_name: fullName,
       class_name: className,
+      avatar_url: profile?.avatar_url,
     });
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);

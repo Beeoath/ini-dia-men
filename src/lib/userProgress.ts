@@ -130,7 +130,7 @@ export async function getAllProgress(userId: string): Promise<Record<string, Stu
       .eq("user_id", userId);
 
     if (error) {
-      console.warn("Notice: Gagal ambil progress dari database:", error.message);
+      console.error("[userProgress.getAllProgress] Supabase error saat mengambil user_progress:", error);
       return {};
     }
 
@@ -140,7 +140,7 @@ export async function getAllProgress(userId: string): Promise<Record<string, Stu
     }
     return map;
   } catch (err) {
-    console.warn("getAllProgress network fallback:", err);
+    console.error("[userProgress.getAllProgress] Exception saat mengambil user_progress:", err);
     return {};
   }
 }
@@ -189,9 +189,11 @@ export async function saveModuleProgress(
       { onConflict: "user_id,module_id" }
     );
 
-    if (error) console.warn("Gagal simpan progress ke server:", error.message);
+    if (error) {
+      console.error("[userProgress.saveModuleProgress] Supabase error saat menyimpan progress modul:", error);
+    }
   } catch (e) {
-    console.warn("saveModuleProgress network fallback:", e);
+    console.error("[userProgress.saveModuleProgress] Exception saat menyimpan progress modul:", e);
   }
 
   localStorage.setItem(LAST_MODULE_KEY, moduleId);
@@ -225,12 +227,16 @@ export async function recordQuizCompletion(userId: string, moduleId: string, sco
 
   try {
     // Ambil dulu row yang ada (kalau ada), biar slideIdx/totalSlides gak ketimpa jadi 0
-    const { data: existing } = await supabase
+    const { data: existing, error: selectError } = await supabase
       .from("user_progress")
       .select("slide_idx, total_slides, completed")
       .eq("user_id", userId)
       .eq("module_id", moduleId)
       .maybeSingle();
+
+    if (selectError) {
+      console.error("[userProgress.recordQuizCompletion] Supabase error saat mengecek progress sebelumnya:", selectError);
+    }
 
     const { error } = await supabase.from("user_progress").upsert(
       {
@@ -246,9 +252,11 @@ export async function recordQuizCompletion(userId: string, moduleId: string, sco
       { onConflict: "user_id,module_id" }
     );
 
-    if (error) console.warn("Gagal simpan hasil quiz ke server:", error.message);
+    if (error) {
+      console.error("[userProgress.recordQuizCompletion] Supabase error saat menyimpan hasil kuis:", error);
+    }
   } catch (e) {
-    console.warn("recordQuizCompletion network fallback:", e);
+    console.error("[userProgress.recordQuizCompletion] Exception saat menyimpan hasil kuis:", e);
   }
 
   localStorage.setItem(LAST_MODULE_KEY, moduleId);

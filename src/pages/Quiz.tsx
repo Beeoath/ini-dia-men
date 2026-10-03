@@ -14,7 +14,7 @@ export default function Quiz() {
   const currentId = moduleId || id;
   const navigate = useNavigate();
   const { isDark } = useTheme();
-  const { profile } = useAuth();
+  const { profile, addXp } = useAuth();
 
   const moduleData = MODULES.find((m) => m.id === currentId) || MODULES[0];
   const { userProgress } = useStudentProgress();
@@ -56,7 +56,14 @@ export default function Quiz() {
     });
 
     const score = Math.round((correctCount / questions.length) * 100);
-    if (profile) recordQuizCompletion(profile.id, moduleData.id, score);
+    if (profile) {
+      recordQuizCompletion(profile.id, moduleData.id, score);
+      if (score > 0) {
+        // Tambah XP melalui RPC add_xp(amount) maksimal 100 per panggilan
+        const earnedXp = Math.min(100, Math.max(10, score));
+        addXp(earnedXp);
+      }
+    }
     sessionStorage.setItem(
       `quiz_result_${moduleData.id}`,
       JSON.stringify({

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { supabase } from "./supabaseClient";
+import { supabase, isSupabaseConfigured } from "./supabaseClient";
 
 export interface UserProfile {
   id: string;
@@ -149,21 +149,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
+
     // Cek session yang lagi aktif waktu app dibuka
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
       if (error) {
-        console.warn("Supabase session check notice:", error.message);
+        console.error("[Auth] Supabase error saat getSession:", error);
       }
       if (session?.user) {
         try {
           setProfile(await loadProfile(session.user.id, session.user.email!, session.user.user_metadata));
         } catch (e) {
-          console.error("Gagal load profile session:", e);
+          console.error("[Auth] Exception saat memuat profil sesi:", e);
         }
       }
       setLoading(false);
     }).catch((err) => {
-      console.warn("Supabase auth unreachable:", err);
+      console.error("[Auth] Gagal menghubungi Supabase auth getSession:", err);
       setLoading(false);
     });
 
@@ -173,7 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           setProfile(await loadProfile(session.user.id, session.user.email!, session.user.user_metadata));
         } catch (e) {
-          console.error("Gagal load profile auth change:", e);
+          console.error("[Auth] Exception saat memuat profil pada onAuthStateChange:", e);
         }
       } else {
         // Jangan hapus profile jika sedang pakai demoProfile
@@ -187,8 +192,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string): Promise<UserProfile> => {
+    if (!isSupabaseConfigured) {
+      const isTeacher = email.toLowerCase().includes("guru") || email.toLowerCase().includes("teacher");
+      const fallbackUser: UserProfile = {
+        id: isTeacher ? "00000000-0000-0000-0000-000000000002" : "00000000-0000-0000-0000-000000000001",
+        full_name: email.split("@")[0] || (isTeacher ? "Guru Pengampu" : "Siswa SIGMA"),
+        email,
+        role: isTeacher ? "teacher" : "student",
+        class_name: isTeacher ? "Guru Pengampu" : "Kelas 11",
+        xp: 250,
+        level: 2,
+        badges: ["perintis-distrik"],
+      };
+      setDemoProfile(fallbackUser);
+      return fallbackUser;
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      console.error("[login] Supabase error saat signInWithPassword:", error);
       const msg = error.message.toLowerCase();
       if (msg.includes("invalid login credentials")) {
         throw new Error(
@@ -218,6 +240,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithGoogle = async (): Promise<void> => {
+    if (!isSupabaseConfigured) {
+      throw new Error("failed to fetch");
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -225,6 +250,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
     });
     if (error) {
+      console.error("[loginWithGoogle] Supabase error saat signInWithOAuth:", error);
       if (error.message.toLowerCase().includes("failed to fetch")) {
         throw new Error(
           "Gagal terhubung ke database Supabase (Failed to fetch). Periksa koneksi internet Anda atau pastikan konfigurasi Vercel sudah sesuai."
@@ -246,6 +272,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error("Kode otorisasi guru tidak valid. Hubungi admin MA Darunnajah 9.");
     }
 
+    if (!isSupabaseConfigured) {
+      const fallbackUser: UserProfile = {
+        id: role === "teacher" ? "00000000-0000-0000-0000-000000000002" : "00000000-0000-0000-0000-000000000001",
+        full_name,
+        email,
+        role,
+        class_name: extra.class_name || (role === "teacher" ? "Guru Pengampu" : "Kelas 11"),
+        xp: 100,
+        level: 1,
+        badges: ["perintis-distrik"],
+      };
+      setDemoProfile(fallbackUser);
+      return fallbackUser;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -254,6 +295,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
     });
     if (error) {
+      console.error("[register] Supabase error saat signUp:", error);
       const msg = error.message.toLowerCase();
       if (msg.includes("invalid api key") || msg.includes("apikey")) {
         throw new Error(
@@ -280,7 +322,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    supabase.auth.signOut().catch(() => {});
+    supabase.auth.signOut().then(({ error }) => {
+      if (error) console.error("[logout] Supabase error saat signOut:", error);
+    }).catch((err) => {
+      console.error("[logout] Exception saat signOut:", err);
+    });
     setProfile(null);
     try {
       sessionStorage.removeItem("sigma_demo_user");

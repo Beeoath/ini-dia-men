@@ -236,13 +236,21 @@ export default function TeacherDashboard() {
         .select("id, full_name, class_name")
         .eq("role", "student");
 
+      if (error) {
+        console.error("[TeacherDashboard] Supabase error saat memuat profil siswa:", error);
+      }
+
       if (!error && students) {
         setTotalStudents(students.length);
 
-        const { data: progressRows } = await supabase
+        const { data: progressRows, error: progressError } = await supabase
           .from("user_progress")
           .select("id, user_id, module_id, quiz_score, completed, last_studied_at")
           .order("last_studied_at", { ascending: false });
+
+        if (progressError) {
+          console.error("[TeacherDashboard] Supabase error saat memuat user_progress:", progressError);
+        }
 
         if (progressRows && progressRows.length > 0) {
           const completedCount = progressRows.filter((p) => p.completed).length;
@@ -277,7 +285,8 @@ export default function TeacherDashboard() {
         setCompletedModulesCount(0);
         setStudentSubmissions([]);
       }
-    } catch {
+    } catch (err) {
+      console.error("[TeacherDashboard] Exception saat memuat metrik guru:", err);
       setTotalStudents(0);
       setCompletedModulesCount(0);
       setStudentSubmissions([]);
