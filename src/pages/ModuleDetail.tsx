@@ -75,7 +75,7 @@ export default function ModuleDetail() {
   const pretest = isBab1 ? getAssessmentResult("mod-aljabar-1", "pretest") : null;
   const posttest = isBab1 ? getAssessmentResult("mod-aljabar-1", "posttest") : null;
   const quizScore = userProgress[moduleData.id]?.quizScore ?? 0;
-  const isQuizPassed = Boolean(userProgress[moduleData.id]?.completed && quizScore >= MIN_PASSING_SCORE);
+  const isQuizPassed = Boolean(quizScore >= MIN_PASSING_SCORE);
   const nGain = pretest && posttest ? calculateNGain(pretest.score, posttest.score) : null;
 
   return (

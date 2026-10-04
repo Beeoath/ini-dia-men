@@ -5,26 +5,31 @@ import { MODULES } from "../lib/sigmaData";
 import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
 import { FormattedMathText } from "../components/MathView";
-import { MIN_PASSING_SCORE } from "../lib/userProgress";
+import { MIN_PASSING_SCORE, recordQuizCompletion } from "../lib/userProgress";
 
 export default function QuizResult() {
   const { id, attemptId } = useParams();
   const currentId = attemptId || id;
   const { isDark } = useTheme();
+  const { profile } = useAuth();
   const moduleData = MODULES.find((m) => m.id === currentId) || MODULES[0];
 
   const [result, setResult] = useState<any>(null);
 
   useEffect(() => {
-    // Status "selesai" udah dicatat ke tabel user_progress lewat
-    // recordQuizCompletion() di Quiz.tsx, jadi di sini tinggal baca hasilnya aja.
     try {
       const saved = sessionStorage.getItem(`quiz_result_${moduleData.id}`);
-      if (saved) setResult(JSON.parse(saved));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setResult(parsed);
+        if (profile && typeof parsed?.score === "number") {
+          recordQuizCompletion(profile.id, moduleData.id, parsed.score);
+        }
+      }
     } catch {
       // ignore
     }
-  }, [moduleData.id]);
+  }, [moduleData.id, profile]);
 
   const score = result?.score ?? 100;
   const isPassed = score >= MIN_PASSING_SCORE;

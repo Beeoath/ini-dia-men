@@ -47,7 +47,7 @@ export default function Quiz() {
     setSelectedAnswers((prev) => ({ ...prev, [currentIdx]: optIdx }));
   };
 
-  const handleSubmit = (isTimeout = false) => {
+  const handleSubmit = async (isTimeout = false) => {
     let correctCount = 0;
     questions.forEach((question, idx) => {
       if (selectedAnswers[idx] === question.correctAnswer) {
@@ -56,14 +56,7 @@ export default function Quiz() {
     });
 
     const score = Math.round((correctCount / questions.length) * 100);
-    if (profile) {
-      recordQuizCompletion(profile.id, moduleData.id, score);
-      if (score > 0) {
-        // Tambah XP melalui RPC add_xp(amount) maksimal 100 per panggilan
-        const earnedXp = Math.min(100, Math.max(10, score));
-        addXp(earnedXp);
-      }
-    }
+
     sessionStorage.setItem(
       `quiz_result_${moduleData.id}`,
       JSON.stringify({
@@ -76,6 +69,15 @@ export default function Quiz() {
         completedAt: new Date().toISOString(),
       })
     );
+
+    if (profile) {
+      await recordQuizCompletion(profile.id, moduleData.id, score);
+      if (score > 0) {
+        // Tambah XP melalui RPC add_xp(amount) maksimal 100 per panggilan
+        const earnedXp = Math.min(100, Math.max(10, score));
+        addXp(earnedXp);
+      }
+    }
 
     navigate(`/app/hasil-kuis/${moduleData.id}`);
   };

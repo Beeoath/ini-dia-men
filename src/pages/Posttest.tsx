@@ -27,6 +27,7 @@ import {
   StudentSurveyResult,
 } from "../lib/testAssessmentData";
 import { useStudentProgress, MIN_PASSING_SCORE } from "../lib/userProgress";
+import { FormattedMathText } from "../components/MathView";
 
 export default function Posttest() {
   const { id } = useParams();
@@ -35,12 +36,31 @@ export default function Posttest() {
   const { profile } = useAuth();
 
   const data = POSTTEST_FORM_DATA;
-  const { userProgress } = useStudentProgress();
+  const { userProgress, loading: progressLoading } = useStudentProgress();
 
-  // Check if student has passed Quiz Bab 1
-  const bab1Progress = userProgress[moduleId] || userProgress["mod-aljabar-1"];
-  const quizScore = bab1Progress?.quizScore ?? 0;
-  const isQuizPassed = Boolean(bab1Progress?.completed && quizScore >= MIN_PASSING_SCORE);
+  // Check if student has passed Quiz Bab 1 (from userProgress or current session quiz_result)
+  const bab1Progress =
+    userProgress[moduleId] ||
+    userProgress["mod-aljabar-1"] ||
+    userProgress["mod-bilangan-1"];
+
+  const sessionQuizScore = (() => {
+    try {
+      const saved =
+        sessionStorage.getItem(`quiz_result_${moduleId}`) ||
+        sessionStorage.getItem("quiz_result_mod-aljabar-1");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed?.score === "number") return parsed.score;
+      }
+    } catch {
+      // ignore
+    }
+    return 0;
+  })();
+
+  const quizScore = Math.max(bab1Progress?.quizScore ?? 0, sessionQuizScore);
+  const isQuizPassed = Boolean(quizScore >= MIN_PASSING_SCORE);
 
   // Retrieve pre-test result to autofill student info & calculate gain
   const pretestSurvey = getSurveyResult(moduleId, "pretest");
@@ -131,6 +151,17 @@ export default function Posttest() {
     setSurveyResult(null);
   };
 
+  if (progressLoading && !isQuizPassed) {
+    return (
+      <div className="max-w-xl mx-auto py-16 px-4 text-center">
+        <div className="inline-flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+          <span className="font-mono text-xs text-slate-400">Memeriksa status kelulusan kuis...</span>
+        </div>
+      </div>
+    );
+  }
+
   // If Quiz Bab 1 is not passed yet, render locked notice
   if (!isQuizPassed) {
     return (
@@ -179,7 +210,7 @@ export default function Posttest() {
             </span>
           </div>
           <p className="text-xs text-left leading-relaxed">
-            Silakan buka kuis Bab 1 dan raih nilai $\ge 70$ untuk secara otomatis membuka evaluasi Post-Test ini.
+            <FormattedMathText text="Silakan buka kuis Bab 1 dan raih nilai $\ge 70$ untuk secara otomatis membuka evaluasi Post-Test ini." />
           </p>
         </div>
 

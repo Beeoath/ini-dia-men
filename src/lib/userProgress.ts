@@ -17,6 +17,41 @@ export interface StudentModuleProgress {
 const LAST_MODULE_KEY = "sigma_last_active_module_v3";
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function getLocalProgressKey(userId: string): string {
+  return `sigma_local_progress_${userId}`;
+}
+
+function readLocalProgressMap(userId: string): Record<string, StudentModuleProgress> {
+  try {
+    const stored = localStorage.getItem(getLocalProgressKey(userId));
+    if (stored) return JSON.parse(stored);
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
+function writeLocalProgressMap(userId: string, map: Record<string, StudentModuleProgress>) {
+  try {
+    localStorage.setItem(getLocalProgressKey(userId), JSON.stringify(map));
+  } catch {
+    // ignore
+  }
+}
+
+function getBestSessionQuizScore(moduleId: string): number | undefined {
+  try {
+    const saved = sessionStorage.getItem(`quiz_result_${moduleId}`);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (typeof parsed?.score === "number") return parsed.score;
+    }
+  } catch {
+    // ignore
+  }
+  return undefined;
+}
+
 export const isLocalSessionUser = (userId?: string | null): boolean => {
   if (!userId) return true;
   if (userId.startsWith("00000000-0000-0000-0000-")) return true;
@@ -63,8 +98,9 @@ export function getModuleUnlockStatus(
 
   // Cek Bab 1 terlebih dahulu (Wajib selesai & nilai kuis minimal 70)
   const bab1Progress = userProgress["mod-aljabar-1"] || userProgress["mod-bilangan-1"];
-  const bab1Score = bab1Progress?.quizScore ?? 0;
-  const bab1Passed = Boolean(bab1Progress?.completed && bab1Score >= MIN_PASSING_SCORE);
+  const sessionBab1Score = getBestSessionQuizScore("mod-aljabar-1") ?? 0;
+  const bab1Score = Math.max(bab1Progress?.quizScore ?? 0, sessionBab1Score);
+  const bab1Passed = Boolean(bab1Score >= MIN_PASSING_SCORE);
 
   if (!bab1Passed) {
     return {
@@ -85,8 +121,9 @@ export function getModuleUnlockStatus(
     const prevModule = MODULES.find((m) => m.districtId === prevDistrictId);
     if (prevModule) {
       const prevProg = userProgress[prevModule.id];
-      const prevScore = prevProg?.quizScore ?? 0;
-      const prevPassed = Boolean(prevProg?.completed && prevScore >= MIN_PASSING_SCORE);
+      const sessionPrevScore = getBestSessionQuizScore(prevModule.id) ?? 0;
+      const prevScore = Math.max(prevProg?.quizScore ?? 0, sessionPrevScore);
+      const prevPassed = Boolean(prevScore >= MIN_PASSING_SCORE);
       if (!prevPassed) {
         return {
           isUnlocked: false,
@@ -103,13 +140,10 @@ export function getModuleUnlockStatus(
 }
 
 export async function getAllProgress(userId: string): Promise<Record<string, StudentModuleProgress>> {
+  const localMap = readLocalProgressMap(userId);
+
   if (isLocalSessionUser(userId)) {
-    try {
-      const stored = localStorage.getItem(`sigma_local_progress_${userId}`);
-      if (stored) return JSON.parse(stored);
-    } catch {
-      // ignore
-    }
+    if (Object.keys(localMap).length > 0) return localMap;
     // Initial progress: Siswa mulai dari Bab 1, Bab 2 terkunci
     return {
       "mod-aljabar-1": {
@@ -123,6 +157,8 @@ export async function getAllProgress(userId: string): Promise<Record<string, Stu
     };
   }
 
+  const mergedMap: Record<string, StudentModuleProgress> = { ...localMap };
+
   try {
     const { data, error } = await supabase
       .from("user_progress")
@@ -131,18 +167,51 @@ export async function getAllProgress(userId: string): Promise<Record<string, Stu
 
     if (error) {
       console.error("[userProgress.getAllProgress] Supabase error saat mengambil user_progress:", error);
-      return {};
+    } else {
+      for (const row of data || []) {
+        const remoteProg = rowToProgress(row);
+        const localProg = localMap[remoteProg.moduleId];
+        const bestQuizScore =
+          remoteProg.quizScore !== undefined && localProg?.quizScore !== undefined
+            ? Math.max(remoteProg.quizScore, localProg.quizScore)
+            : remoteProg.quizScore ?? localProg?.quizScore;
+        const isCompleted = Boolean(
+          remoteProg.completed ||
+            localProg?.completed ||
+            (bestQuizScore !== undefined && bestQuizScore >= MIN_PASSING_SCORE)
+        );
+        mergedMap[remoteProg.moduleId] = {
+          ...remoteProg,
+          percent: Math.max(remoteProg.percent || 0, localProg?.percent || 0),
+          quizScore: bestQuizScore,
+          completed: isCompleted,
+        };
+      }
+      writeLocalProgressMap(userId, mergedMap);
     }
-
-    const map: Record<string, StudentModuleProgress> = {};
-    for (const row of data || []) {
-      map[row.module_id] = rowToProgress(row);
-    }
-    return map;
   } catch (err) {
     console.error("[userProgress.getAllProgress] Exception saat mengambil user_progress:", err);
-    return {};
   }
+
+  // Sinkronkan juga skor kuis di sessionStorage jika baru saja selesai dikerjakan di sesi ini
+  for (const mod of MODULES) {
+    const sessionScore = getBestSessionQuizScore(mod.id);
+    if (sessionScore !== undefined) {
+      const existing = mergedMap[mod.id];
+      const bestScore = Math.max(existing?.quizScore ?? 0, sessionScore);
+      mergedMap[mod.id] = {
+        moduleId: mod.id,
+        slideIdx: existing?.slideIdx ?? 0,
+        totalSlides: existing?.totalSlides ?? 14,
+        percent: Math.max(existing?.percent ?? 0, 100),
+        lastStudiedAt: existing?.lastStudiedAt || new Date().toISOString(),
+        quizScore: bestScore,
+        completed: Boolean(existing?.completed || bestScore >= MIN_PASSING_SCORE),
+      };
+    }
+  }
+
+  return mergedMap;
 }
 
 export async function saveModuleProgress(
@@ -152,42 +221,73 @@ export async function saveModuleProgress(
   totalSlides: number
 ) {
   const percent = Math.min(100, Math.round(((slideIdx + 1) / totalSlides) * 100));
+  const localMap = readLocalProgressMap(userId);
+  const localExisting = localMap[moduleId];
+  const sessionScore = getBestSessionQuizScore(moduleId);
+  const preservedQuizScore =
+    localExisting?.quizScore !== undefined && sessionScore !== undefined
+      ? Math.max(localExisting.quizScore, sessionScore)
+      : localExisting?.quizScore ?? sessionScore;
+  const preservedCompleted = Boolean(
+    percent >= 100 ||
+      localExisting?.completed ||
+      (preservedQuizScore !== undefined && preservedQuizScore >= MIN_PASSING_SCORE)
+  );
+
+  // Simpan di localStorage terlebih dahulu agar state instan dan menjaga quizScore tidak hilang
+  localMap[moduleId] = {
+    moduleId,
+    slideIdx,
+    totalSlides,
+    percent: Math.max(percent, localExisting?.percent ?? 0),
+    quizScore: preservedQuizScore,
+    completed: preservedCompleted,
+    lastStudiedAt: new Date().toISOString(),
+  };
+  writeLocalProgressMap(userId, localMap);
 
   if (isLocalSessionUser(userId)) {
-    try {
-      const key = `sigma_local_progress_${userId}`;
-      const stored = localStorage.getItem(key);
-      const map = stored ? JSON.parse(stored) : {};
-      map[moduleId] = {
-        moduleId,
-        slideIdx,
-        totalSlides,
-        percent,
-        completed: percent >= 100,
-        lastStudiedAt: new Date().toISOString(),
-      };
-      localStorage.setItem(key, JSON.stringify(map));
-    } catch {
-      // ignore
-    }
     localStorage.setItem(LAST_MODULE_KEY, moduleId);
     window.dispatchEvent(new Event("sigma_progress_updated"));
     return;
   }
 
   try {
-    const { error } = await supabase.from("user_progress").upsert(
-      {
-        user_id: userId,
-        module_id: moduleId,
-        slide_idx: slideIdx,
-        total_slides: totalSlides,
-        percent,
-        completed: percent >= 100,
-        last_studied_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,module_id" }
+    // Ambil dulu row yang ada di database agar completed / quiz_score tidak ketimpa jadi false
+    const { data: existingRow } = await supabase
+      .from("user_progress")
+      .select("completed, quiz_score, percent")
+      .eq("user_id", userId)
+      .eq("module_id", moduleId)
+      .maybeSingle();
+
+    const dbQuizScore =
+      existingRow?.quiz_score !== null && existingRow?.quiz_score !== undefined
+        ? Math.max(existingRow.quiz_score, preservedQuizScore ?? 0)
+        : preservedQuizScore;
+
+    const finalCompleted = Boolean(
+      preservedCompleted ||
+        existingRow?.completed ||
+        (dbQuizScore !== undefined && dbQuizScore >= MIN_PASSING_SCORE)
     );
+
+    const payload: Record<string, any> = {
+      user_id: userId,
+      module_id: moduleId,
+      slide_idx: slideIdx,
+      total_slides: totalSlides,
+      percent: Math.max(percent, existingRow?.percent ?? 0),
+      completed: finalCompleted,
+      last_studied_at: new Date().toISOString(),
+    };
+    if (dbQuizScore !== undefined) {
+      payload.quiz_score = dbQuizScore;
+    }
+
+    const { error } = await supabase
+      .from("user_progress")
+      .upsert(payload, { onConflict: "user_id,module_id" });
 
     if (error) {
       console.error("[userProgress.saveModuleProgress] Supabase error saat menyimpan progress modul:", error);
@@ -201,35 +301,35 @@ export async function saveModuleProgress(
 }
 
 export async function recordQuizCompletion(userId: string, moduleId: string, score: number) {
+  const localMap = readLocalProgressMap(userId);
+  const localExisting = localMap[moduleId];
+  const bestLocalScore =
+    localExisting?.quizScore !== undefined ? Math.max(localExisting.quizScore, score) : score;
+  const isCompleted = Boolean(bestLocalScore >= MIN_PASSING_SCORE || localExisting?.completed);
+
+  // Simpan langsung ke localStorage agar Post-Test & bab berikutnya langsung terbuka tanpa race condition
+  localMap[moduleId] = {
+    moduleId,
+    slideIdx: localExisting?.slideIdx ?? 0,
+    totalSlides: localExisting?.totalSlides ?? 14,
+    percent: 100,
+    quizScore: bestLocalScore,
+    completed: isCompleted,
+    lastStudiedAt: new Date().toISOString(),
+  };
+  writeLocalProgressMap(userId, localMap);
+
   if (isLocalSessionUser(userId)) {
-    try {
-      const key = `sigma_local_progress_${userId}`;
-      const stored = localStorage.getItem(key);
-      const map = stored ? JSON.parse(stored) : {};
-      const existing = map[moduleId];
-      map[moduleId] = {
-        moduleId,
-        slideIdx: existing?.slideIdx ?? 0,
-        totalSlides: existing?.totalSlides ?? 1,
-        percent: 100,
-        quizScore: score,
-        completed: score >= MIN_PASSING_SCORE || existing?.completed || false,
-        lastStudiedAt: new Date().toISOString(),
-      };
-      localStorage.setItem(key, JSON.stringify(map));
-    } catch {
-      // ignore
-    }
     localStorage.setItem(LAST_MODULE_KEY, moduleId);
     window.dispatchEvent(new Event("sigma_progress_updated"));
     return;
   }
 
   try {
-    // Ambil dulu row yang ada (kalau ada), biar slideIdx/totalSlides gak ketimpa jadi 0
+    // Ambil dulu row yang ada (kalau ada), biar slideIdx/totalSlides/quiz_score terbaik gak ketimpa
     const { data: existing, error: selectError } = await supabase
       .from("user_progress")
-      .select("slide_idx, total_slides, completed")
+      .select("slide_idx, total_slides, completed, quiz_score")
       .eq("user_id", userId)
       .eq("module_id", moduleId)
       .maybeSingle();
@@ -238,15 +338,20 @@ export async function recordQuizCompletion(userId: string, moduleId: string, sco
       console.error("[userProgress.recordQuizCompletion] Supabase error saat mengecek progress sebelumnya:", selectError);
     }
 
+    const finalScore =
+      existing?.quiz_score !== null && existing?.quiz_score !== undefined
+        ? Math.max(existing.quiz_score, bestLocalScore)
+        : bestLocalScore;
+
     const { error } = await supabase.from("user_progress").upsert(
       {
         user_id: userId,
         module_id: moduleId,
-        slide_idx: existing?.slide_idx ?? 0,
-        total_slides: existing?.total_slides ?? 1,
+        slide_idx: existing?.slide_idx ?? localExisting?.slideIdx ?? 0,
+        total_slides: existing?.total_slides ?? localExisting?.totalSlides ?? 14,
         percent: 100,
-        quiz_score: score,
-        completed: score >= MIN_PASSING_SCORE || existing?.completed || false,
+        quiz_score: finalScore,
+        completed: finalScore >= MIN_PASSING_SCORE || existing?.completed || isCompleted,
         last_studied_at: new Date().toISOString(),
       },
       { onConflict: "user_id,module_id" }
