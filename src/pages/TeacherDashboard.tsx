@@ -231,60 +231,98 @@ export default function TeacherDashboard() {
   // Query real students and submissions from Supabase
   const loadTeacherMetrics = async () => {
     try {
-      const { data: students, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, class_name")
-        .eq("role", "student");
-
-      if (error) {
-        console.error("[TeacherDashboard] Supabase error saat memuat profil siswa:", error);
-      }
-
-      if (!error && students) {
-        setTotalStudents(students.length);
-
-        const { data: progressRows, error: progressError } = await supabase
+      const [studentsRes, progressRes] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, full_name, class_name, role")
+          .eq("role", "student"),
+        supabase
           .from("user_progress")
-          .select("id, user_id, module_id, quiz_score, completed, last_studied_at")
-          .order("last_studied_at", { ascending: false });
+          .select("id, user_id, module_id, slide_idx, total_slides, percent, quiz_score, completed, last_studied_at")
+          .order("last_studied_at", { ascending: false }),
+      ]);
 
-        if (progressError) {
-          console.error("[TeacherDashboard] Supabase error saat memuat user_progress:", progressError);
-        }
-
-        if (progressRows && progressRows.length > 0) {
-          const completedCount = progressRows.filter((p) => p.completed).length;
-          setCompletedModulesCount(completedCount);
-
-          const studentMap = new Map(students.map((s) => [s.id, s]));
-          const submissions: StudentSubmission[] = progressRows
-            .filter((p) => studentMap.has(p.user_id) && p.quiz_score !== null && p.quiz_score !== undefined)
-            .map((p) => {
-              const st = studentMap.get(p.user_id)!;
-              const mod = MODULES.find((m) => m.id === p.module_id);
-              const score = Number(p.quiz_score) || 0;
-              const isPassed = score >= 70;
-              return {
-                id: String(p.id || `${p.user_id}-${p.module_id}`),
-                name: st.full_name || "Siswa",
-                grade: st.class_name || "Kelas 11",
-                subject: "Matematika",
-                topic: mod?.title || p.module_id,
-                score: `${score}/100`,
-                status: isPassed ? "Lulus KKM (Terbuka)" : "Remedial KKM",
-                statusVariant: isPassed ? "cyan" : "amber",
-              };
-            });
-          setStudentSubmissions(submissions);
-        } else {
-          setCompletedModulesCount(0);
-          setStudentSubmissions([]);
-        }
-      } else {
-        setTotalStudents(0);
-        setCompletedModulesCount(0);
-        setStudentSubmissions([]);
+      if (studentsRes.error) {
+        console.error("[TeacherDashboard] Supabase error saat memuat profil siswa:", studentsRes.error);
       }
+      if (progressRes.error) {
+        console.error("[TeacherDashboard] Supabase error saat memuat user_progress:", progressRes.error);
+      }
+
+      const students = studentsRes.data || [];
+      const progressRows = progressRes.data || [];
+
+      const studentMap = new Map<string, { id: string; full_name: string; class_name: string }>();
+      for (const s of students) {
+        studentMap.set(s.id, {
+          id: s.id,
+          full_name: s.full_name || "Siswa",
+          class_name: s.class_name || "Kelas 11",
+        });
+      }
+
+      // Hitung juga user_id unik yang ada di user_progress seandainya RLS profiles hanya mengembalikan sebagian
+      const uniqueStudentIds = new Set<string>(students.map((s) => s.id));
+      for (const p of progressRows) {
+        if (p.user_id) {
+          uniqueStudentIds.add(p.user_id);
+        }
+      }
+
+      setTotalStudents(uniqueStudentIds.size);
+
+      const completedCount = progressRows.filter(
+        (p) => p.completed || (typeof p.quiz_score === "number" && p.quiz_score >= 70)
+      ).length;
+      setCompletedModulesCount(completedCount);
+
+      const submissions: StudentSubmission[] = [];
+      const usersWithProgress = new Set<string>();
+
+      for (const p of progressRows) {
+        usersWithProgress.add(p.user_id);
+        const st = studentMap.get(p.user_id);
+        const mod = MODULES.find((m) => m.id === p.module_id);
+        const hasQuizScore = p.quiz_score !== null && p.quiz_score !== undefined;
+        const scoreNum = hasQuizScore ? Number(p.quiz_score) : null;
+        const isPassed = scoreNum !== null && scoreNum >= 70;
+        const percentNum = Number(p.percent) || 0;
+
+        submissions.push({
+          id: String(p.id || `${p.user_id}-${p.module_id}`),
+          name: st?.full_name || `Siswa (${String(p.user_id).slice(0, 6)})`,
+          grade: st?.class_name || "Kelas 11",
+          subject: "Matematika",
+          topic: mod?.displayTitle || mod?.title || p.module_id,
+          score: hasQuizScore ? `${scoreNum}/100` : `Materi ${percentNum}%`,
+          status: hasQuizScore
+            ? isPassed
+              ? "Lulus KKM (Terbuka)"
+              : "Remedial KKM"
+            : p.completed
+            ? "Materi Selesai"
+            : "Sedang Belajar",
+          statusVariant: isPassed || (!hasQuizScore && p.completed) ? "cyan" : "amber",
+        });
+      }
+
+      // Tampilkan juga siswa yang sudah daftar akun tapi belum memiliki baris di user_progress
+      for (const st of students) {
+        if (!usersWithProgress.has(st.id)) {
+          submissions.push({
+            id: `registered-${st.id}`,
+            name: st.full_name || "Siswa Terdaftar",
+            grade: st.class_name || "Kelas 11",
+            subject: "Matematika",
+            topic: "BAB 1: BILANGAN",
+            score: "Belum Kuis",
+            status: "Terdaftar (Belum Mulai)",
+            statusVariant: "amber",
+          });
+        }
+      }
+
+      setStudentSubmissions(submissions);
     } catch (err) {
       console.error("[TeacherDashboard] Exception saat memuat metrik guru:", err);
       setTotalStudents(0);
