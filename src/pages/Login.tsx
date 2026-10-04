@@ -31,16 +31,18 @@ export default function Login() {
     pendingTeacherCode,
     setPendingTeacherCode,
     profile,
+    loading: authLoading,
   } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const isDaftarQuery = searchParams.get("mode") === "daftar";
-  const roleQuery = searchParams.get("role") === "guru" ? "teacher" : "student";
+  const initialTab = searchParams.get("role") === "guru" ? "teacher" : "student";
 
   const [isRegisterMode, setIsRegisterMode] = useState(isDaftarQuery);
-  const [selectedRole, setSelectedRole] = useState<"student" | "teacher">(roleQuery);
+  // selectedTab HANYA pilihan tampilan UI (Siswa / Guru), BUKAN penentu role user
+  const [selectedTab, setSelectedTab] = useState<"student" | "teacher">(initialTab);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -48,25 +50,33 @@ export default function Login() {
   const [teacherCode, setTeacherCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [language, setLanguage] = useState<"ID" | "EN">("ID");
 
-  const getDestination = (role: string) => {
+  const isBusy = authLoading || submitting;
+
+  // Tentukan tujuan halaman HANYA berdasarkan profile.role dari tabel profiles di database
+  const getDestinationByRole = (dbRole: "student" | "teacher") => {
     const redirectParam = searchParams.get("redirect");
     if (redirectParam && redirectParam.startsWith("/")) {
+      // Cegah siswa diarahkan ke halaman /teacher/* jika ada parameter redirect
+      if (redirectParam.startsWith("/teacher") && dbRole !== "teacher") {
+        return "/app/dashboard";
+      }
       return redirectParam;
     }
-    return role === "teacher" ? "/teacher/dashboard" : "/app/dashboard";
+    return dbRole === "teacher" ? "/teacher/dashboard" : "/app/dashboard";
   };
 
-  // Redirect if already authenticated (dan tangani klaim guru setelah login Google di tab Guru)
+  // Redirect saat sesi sudah aktif & profil dari database selesai dimuat
+  // (termasuk setelah kembali dari Google OAuth)
   useEffect(() => {
-    if (!profile || loading) return;
+    if (authLoading || submitting || !profile) return;
 
     const codeToTry = teacherCode.trim() || pendingTeacherCode;
-    if (selectedRole === "teacher" && profile.role === "student" && codeToTry) {
+    if (selectedTab === "teacher" && profile.role === "student" && codeToTry) {
       let cancelled = false;
-      setLoading(true);
+      setSubmitting(true);
       setPendingTeacherCode(null);
       setTeacherCode("");
 
@@ -74,17 +84,19 @@ export default function Login() {
         .then(async (claimed) => {
           if (cancelled) return;
           if (claimed) {
-            await refreshProfile(profile.id);
-            toast.success("Akun Guru berhasil diverifikasi!");
-            navigate("/teacher/dashboard");
-          } else {
-            setErrorMsg("Kode guru salah");
-            toast.error("Kode guru salah");
-            navigate("/app/dashboard");
+            const refreshed = await refreshProfile(profile.id);
+            const finalRole = refreshed?.role === "teacher" ? "teacher" : "student";
+            if (finalRole === "teacher") {
+              toast.success("Akun Guru berhasil diverifikasi!");
+              navigate("/teacher/dashboard", { replace: true });
+              return;
+            }
           }
+          toast.info("Akun ini belum terdaftar sebagai guru. Kamu masuk sebagai siswa.");
+          navigate("/app/dashboard", { replace: true });
         })
         .finally(() => {
-          if (!cancelled) setLoading(false);
+          if (!cancelled) setSubmitting(false);
         });
 
       return () => {
@@ -92,20 +104,38 @@ export default function Login() {
       };
     }
 
-    navigate(getDestination(profile.role));
-  }, [profile, loading, selectedRole, teacherCode, pendingTeacherCode, claimTeacher, refreshProfile, setPendingTeacherCode, navigate, searchParams]);
+    if (selectedTab === "teacher" && profile.role === "student") {
+      toast.info("Akun ini belum terdaftar sebagai guru. Kamu masuk sebagai siswa.");
+      navigate("/app/dashboard", { replace: true });
+      return;
+    }
+
+    navigate(getDestinationByRole(profile.role), { replace: true });
+  }, [
+    profile,
+    authLoading,
+    submitting,
+    selectedTab,
+    teacherCode,
+    pendingTeacherCode,
+    claimTeacher,
+    refreshProfile,
+    setPendingTeacherCode,
+    navigate,
+    searchParams,
+  ]);
 
   useEffect(() => {
     setIsRegisterMode(searchParams.get("mode") === "daftar");
     if (searchParams.get("role") === "guru") {
-      setSelectedRole("teacher");
+      setSelectedTab("teacher");
     }
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
-    setLoading(true);
+    setSubmitting(true);
 
     try {
       if (isRegisterMode) {
@@ -119,9 +149,12 @@ export default function Login() {
           throw new Error("Password minimal 6 karakter.");
         }
 
-        const result = await register(fullName, email, password, selectedRole, {
-          class_name: selectedRole === "student" ? className : "Guru Pengampu",
-          teacher_code: selectedRole === "teacher" ? teacherCode : undefined,
+        const codeInput = selectedTab === "teacher" ? teacherCode.trim() : "";
+        setTeacherCode("");
+
+        const result = await register(fullName, email, password, {
+          class_name: selectedTab === "student" ? className : "Guru Pengampu",
+          teacher_code: codeInput || undefined,
         });
 
         // Jika signUp butuh konfirmasi email sehingga session belum aktif
@@ -133,30 +166,52 @@ export default function Login() {
           return;
         }
 
-        if (selectedRole === "teacher") {
-          if (result.teacherClaimFailed) {
-            setErrorMsg("Kode guru salah");
-            toast.error("Kode guru salah");
-            navigate("/app/dashboard");
-            return;
-          }
+        // Role HANYA ditentukan oleh result.user.role dari tabel profiles di database
+        if (result.user.role === "teacher") {
           toast.success("Akun Guru berhasil dibuat!");
-          navigate("/teacher/dashboard");
+          navigate("/teacher/dashboard", { replace: true });
+          return;
+        }
+
+        if (selectedTab === "teacher") {
+          if (codeInput) {
+            toast.error("Kode guru salah");
+          }
+          toast.info("Akun ini belum terdaftar sebagai guru. Kamu masuk sebagai siswa.");
+          navigate("/app/dashboard", { replace: true });
           return;
         }
 
         toast.success("Akun Siswa berhasil dibuat!");
-        navigate(getDestination(result.user.role));
+        navigate(getDestinationByRole(result.user.role), { replace: true });
       } else {
         if (!email.trim()) {
           throw new Error("Masukkan alamat email.");
         }
-        if (selectedRole === "teacher" && teacherCode.trim()) {
-          setPendingTeacherCode(teacherCode.trim());
+
+        const codeInput = selectedTab === "teacher" ? teacherCode.trim() : "";
+        setTeacherCode("");
+        if (codeInput) {
+          setPendingTeacherCode(codeInput);
         }
+
         const user = await login(email, password);
+
+        // Role HANYA ditentukan oleh user.role dari tabel profiles di database
+        if (user.role === "teacher") {
+          toast.success("Selamat datang kembali di Portal SIGMA!");
+          navigate("/teacher/dashboard", { replace: true });
+          return;
+        }
+
+        if (selectedTab === "teacher") {
+          toast.info("Akun ini belum terdaftar sebagai guru. Kamu masuk sebagai siswa.");
+          navigate("/app/dashboard", { replace: true });
+          return;
+        }
+
         toast.success("Selamat datang kembali di Portal SIGMA!");
-        navigate(getDestination(user.role));
+        navigate(getDestinationByRole(user.role), { replace: true });
       }
     } catch (err: any) {
       const msg = err?.message || "";
@@ -176,16 +231,16 @@ export default function Login() {
         setErrorMsg(msg || "Terjadi kesalahan saat otentikasi.");
       }
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   // Google OAuth Login via Supabase
   const handleGoogleLogin = async () => {
     setErrorMsg("");
-    setLoading(true);
+    setSubmitting(true);
     try {
-      if (selectedRole === "teacher" && teacherCode.trim()) {
+      if (selectedTab === "teacher" && teacherCode.trim()) {
         setPendingTeacherCode(teacherCode.trim());
       }
       await loginWithGoogle();
@@ -207,13 +262,29 @@ export default function Login() {
       } else {
         setErrorMsg(msg || "Gagal menghubungkan ke layanan Google OAuth.");
       }
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   const handleRecoverPassword = () => {
     toast.info("Link reset password dikirim ke email kamu", { duration: 5000 });
   };
+
+  // Selama profil masih dimuat dari database, tampilkan loading state dan jangan redirect dulu
+  if (authLoading) {
+    return (
+      <div
+        className={`min-h-screen w-full flex items-center justify-center transition-colors duration-300 ${
+          isDark ? "bg-[#06070b] text-white" : "bg-[#f1f4f9] text-slate-900"
+        }`}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+          <span className="font-mono text-xs text-slate-400">Memuat profil pengguna...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -481,53 +552,46 @@ export default function Login() {
                 </div>
               )}
 
-              {/* Role selector if in Register Mode */}
-              <AnimatePresence>
-                {isRegisterMode && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="grid grid-cols-2 p-1 rounded-full mb-4 border transition-colors overflow-hidden"
-                    style={{
-                      borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(226,232,240,1)",
-                      backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(241,245,249,1)",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setSelectedRole("student")}
-                      className={`py-1.5 rounded-full font-lexend text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        selectedRole === "student"
-                          ? isDark
-                            ? "bg-white text-slate-950 font-bold shadow"
-                            : "bg-slate-950 text-white font-bold shadow"
-                          : isDark
-                          ? "text-slate-400 hover:text-white"
-                          : "text-slate-500 hover:text-slate-900"
-                      }`}
-                    >
-                      <Sparkles size={13} />
-                      <span>Siswa (TKA)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedRole("teacher")}
-                      className={`py-1.5 rounded-full font-lexend text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        selectedRole === "teacher"
-                          ? isDark
-                            ? "bg-amber-400 text-slate-950 font-bold shadow"
-                            : "bg-amber-500 text-white font-bold shadow"
-                          : isDark
-                          ? "text-slate-400 hover:text-white"
-                          : "text-slate-500 hover:text-slate-900"
-                      }`}
-                    >
-                      <span>Guru Pengampu</span>
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {/* Pilihan Tab Tampilan: Siswa / Guru (hanya tampilan, bukan penentu role) */}
+              <div
+                className="grid grid-cols-2 p-1 rounded-full mb-4 border transition-colors overflow-hidden"
+                style={{
+                  borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(226,232,240,1)",
+                  backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(241,245,249,1)",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setSelectedTab("student")}
+                  className={`py-1.5 rounded-full font-lexend text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    selectedTab === "student"
+                      ? isDark
+                        ? "bg-white text-slate-950 font-bold shadow"
+                        : "bg-slate-950 text-white font-bold shadow"
+                      : isDark
+                      ? "text-slate-400 hover:text-white"
+                      : "text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  <Sparkles size={13} />
+                  <span>Siswa (TKA)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTab("teacher")}
+                  className={`py-1.5 rounded-full font-lexend text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    selectedTab === "teacher"
+                      ? isDark
+                        ? "bg-amber-400 text-slate-950 font-bold shadow"
+                        : "bg-amber-500 text-white font-bold shadow"
+                      : isDark
+                      ? "text-slate-400 hover:text-white"
+                      : "text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  <span>Guru Pengampu</span>
+                </button>
+              </div>
 
               {/* Error Message */}
               <AnimatePresence>
@@ -572,7 +636,7 @@ export default function Login() {
                       />
                     </div>
 
-                    {selectedRole === "student" ? (
+                    {selectedTab === "student" && (
                       <div>
                         <select
                           value={className}
@@ -586,22 +650,25 @@ export default function Login() {
                           <option value="Kelas 11">Kelas 11</option>
                         </select>
                       </div>
-                    ) : (
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Kode Guru"
-                          value={teacherCode}
-                          onChange={(e) => setTeacherCode(e.target.value)}
-                          className={`w-full rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 font-lexend text-xs sm:text-sm outline-none border transition-all ${
-                            isDark
-                              ? "bg-white/5 border-white/10 focus:border-amber-400 text-white placeholder-slate-400"
-                              : "bg-slate-50 border-slate-200 focus:border-amber-500 text-slate-900 placeholder-slate-400"
-                          }`}
-                        />
-                      </div>
                     )}
                   </>
+                )}
+
+                {/* Input Kode Guru jika di tab Guru (hanya dipakai untuk RPC claim_teacher) */}
+                {selectedTab === "teacher" && (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Kode Guru"
+                      value={teacherCode}
+                      onChange={(e) => setTeacherCode(e.target.value)}
+                      className={`w-full rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 font-lexend text-xs sm:text-sm outline-none border transition-all ${
+                        isDark
+                          ? "bg-white/5 border-white/10 focus:border-amber-400 text-white placeholder-slate-400"
+                          : "bg-slate-50 border-slate-200 focus:border-amber-500 text-slate-900 placeholder-slate-400"
+                      }`}
+                    />
+                  </div>
                 )}
 
                 {/* Email Field with Right Icon */}
@@ -671,14 +738,14 @@ export default function Login() {
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                   type="submit"
-                  disabled={loading}
+                  disabled={isBusy}
                   className={`w-full py-3 rounded-xl sm:rounded-2xl font-lexend font-bold text-sm sm:text-base transition-all cursor-pointer shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
                     isDark
                       ? "bg-white text-slate-950 hover:bg-slate-200 shadow-white/10"
                       : "bg-slate-950 text-white hover:bg-slate-800 shadow-slate-950/20"
                   }`}
                 >
-                  {loading
+                  {isBusy
                     ? language === "ID"
                       ? "Memproses..."
                       : "Processing..."
@@ -718,7 +785,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={handleGoogleLogin}
-                disabled={loading}
+                disabled={isBusy}
                 title="Masuk dengan Akun Google (Google OAuth)"
                 className={`w-full h-11 sm:h-12 rounded-xl sm:rounded-2xl border flex items-center justify-center gap-3 font-lexend font-semibold text-xs sm:text-sm transition-all cursor-pointer group shadow-sm disabled:opacity-50 active:scale-[0.99] ${
                   isDark

@@ -235,7 +235,14 @@ export default function App() {
             />
 
             {/* Teacher Routes (Protected, require teacher role) */}
-            <Route path="/teacher" element={<Navigate to="/teacher/dashboard" replace />} />
+            <Route
+              path="/teacher"
+              element={
+                <ProtectedRoute requireRole="teacher">
+                  <Navigate to="/teacher/dashboard" replace />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/teacher/dashboard"
               element={
@@ -263,6 +270,14 @@ export default function App() {
                   <AppShell>
                     <TeacherModeration />
                   </AppShell>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/*"
+              element={
+                <ProtectedRoute requireRole="teacher">
+                  <Navigate to="/teacher/dashboard" replace />
                 </ProtectedRoute>
               }
             />

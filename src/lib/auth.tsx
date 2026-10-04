@@ -35,7 +35,6 @@ interface AuthContextType {
     full_name: string,
     email: string,
     password: string,
-    role?: "student" | "teacher",
     extra?: { class_name?: string; teacher_code?: string }
   ) => Promise<RegisterResult>;
   logout: () => void;
@@ -95,16 +94,20 @@ async function loadProfile(userId: string, email: string, userMetadata?: any): P
       console.error("[loadProfile] Exception saat memuat user_badges:", badgeCatch);
     }
 
+    // Role HANYA ditentukan oleh kolom role dari tabel profiles di database
+    const dbRole: "student" | "teacher" = profileRow.role === "teacher" ? "teacher" : "student";
+
     return {
       ...profileRow,
+      role: dbRole,
       email,
       badges,
     };
   }
 
-  // Fallback ke metadata sesi HANYA di memori klien (TIDAK melakukan insert/upsert ke profiles)
+  // Fallback ke metadata sesi HANYA di memori klien jika baris belum ditemukan setelah retry
   // Trigger selalu membuat profil baru dengan role 'student'
-  console.warn("[loadProfile] Profil belum ditemukan di database setelah 3x percobaan (menunggu trigger). Menggunakan data sesi sementara.");
+  console.warn("[loadProfile] Profil belum ditemukan di database setelah 3x percobaan (menunggu trigger). Menggunakan role default 'student'.");
   const fullName =
     userMetadata?.full_name ||
     userMetadata?.name ||
@@ -126,20 +129,10 @@ async function loadProfile(userId: string, email: string, userMetadata?: any): P
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [profile, setProfile] = useState<UserProfile | null>(() => {
-    try {
-      const stored = sessionStorage.getItem("sigma_local_user");
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch {
-      // ignore
-    }
-    return null;
-  });
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [pendingTeacherCode, setPendingTeacherCodeState] = useState<string | null>(inMemoryPendingTeacherCode);
-  const isRegisteringRef = useRef(false);
+  const isAuthenticatingRef = useRef(false);
 
   const setPendingTeacherCode = (code: string | null) => {
     const cleaned = code && code.trim() ? code.trim() : null;
@@ -147,28 +140,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPendingTeacherCodeState(cleaned);
   };
 
-  const setLocalSessionProfile = (localUser: UserProfile | null) => {
-    setProfile(localUser);
-    if (localUser) {
-      try {
-        sessionStorage.setItem("sigma_local_user", JSON.stringify(localUser));
-      } catch {
-        // ignore
-      }
-    } else {
-      try {
-        sessionStorage.removeItem("sigma_local_user");
-      } catch {
-        // ignore
-      }
-    }
-  };
-
   const refreshProfile = async (userIdOverride?: string): Promise<UserProfile | null> => {
     const targetId = userIdOverride || profile?.id;
     if (!targetId) return null;
-    const isLocalId = targetId.startsWith("00000000-0000-0000-0000-");
-    if (isLocalId) return profile;
 
     try {
       const { data, error } = await supabase
@@ -181,18 +155,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("[refreshProfile] Supabase error saat memuat profil terbaru:", error);
         return profile;
       } else if (data) {
+        const dbRole: "student" | "teacher" = data.role === "teacher" ? "teacher" : "student";
+        const normalizedData = { ...data, role: dbRole };
         let updatedProfile: UserProfile | null = null;
         setProfile((prev) => {
           updatedProfile = prev
-            ? { ...prev, ...data }
+            ? { ...prev, ...normalizedData }
             : {
-                ...data,
+                ...normalizedData,
                 email: "",
                 badges: [],
               };
           return updatedProfile;
         });
-        return updatedProfile || (data as UserProfile);
+        return updatedProfile || (normalizedData as UserProfile);
       }
     } catch (err) {
       console.error("[refreshProfile] Exception saat memuat ulang profil:", err);
@@ -258,11 +234,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Dengerin perubahan login/logout (termasuk dari tab lain atau redirect OAuth)
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (isRegisteringRef.current) {
-        // Biarkan fungsi register() menyelesaikan alur signUp + claim_teacher terlebih dahulu
+      if (isAuthenticatingRef.current) {
+        // Biarkan fungsi login() / register() menyelesaikan alur pemuatan profil terlebih dahulu
         return;
       }
       if (session?.user) {
+        setLoading(true);
         try {
           let userProf = await loadProfile(session.user.id, session.user.email!, session.user.user_metadata);
           if (inMemoryPendingTeacherCode && userProf.role === "student") {
@@ -278,11 +255,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(userProf);
         } catch (e) {
           console.error("[Auth] Exception saat memuat profil pada onAuthStateChange:", e);
+        } finally {
+          setLoading(false);
         }
       } else {
-        if (!sessionStorage.getItem("sigma_local_user")) {
-          setProfile(null);
-        }
+        setProfile(null);
+        setLoading(false);
       }
     });
 
@@ -291,70 +269,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<UserProfile> => {
     if (!isSupabaseConfigured) {
-      const isTeacher = email.toLowerCase().includes("guru") || email.toLowerCase().includes("teacher");
-      const fallbackUser: UserProfile = {
-        id: isTeacher ? "00000000-0000-0000-0000-000000000002" : "00000000-0000-0000-0000-000000000001",
-        full_name: email.split("@")[0] || (isTeacher ? "Guru Pengampu" : "Siswa SIGMA"),
-        email,
-        role: isTeacher ? "teacher" : "student",
-        class_name: isTeacher ? "Guru Pengampu" : "Kelas 11",
-        xp: 250,
-        level: 2,
-        badges: ["perintis-distrik"],
-      };
-      setLocalSessionProfile(fallbackUser);
-      return fallbackUser;
+      throw new Error("failed to fetch");
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      console.error("[login] Supabase error saat signInWithPassword:", error);
-      const msg = error.message.toLowerCase();
-      if (msg.includes("invalid login credentials")) {
-        throw new Error(
-          "Email atau password salah / belum terdaftar. Jika baru pertama kali menggunakan portal ini, silakan klik tab 'Daftar' untuk membuat akun baru."
-        );
-      }
-      if (msg.includes("invalid api key") || msg.includes("apikey")) {
-        throw new Error(
-          "Kunci API Supabase tidak valid (Invalid API key). Pastikan VITE_SUPABASE_ANON_KEY diisi dengan kunci 'anon / public' (berawalan eyJ...) dari Supabase tanpa tanda petik, lalu lakukan Redeploy di Vercel."
-        );
-      }
-      if (msg.includes("failed to fetch")) {
-        throw new Error(
-          "Gagal terhubung ke database Supabase (Failed to fetch). Periksa koneksi internet Anda atau pastikan variabel lingkungan VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY sudah disetel di Vercel lalu lakukan Redeploy."
-        );
-      }
-      throw new Error(error.message);
-    }
-
-    let userProf = await loadProfile(data.user.id, data.user.email!, data.user.user_metadata);
-
-    // Jika sebelumnya signUp butuh konfirmasi email dan kode guru disimpan di memory state,
-    // panggil claim_teacher saat user berhasil login pertama kali
-    if (inMemoryPendingTeacherCode && userProf.role === "student") {
-      const codeToClaim = inMemoryPendingTeacherCode;
-      setPendingTeacherCode(null);
-      const claimed = await claimTeacher(codeToClaim, data.user.id);
-      if (claimed) {
-        const refreshed = await refreshProfile(data.user.id);
-        if (refreshed) {
-          userProf = { ...userProf, ...refreshed, role: "teacher" };
-        } else {
-          userProf = { ...userProf, role: "teacher" };
-        }
-      } else {
-        toast.error("Kode guru salah");
-      }
-    }
-
-    setProfile(userProf);
+    isAuthenticatingRef.current = true;
+    setLoading(true);
     try {
-      sessionStorage.removeItem("sigma_local_user");
-    } catch {
-      // ignore
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        console.error("[login] Supabase error saat signInWithPassword:", error);
+        const msg = error.message.toLowerCase();
+        if (msg.includes("invalid login credentials")) {
+          throw new Error(
+            "Email atau password salah / belum terdaftar. Jika baru pertama kali menggunakan portal ini, silakan klik tab 'Daftar' untuk membuat akun baru."
+          );
+        }
+        if (msg.includes("invalid api key") || msg.includes("apikey")) {
+          throw new Error(
+            "Kunci API Supabase tidak valid (Invalid API key). Pastikan VITE_SUPABASE_ANON_KEY diisi dengan kunci 'anon / public' (berawalan eyJ...) dari Supabase tanpa tanda petik, lalu lakukan Redeploy di Vercel."
+          );
+        }
+        if (msg.includes("failed to fetch")) {
+          throw new Error(
+            "Gagal terhubung ke database Supabase (Failed to fetch). Periksa koneksi internet Anda atau pastikan variabel lingkungan VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY sudah disetel di Vercel lalu lakukan Redeploy."
+          );
+        }
+        throw new Error(error.message);
+      }
+
+      let userProf = await loadProfile(data.user.id, data.user.email!, data.user.user_metadata);
+
+      // Jika kode guru disimpan di memory state (misal dari signUp tertunda atau diisi di tab Guru),
+      // panggil claim_teacher saat user login dan role masih 'student'
+      if (inMemoryPendingTeacherCode && userProf.role === "student") {
+        const codeToClaim = inMemoryPendingTeacherCode;
+        setPendingTeacherCode(null);
+        const claimed = await claimTeacher(codeToClaim, data.user.id);
+        if (claimed) {
+          const refreshed = await refreshProfile(data.user.id);
+          if (refreshed) {
+            userProf = { ...userProf, ...refreshed };
+          }
+        } else {
+          toast.error("Kode guru salah");
+        }
+      }
+
+      setProfile(userProf);
+      return userProf;
+    } finally {
+      isAuthenticatingRef.current = false;
+      setLoading(false);
     }
-    return userProf;
   };
 
   const loginWithGoogle = async (): Promise<void> => {
@@ -364,7 +330,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/app/dashboard`,
+        redirectTo: `${window.location.origin}/masuk`,
       },
     });
     if (error) {
@@ -382,25 +348,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     full_name: string,
     email: string,
     password: string,
-    role: "student" | "teacher" = "student",
     extra: { class_name?: string; teacher_code?: string } = {}
   ): Promise<RegisterResult> => {
     if (!isSupabaseConfigured) {
-      const fallbackUser: UserProfile = {
-        id: "00000000-0000-0000-0000-000000000001",
-        full_name,
-        email,
-        role: "student",
-        class_name: extra.class_name || "Kelas 11",
-        xp: 100,
-        level: 1,
-        badges: ["perintis-distrik"],
-      };
-      setLocalSessionProfile(fallbackUser);
-      return { user: fallbackUser, sessionActive: true };
+      throw new Error("failed to fetch");
     }
 
-    isRegisteringRef.current = true;
+    isAuthenticatingRef.current = true;
+    setLoading(true);
     try {
       // (1) signUp seperti biasa — TIDAK mengirim kolom role ke database/metadata
       const { data, error } = await supabase.auth.signUp({
@@ -432,51 +387,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Jika signUp butuh konfirmasi email sehingga session belum aktif:
       // Simpan kode guru sementara di memory state (BUKAN di localStorage)
       if (!data.session) {
-        if (role === "teacher" && trimmedCode) {
+        if (trimmedCode) {
           setPendingTeacherCode(trimmedCode);
         }
         return { user: null, sessionActive: false };
       }
 
-      // Session sudah aktif: muat profil awal (trigger membuat profil dengan role 'student')
+      // Session sudah aktif: muat profil awal dari tabel profiles (trigger membuat profil dengan role 'student')
       let userProf = await loadProfile(data.user.id, data.user.email!, data.user.user_metadata);
-      setProfile(userProf);
 
       let teacherClaimFailed = false;
 
-      // (2) Jika mendaftar sebagai guru, panggil supabase.rpc('claim_teacher', { code })
-      if (role === "teacher") {
-        if (!trimmedCode) {
+      // (2) Jika user mengisi kode guru, panggil supabase.rpc('claim_teacher', { code })
+      if (trimmedCode) {
+        const { data: claimed, error: claimError } = await supabase.rpc("claim_teacher", {
+          code: trimmedCode,
+        });
+        if (claimError) {
+          console.error("[register] Supabase error saat memanggil RPC claim_teacher:", claimError);
           teacherClaimFailed = true;
-        } else {
-          const { data: claimed, error: claimError } = await supabase.rpc("claim_teacher", {
-            code: trimmedCode,
-          });
-          if (claimError) {
-            console.error("[register] Supabase error saat memanggil RPC claim_teacher:", claimError);
-            teacherClaimFailed = true;
-          } else if (claimed === true) {
-            // (3) Kalau hasilnya true, panggil refreshProfile()
-            const refreshed = await refreshProfile(data.user.id);
-            userProf = refreshed
-              ? { ...userProf, ...refreshed, role: "teacher" }
-              : { ...userProf, role: "teacher" };
-            setProfile(userProf);
-          } else {
-            // (4) Kalau false, akun tetap sebagai siswa
-            teacherClaimFailed = true;
+        } else if (claimed === true) {
+          // (3) Kalau hasilnya true, panggil refreshProfile() untuk membaca role terbaru dari tabel profiles
+          const refreshed = await refreshProfile(data.user.id);
+          if (refreshed) {
+            userProf = { ...userProf, ...refreshed };
           }
+        } else {
+          // (4) Kalau false, kode salah dan akun tetap sebagai siswa
+          teacherClaimFailed = true;
         }
       }
 
-      try {
-        sessionStorage.removeItem("sigma_local_user");
-      } catch {
-        // ignore
-      }
+      setProfile(userProf);
       return { user: userProf, sessionActive: true, teacherClaimFailed };
     } finally {
-      isRegisteringRef.current = false;
+      isAuthenticatingRef.current = false;
+      setLoading(false);
     }
   };
 
@@ -487,16 +433,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("[logout] Exception saat signOut:", err);
     });
     setProfile(null);
-    try {
-      sessionStorage.removeItem("sigma_local_user");
-    } catch {
-      // ignore
-    }
   };
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!profile) return;
-    const isLocalId = profile.id.startsWith("00000000-0000-0000-0000-");
 
     // Sesuai aturan keamanan Supabase baru:
     // Client HANYA boleh UPDATE kolom: full_name, class_name, avatar_url.
@@ -510,7 +450,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       allowedFields.avatar_url = updates.avatar;
     }
 
-    if (!isLocalId && Object.keys(allowedFields).length > 0) {
+    if (Object.keys(allowedFields).length > 0) {
       try {
         const { error } = await supabase.from("profiles").update(allowedFields).eq("id", profile.id);
         if (error) {
@@ -521,36 +461,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    setProfile((prev) => {
-      const updated = prev ? { ...prev, ...allowedFields } : prev;
-      if (updated && sessionStorage.getItem("sigma_local_user")) {
-        try {
-          sessionStorage.setItem("sigma_local_user", JSON.stringify(updated));
-        } catch {
-          // ignore
-        }
-      }
-      return updated;
-    });
+    setProfile((prev) => (prev ? { ...prev, ...allowedFields } : prev));
   };
 
   const addXp = async (amount: number) => {
     if (!profile || amount <= 0) return;
-    const isLocalId = profile.id.startsWith("00000000-0000-0000-0000-");
-
-    if (isLocalId) {
-      setProfile((prev) => {
-        if (!prev) return null;
-        const newXp = (prev.xp || 0) + amount;
-        const newLevel = Math.floor(newXp / 100) + 1;
-        const updated = { ...prev, xp: newXp, level: newLevel };
-        try {
-          sessionStorage.setItem("sigma_local_user", JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
-      return;
-    }
 
     try {
       // Sesuai fungsi RPC database baru: add_xp(amount int) maksimal 100 per panggilan

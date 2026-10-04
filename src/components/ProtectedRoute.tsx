@@ -36,10 +36,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  if (requireRole && profile.role !== requireRole) {
-    if (requireRole === "teacher") {
-      return <Navigate to="/masuk?role=guru" replace />;
-    }
+  if (requireRole === "teacher" && profile.role !== "teacher") {
+    return <Navigate to="/app/dashboard" replace />;
   }
 
   return <>{children}</>;
