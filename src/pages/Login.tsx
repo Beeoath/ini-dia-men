@@ -148,6 +148,11 @@ export default function Login() {
         if (password.length < 6) {
           throw new Error("Password minimal 6 karakter.");
         }
+        if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+          throw new Error(
+            "Password wajib mengandung minimal 1 huruf besar (A-Z), 1 huruf kecil (a-z), dan 1 angka (0-9). Contoh: Matematika11"
+          );
+        }
 
         const codeInput = selectedTab === "teacher" ? teacherCode.trim() : "";
         setTeacherCode("");
@@ -215,7 +220,13 @@ export default function Login() {
       }
     } catch (err: any) {
       const msg = err?.message || "";
-      if (msg.toLowerCase().includes("invalid login credentials")) {
+      if (msg.toLowerCase().includes("sudah terdaftar") || msg.toLowerCase().includes("already registered")) {
+        setIsRegisterMode(false);
+        toast.info("Email sudah terdaftar. Silakan masuk dengan password akun kamu.");
+        setErrorMsg(
+          "Email ini sudah terdaftar. Kami telah mengalihkan ke mode 'Masuk' — silakan masukkan password akun kamu."
+        );
+      } else if (msg.toLowerCase().includes("invalid login credentials")) {
         setErrorMsg(
           "Email atau password salah / belum terdaftar. Jika Anda baru pertama kali menggunakan portal ini, silakan klik tab 'Daftar' di atas untuk membuat akun terlebih dahulu."
         );

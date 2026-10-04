@@ -366,8 +366,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       });
       if (error) {
-        console.error("[register] Supabase error saat signUp:", error);
         const msg = error.message.toLowerCase();
+
+        // Jika email sudah terdaftar, coba login otomatis jika password cocok, atau arahkan ke Masuk
+        if (msg.includes("already registered") || msg.includes("already been registered")) {
+          const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (!signInErr && signInData?.user) {
+            let existingProf = await loadProfile(
+              signInData.user.id,
+              signInData.user.email!,
+              signInData.user.user_metadata
+            );
+            const trimmedCode = extra.teacher_code?.trim() || "";
+            let teacherClaimFailed = false;
+            if (trimmedCode && existingProf.role === "student") {
+              const claimed = await claimTeacher(trimmedCode, signInData.user.id);
+              if (claimed) {
+                const refreshed = await refreshProfile(signInData.user.id);
+                if (refreshed) existingProf = { ...existingProf, ...refreshed };
+              } else {
+                teacherClaimFailed = true;
+              }
+            }
+            setProfile(existingProf);
+            return { user: existingProf, sessionActive: true, teacherClaimFailed };
+          }
+
+          throw new Error(
+            "Email ini sudah terdaftar. Silakan klik tab 'Masuk' untuk login dengan password akun kamu."
+          );
+        }
+
+        if (
+          msg.includes("password should contain") ||
+          msg.includes("weak_password") ||
+          msg.includes("characters")
+        ) {
+          throw new Error(
+            "Password harus mengandung kombinasi huruf kecil (a-z), huruf besar (A-Z), dan angka (0-9). Contoh: Sigma123"
+          );
+        }
+
+        console.error("[register] Supabase error saat signUp:", error.message);
         if (msg.includes("invalid api key") || msg.includes("apikey")) {
           throw new Error(
             "Kunci API Supabase tidak valid (Invalid API key). Pastikan VITE_SUPABASE_ANON_KEY diisi dengan kunci 'anon / public' (berawalan eyJ...) dari Supabase tanpa tanda petik, lalu lakukan Redeploy di Vercel."

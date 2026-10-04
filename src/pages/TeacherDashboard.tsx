@@ -234,12 +234,11 @@ export default function TeacherDashboard() {
       const [studentsRes, progressRes] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id, full_name, class_name, role")
+          .select("id, full_name, class_name, role, xp, level")
           .eq("role", "student"),
         supabase
           .from("user_progress")
-          .select("id, user_id, module_id, slide_idx, total_slides, percent, quiz_score, completed, last_studied_at")
-          .order("last_studied_at", { ascending: false }),
+          .select("*"),
       ]);
 
       if (studentsRes.error) {
@@ -250,14 +249,19 @@ export default function TeacherDashboard() {
       }
 
       const students = studentsRes.data || [];
-      const progressRows = progressRes.data || [];
+      const progressRows = [...(progressRes.data || [])].sort((a: any, b: any) => {
+        const timeA = new Date(a.last_studied_at || a.updated_at || a.created_at || 0).getTime();
+        const timeB = new Date(b.last_studied_at || b.updated_at || b.created_at || 0).getTime();
+        return timeB - timeA;
+      });
 
-      const studentMap = new Map<string, { id: string; full_name: string; class_name: string }>();
+      const studentMap = new Map<string, { id: string; full_name: string; class_name: string; xp?: number }>();
       for (const s of students) {
         studentMap.set(s.id, {
           id: s.id,
           full_name: s.full_name || "Siswa",
           class_name: s.class_name || "Kelas 11",
+          xp: s.xp ?? 0,
         });
       }
 
@@ -271,9 +275,10 @@ export default function TeacherDashboard() {
 
       setTotalStudents(uniqueStudentIds.size);
 
-      const completedCount = progressRows.filter(
-        (p) => p.completed || (typeof p.quiz_score === "number" && p.quiz_score >= 70)
-      ).length;
+      const completedCount = progressRows.filter((p: any) => {
+        const sc = p.quiz_score ?? p.score;
+        return p.completed || (typeof sc === "number" && sc >= 70);
+      }).length;
       setCompletedModulesCount(completedCount);
 
       const submissions: StudentSubmission[] = [];
@@ -283,10 +288,11 @@ export default function TeacherDashboard() {
         usersWithProgress.add(p.user_id);
         const st = studentMap.get(p.user_id);
         const mod = MODULES.find((m) => m.id === p.module_id);
-        const hasQuizScore = p.quiz_score !== null && p.quiz_score !== undefined;
-        const scoreNum = hasQuizScore ? Number(p.quiz_score) : null;
+        const rawScore = p.quiz_score ?? p.score;
+        const hasQuizScore = rawScore !== null && rawScore !== undefined;
+        const scoreNum = hasQuizScore ? Number(rawScore) : null;
         const isPassed = scoreNum !== null && scoreNum >= 70;
-        const percentNum = Number(p.percent) || 0;
+        const percentNum = Number(p.percent ?? (p.completed ? 100 : 0)) || 0;
 
         submissions.push({
           id: String(p.id || `${p.user_id}-${p.module_id}`),
@@ -294,30 +300,31 @@ export default function TeacherDashboard() {
           grade: st?.class_name || "Kelas 11",
           subject: "Matematika",
           topic: mod?.displayTitle || mod?.title || p.module_id,
-          score: hasQuizScore ? `${scoreNum}/100` : `Materi ${percentNum}%`,
+          score: hasQuizScore ? `${scoreNum}/100` : p.completed ? "Tuntas (100%)" : `Materi ${percentNum}%`,
           status: hasQuizScore
             ? isPassed
               ? "Lulus KKM (Terbuka)"
               : "Remedial KKM"
             : p.completed
-            ? "Materi Selesai"
+            ? "Lulus / Selesai"
             : "Sedang Belajar",
-          statusVariant: isPassed || (!hasQuizScore && p.completed) ? "cyan" : "amber",
+          statusVariant: isPassed || p.completed ? "cyan" : "amber",
         });
       }
 
       // Tampilkan juga siswa yang sudah daftar akun tapi belum memiliki baris di user_progress
       for (const st of students) {
         if (!usersWithProgress.has(st.id)) {
+          const hasXp = (st.xp ?? 0) > 0;
           submissions.push({
             id: `registered-${st.id}`,
             name: st.full_name || "Siswa Terdaftar",
             grade: st.class_name || "Kelas 11",
             subject: "Matematika",
             topic: "BAB 1: BILANGAN",
-            score: "Belum Kuis",
-            status: "Terdaftar (Belum Mulai)",
-            statusVariant: "amber",
+            score: hasXp ? `${st.xp} XP` : "Belum Kuis",
+            status: hasXp ? "Sudah Aktivitas (XP Tercatat)" : "Terdaftar (Belum Mulai)",
+            statusVariant: hasXp ? "cyan" : "amber",
           });
         }
       }
