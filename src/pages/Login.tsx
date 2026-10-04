@@ -22,7 +22,16 @@ import { isSupabaseConfigured } from "../lib/supabaseClient";
 import { toast } from "sonner";
 
 export default function Login() {
-  const { login, loginWithGoogle, register, profile, setDemoProfile } = useAuth();
+  const {
+    login,
+    loginWithGoogle,
+    register,
+    claimTeacher,
+    refreshProfile,
+    pendingTeacherCode,
+    setPendingTeacherCode,
+    profile,
+  } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -50,12 +59,41 @@ export default function Login() {
     return role === "teacher" ? "/teacher/dashboard" : "/app/dashboard";
   };
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (dan tangani klaim guru setelah login Google di tab Guru)
   useEffect(() => {
-    if (profile) {
-      navigate(getDestination(profile.role));
+    if (!profile || loading) return;
+
+    const codeToTry = teacherCode.trim() || pendingTeacherCode;
+    if (selectedRole === "teacher" && profile.role === "student" && codeToTry) {
+      let cancelled = false;
+      setLoading(true);
+      setPendingTeacherCode(null);
+      setTeacherCode("");
+
+      claimTeacher(codeToTry)
+        .then(async (claimed) => {
+          if (cancelled) return;
+          if (claimed) {
+            await refreshProfile(profile.id);
+            toast.success("Akun Guru berhasil diverifikasi!");
+            navigate("/teacher/dashboard");
+          } else {
+            setErrorMsg("Kode guru salah");
+            toast.error("Kode guru salah");
+            navigate("/app/dashboard");
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+
+      return () => {
+        cancelled = true;
+      };
     }
-  }, [profile, navigate, searchParams]);
+
+    navigate(getDestination(profile.role));
+  }, [profile, loading, selectedRole, teacherCode, pendingTeacherCode, claimTeacher, refreshProfile, setPendingTeacherCode, navigate, searchParams]);
 
   useEffect(() => {
     setIsRegisterMode(searchParams.get("mode") === "daftar");
@@ -80,25 +118,41 @@ export default function Login() {
         if (password.length < 6) {
           throw new Error("Password minimal 6 karakter.");
         }
-        if (selectedRole === "teacher" && teacherCode.trim() !== "SIGMAGURU2026" && teacherCode.trim() !== "GURU-DN9") {
-          throw new Error("Kode verifikasi guru salah! Gunakan: SIGMAGURU2026");
-        }
 
-        const user = await register(fullName, email, password, selectedRole, {
+        const result = await register(fullName, email, password, selectedRole, {
           class_name: selectedRole === "student" ? className : "Guru Pengampu",
-          teacher_code: teacherCode,
+          teacher_code: selectedRole === "teacher" ? teacherCode : undefined,
         });
 
-        toast.success(
-          selectedRole === "teacher"
-            ? "Akun Guru berhasil dibuat!"
-            : "Akun Siswa berhasil dibuat!"
-        );
+        // Jika signUp butuh konfirmasi email sehingga session belum aktif
+        if (!result.sessionActive || !result.user) {
+          toast.info(
+            "Registrasi berhasil! Silakan cek email untuk konfirmasi, lalu masuk kembali."
+          );
+          setIsRegisterMode(false);
+          return;
+        }
 
-        navigate(getDestination(user.role));
+        if (selectedRole === "teacher") {
+          if (result.teacherClaimFailed) {
+            setErrorMsg("Kode guru salah");
+            toast.error("Kode guru salah");
+            navigate("/app/dashboard");
+            return;
+          }
+          toast.success("Akun Guru berhasil dibuat!");
+          navigate("/teacher/dashboard");
+          return;
+        }
+
+        toast.success("Akun Siswa berhasil dibuat!");
+        navigate(getDestination(result.user.role));
       } else {
         if (!email.trim()) {
           throw new Error("Masukkan alamat email.");
+        }
+        if (selectedRole === "teacher" && teacherCode.trim()) {
+          setPendingTeacherCode(teacherCode.trim());
         }
         const user = await login(email, password);
         toast.success("Selamat datang kembali di Portal SIGMA!");
@@ -131,6 +185,9 @@ export default function Login() {
     setErrorMsg("");
     setLoading(true);
     try {
+      if (selectedRole === "teacher" && teacherCode.trim()) {
+        setPendingTeacherCode(teacherCode.trim());
+      }
       await loginWithGoogle();
       // Browser will redirect to Google login screen
     } catch (err: any) {
@@ -145,7 +202,7 @@ export default function Login() {
         );
       } else if (msg.toLowerCase().includes("failed to fetch")) {
         setErrorMsg(
-          "Gagal menghubungi server Google/Supabase (Failed to fetch). Periksa jaringan internet atau gunakan tombol akun demo di bawah."
+          "Gagal menghubungi server Google/Supabase (Failed to fetch). Periksa jaringan internet Anda."
         );
       } else {
         setErrorMsg(msg || "Gagal menghubungkan ke layanan Google OAuth.");
@@ -154,77 +211,8 @@ export default function Login() {
     }
   };
 
-  // 1-Click Demo Access for quick evaluation (Resilient with offline fallback)
-  const handleDemoAccess = async (role: "student" | "teacher") => {
-    setErrorMsg("");
-    setLoading(true);
-    const demoEmail = role === "teacher" ? "guru.demo@darunnajah9.sch.id" : "siswa.demo@darunnajah9.sch.id";
-    const demoPass = "Sigma2026!";
-    const fallbackProfile = {
-      id: role === "teacher" ? "00000000-0000-0000-0000-000000000002" : "00000000-0000-0000-0000-000000000001",
-      full_name: role === "teacher" ? "Ust. Ahmad Fauzi, S.Pd. (Demo)" : "Ahmad Rizky Pratama (Demo)",
-      email: demoEmail,
-      role,
-      class_name: role === "teacher" ? "Guru Pengampu" : "Kelas 11",
-      xp: 250,
-      level: 2,
-      badges: ["perintis-distrik"],
-    };
-
-    try {
-      if (!isSupabaseConfigured) {
-        setDemoProfile(fallbackProfile);
-        toast.success(`Berhasil masuk sebagai Akun Uji Coba ${role === "teacher" ? "Guru" : "Siswa"}!`);
-        navigate(getDestination(role));
-        return;
-      }
-
-      let user: any;
-      try {
-        user = await login(demoEmail, demoPass);
-      } catch (loginErr: any) {
-        const errMsg = loginErr?.message?.toLowerCase() || "";
-        if (errMsg.includes("failed to fetch")) {
-          setDemoProfile(fallbackProfile);
-          toast.success(`Berhasil masuk mode uji coba ${role === "teacher" ? "Guru" : "Siswa"}!`);
-          navigate(getDestination(role));
-          return;
-        }
-        try {
-          user = await register(
-            role === "teacher" ? "Ust. Ahmad Fauzi, S.Pd. (Demo)" : "Ahmad Rizky Pratama (Demo)",
-            demoEmail,
-            demoPass,
-            role,
-            { class_name: role === "teacher" ? "Guru Pengampu" : "Kelas 11", teacher_code: "SIGMAGURU2026" }
-          );
-        } catch (regErr: any) {
-          if (regErr?.message?.toLowerCase()?.includes("failed to fetch")) {
-            setDemoProfile(fallbackProfile);
-            toast.success(`Berhasil masuk mode uji coba ${role === "teacher" ? "Guru" : "Siswa"}!`);
-            navigate(getDestination(role));
-            return;
-          }
-          throw regErr;
-        }
-      }
-      toast.success(`Berhasil masuk sebagai Akun Uji Coba ${role === "teacher" ? "Guru" : "Siswa"}!`);
-      navigate(getDestination(user.role));
-    } catch (err: any) {
-      console.warn("Demo access network issue, falling back to local demo:", err);
-      setDemoProfile(fallbackProfile);
-      toast.success(`Berhasil masuk mode uji coba ${role === "teacher" ? "Guru" : "Siswa"}!`);
-      navigate(getDestination(role));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleRecoverPassword = () => {
-    toast.info(
-      "Info: Siswa dapat menggunakan password default: siswa123 atau hubungi administrator sekolah.",
-      { duration: 5000 }
-    );
+    toast.info("Link reset password dikirim ke email kamu", { duration: 5000 });
   };
 
   return (
@@ -489,9 +477,6 @@ export default function Login() {
                     <span className="text-[11px] text-amber-400/90 block">
                       Jika membuka di hosting/Vercel, pastikan <code>VITE_SUPABASE_URL</code> dan <code>VITE_SUPABASE_ANON_KEY</code> sudah disetel di menu Environment Variables Vercel lalu lakukan <em>Redeploy</em>.
                     </span>
-                    <span className="text-[11px] text-amber-300/80 block mt-1 font-semibold">
-                      Tips: Anda tetap bisa langsung masuk menggunakan tombol "Masuk Akun Siswa/Guru" di bagian bawah!
-                    </span>
                   </div>
                 </div>
               )}
@@ -605,7 +590,7 @@ export default function Login() {
                       <div className="relative">
                         <input
                           type="text"
-                          placeholder="Kode Guru: SIGMAGURU2026"
+                          placeholder="Kode Guru"
                           value={teacherCode}
                           onChange={(e) => setTeacherCode(e.target.value)}
                           className={`w-full rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 font-lexend text-xs sm:text-sm outline-none border transition-all ${
@@ -769,39 +754,6 @@ export default function Login() {
                     : "Continue with Google"}
                 </span>
               </button>
-
-              {/* Akses Uji Coba Cepat (Demo Mode) */}
-              <div className="pt-2 text-center">
-                <span className={`text-[10px] block mb-2 font-mono ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                  Akses instan untuk peninjauan fitur:
-                </span>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleDemoAccess("student")}
-                    disabled={loading}
-                    className={`py-2 px-2.5 rounded-xl border text-[11px] font-semibold transition-all cursor-pointer ${
-                      isDark
-                        ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
-                        : "border-cyan-300 bg-cyan-50 text-cyan-700 hover:bg-cyan-100"
-                    }`}
-                  >
-                    Masuk Akun Siswa
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDemoAccess("teacher")}
-                    disabled={loading}
-                    className={`py-2 px-2.5 rounded-xl border text-[11px] font-semibold transition-all cursor-pointer ${
-                      isDark
-                        ? "border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
-                        : "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                    }`}
-                  >
-                    Masuk Akun Guru
-                  </button>
-                </div>
-              </div>
 
               {/* Bottom Toggle: Don't have an account ? Create Account! */}
               <div className="mt-6 text-center font-lexend text-xs">

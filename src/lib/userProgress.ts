@@ -17,9 +17,9 @@ export interface StudentModuleProgress {
 const LAST_MODULE_KEY = "sigma_last_active_module_v3";
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export const isDemoUser = (userId?: string | null): boolean => {
+export const isLocalSessionUser = (userId?: string | null): boolean => {
   if (!userId) return true;
-  if (userId.startsWith("demo-") || userId.startsWith("00000000-0000-0000-0000-")) return true;
+  if (userId.startsWith("00000000-0000-0000-0000-")) return true;
   return !UUID_REGEX.test(userId);
 };
 
@@ -103,14 +103,14 @@ export function getModuleUnlockStatus(
 }
 
 export async function getAllProgress(userId: string): Promise<Record<string, StudentModuleProgress>> {
-  if (isDemoUser(userId)) {
+  if (isLocalSessionUser(userId)) {
     try {
-      const stored = localStorage.getItem(`sigma_demo_progress_${userId}`);
+      const stored = localStorage.getItem(`sigma_local_progress_${userId}`);
       if (stored) return JSON.parse(stored);
     } catch {
       // ignore
     }
-    // Initial demo progress: Siswa mulai dari Bab 1, Bab 2 terkunci
+    // Initial progress: Siswa mulai dari Bab 1, Bab 2 terkunci
     return {
       "mod-aljabar-1": {
         moduleId: "mod-aljabar-1",
@@ -153,9 +153,9 @@ export async function saveModuleProgress(
 ) {
   const percent = Math.min(100, Math.round(((slideIdx + 1) / totalSlides) * 100));
 
-  if (isDemoUser(userId)) {
+  if (isLocalSessionUser(userId)) {
     try {
-      const key = `sigma_demo_progress_${userId}`;
+      const key = `sigma_local_progress_${userId}`;
       const stored = localStorage.getItem(key);
       const map = stored ? JSON.parse(stored) : {};
       map[moduleId] = {
@@ -201,9 +201,9 @@ export async function saveModuleProgress(
 }
 
 export async function recordQuizCompletion(userId: string, moduleId: string, score: number) {
-  if (isDemoUser(userId)) {
+  if (isLocalSessionUser(userId)) {
     try {
-      const key = `sigma_demo_progress_${userId}`;
+      const key = `sigma_local_progress_${userId}`;
       const stored = localStorage.getItem(key);
       const map = stored ? JSON.parse(stored) : {};
       const existing = map[moduleId];
