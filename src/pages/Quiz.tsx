@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Send, Clock, Lock, AlertCircle, Play, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { MODULES } from "../lib/sigmaData";
 import { ProgressBar } from "../components/Primitives";
 import { useTheme } from "../lib/theme";
@@ -8,6 +9,7 @@ import { recordQuizCompletion, useStudentProgress, getModuleUnlockStatus } from 
 import { FormattedMathText } from "../components/MathView";
 import { useAuth } from "../lib/auth";
 import { getAssessmentResult } from "../lib/testAssessmentData";
+import { supabase } from "../lib/supabaseClient";
 
 export default function Quiz() {
   const { id, moduleId } = useParams();
@@ -25,19 +27,68 @@ export default function Quiz() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
 
-  // Countdown timer configurations set by Teacher in Teacher Menu/Dashboard
-  const defaultLimit = moduleData.quizTimeLimitMinutes || 15;
-  const timeLimitMinutes = (() => {
-    const saved = localStorage.getItem(`quiz_timelimit_${moduleData.id}`);
-    return saved ? parseInt(saved, 10) : defaultLimit;
-  })();
+  // Countdown timer configurations from Supabase quiz_settings
+  const [timerLoading, setTimerLoading] = useState<boolean>(true);
+  const [timerEnabled, setTimerEnabled] = useState<boolean>(false);
+  const [timeLimitMinutes, setTimeLimitMinutes] = useState<number>(15);
+  const [timeLeft, setTimeLeft] = useState<number>(15 * 60);
 
-  const timerEnabled = (() => {
-    const saved = localStorage.getItem(`quiz_timer_enabled_${moduleData.id}`);
-    return saved !== null ? saved === "true" : true;
-  })();
+  useEffect(() => {
+    let active = true;
 
-  const [timeLeft, setTimeLeft] = useState<number>(() => timeLimitMinutes * 60);
+    const loadTimerSettings = async () => {
+      setTimerLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("quiz_settings")
+          .select("timer_enabled, time_limit")
+          .eq("module_id", moduleData.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error("[Quiz] Gagal memuat quiz_settings:", error);
+          toast.error("Gagal memuat pengaturan timer kuis dari server.");
+          if (active) {
+            setTimerEnabled(false);
+            setTimerLoading(false);
+          }
+          return;
+        }
+
+        if (active) {
+          if (data) {
+            const enabled = Boolean(data.timer_enabled);
+            const limit =
+              typeof data.time_limit === "number" && data.time_limit > 0
+                ? data.time_limit
+                : moduleData.quizTimeLimitMinutes || 15;
+            setTimerEnabled(enabled);
+            setTimeLimitMinutes(limit);
+            setTimeLeft(limit * 60);
+          } else {
+            // Kalau tidak ada baris, anggap timer nonaktif
+            setTimerEnabled(false);
+            setTimeLimitMinutes(moduleData.quizTimeLimitMinutes || 15);
+            setTimeLeft((moduleData.quizTimeLimitMinutes || 15) * 60);
+          }
+          setTimerLoading(false);
+        }
+      } catch (err) {
+        console.error("[Quiz] Exception saat memuat quiz_settings:", err);
+        toast.error("Terjadi kesalahan saat memuat konfigurasi kuis.");
+        if (active) {
+          setTimerEnabled(false);
+          setTimerLoading(false);
+        }
+      }
+    };
+
+    loadTimerSettings();
+
+    return () => {
+      active = false;
+    };
+  }, [moduleData.id, moduleData.quizTimeLimitMinutes]);
 
   const q = questions[currentIdx];
   const progress = ((currentIdx + 1) / questions.length) * 100;
@@ -246,6 +297,15 @@ export default function Quiz() {
             Kembali ke Dashboard
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  if (timerLoading) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+        <span className="font-mono text-xs text-slate-400">Memuat konfigurasi kuis...</span>
       </div>
     );
   }

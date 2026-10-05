@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Layers,
@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { MODULES, DISTRICTS, SigmaModule } from "../lib/sigmaData";
 import { useTheme } from "../lib/theme";
+import { useAuth } from "../lib/auth";
 import { EditMaterialModal } from "../components/EditMaterialModal";
 import { getMaterialMetaSync } from "../lib/pdfStorage";
 import { supabase } from "../lib/supabaseClient";
@@ -148,78 +149,321 @@ export default function TeacherDashboard() {
   // Teacher edit material & upload PDF modal state
   const [editModalModule, setEditModalModule] = useState<SigmaModule | null>(null);
 
+  const { profile } = useAuth();
+  const teacherId = profile?.id;
+  const [agendaLoading, setAgendaLoading] = useState(true);
+  const isLoadedRef = useRef(false);
+
   // 1. Teacher Tasks state (Agenda Pengajaran Guru)
-  const [tasks, setTasks] = useState<TeacherTask[]>(() => {
-    try {
-      const saved = localStorage.getItem("teacher_agenda_tasks");
-      return saved ? JSON.parse(saved) : DEFAULT_TASKS;
-    } catch {
-      return DEFAULT_TASKS;
-    }
-  });
+  const [tasks, setTasks] = useState<TeacherTask[]>(DEFAULT_TASKS);
   const [newTaskInput, setNewTaskInput] = useState("");
   const [editingTask, setEditingTask] = useState<TeacherTask | null>(null);
 
   // 2. Class Sessions state (Sesi Kelas Hari Ini)
-  const [sessions, setSessions] = useState<ClassSession[]>(() => {
-    try {
-      const saved = localStorage.getItem("teacher_class_sessions");
-      return saved ? JSON.parse(saved) : DEFAULT_SESSIONS;
-    } catch {
-      return DEFAULT_SESSIONS;
-    }
-  });
+  const [sessions, setSessions] = useState<ClassSession[]>(DEFAULT_SESSIONS);
   const [sessionModalOpen, setSessionModalOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<ClassSession | null>(null);
 
   // 3. Teaching Schedule state (Jadwal Mengajar)
-  const [scheduleDays, setScheduleDays] = useState<DaySchedule[]>(() => {
-    try {
-      const saved = localStorage.getItem("teacher_schedule_days");
-      return saved ? JSON.parse(saved) : DEFAULT_SCHEDULE_DAYS;
-    } catch {
-      return DEFAULT_SCHEDULE_DAYS;
-    }
-  });
+  const [scheduleDays, setScheduleDays] = useState<DaySchedule[]>(DEFAULT_SCHEDULE_DAYS);
   const [selectedDayNumber, setSelectedDayNumber] = useState<number>(4);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 
   // 4. Madrasah Agenda state (Agenda Madrasah)
-  const [madrasahAgenda, setMadrasahAgenda] = useState<MadrasahAgendaItem[]>(() => {
-    try {
-      const saved = localStorage.getItem("teacher_madrasah_agenda");
-      return saved ? JSON.parse(saved) : DEFAULT_MADRASAH_AGENDA;
-    } catch {
-      return DEFAULT_MADRASAH_AGENDA;
-    }
-  });
+  const [madrasahAgenda, setMadrasahAgenda] = useState<MadrasahAgendaItem[]>(DEFAULT_MADRASAH_AGENDA);
   const [agendaModalOpen, setAgendaModalOpen] = useState(false);
   const [editingAgenda, setEditingAgenda] = useState<MadrasahAgendaItem | null>(null);
 
-  // Sync to localStorage
+  // Load teacher_data from Supabase (with one-time migration from localStorage)
   useEffect(() => {
-    try {
-      localStorage.setItem("teacher_agenda_tasks", JSON.stringify(tasks));
-    } catch {}
-  }, [tasks]);
+    if (!teacherId) return;
+    let active = true;
+
+    const loadTeacherData = async () => {
+      setAgendaLoading(true);
+      try {
+        const [tasksRes, sessionsRes, scheduleRes, agendaRes] = await Promise.all([
+          supabase
+            .from("teacher_data")
+            .select("value")
+            .eq("teacher_id", teacherId)
+            .eq("key", "teacher_agenda_tasks")
+            .maybeSingle(),
+          supabase
+            .from("teacher_data")
+            .select("value")
+            .eq("teacher_id", teacherId)
+            .eq("key", "teacher_class_sessions")
+            .maybeSingle(),
+          supabase
+            .from("teacher_data")
+            .select("value")
+            .eq("teacher_id", teacherId)
+            .eq("key", "teacher_schedule_days")
+            .maybeSingle(),
+          supabase
+            .from("teacher_data")
+            .select("value")
+            .eq("teacher_id", teacherId)
+            .eq("key", "teacher_madrasah_agenda")
+            .maybeSingle(),
+        ]);
+
+        if (tasksRes.error || sessionsRes.error || scheduleRes.error || agendaRes.error) {
+          const firstErr = tasksRes.error || sessionsRes.error || scheduleRes.error || agendaRes.error;
+          console.error("[TeacherDashboard] Gagal memuat teacher_data dari Supabase:", firstErr);
+          toast.error("Gagal memuat data agenda guru dari server.");
+          if (active) setAgendaLoading(false);
+          return;
+        }
+
+        if (!active) return;
+
+        // 1. teacher_agenda_tasks
+        let loadedTasks: TeacherTask[] = DEFAULT_TASKS;
+        if (tasksRes.data?.value) {
+          loadedTasks = tasksRes.data.value;
+          try {
+            localStorage.removeItem("teacher_agenda_tasks");
+          } catch {}
+        } else {
+          // Migrasi sekali jalan dari localStorage jika ada
+          const local = localStorage.getItem("teacher_agenda_tasks");
+          if (local) {
+            try {
+              const parsed = JSON.parse(local);
+              loadedTasks = parsed;
+              await supabase.from("teacher_data").upsert(
+                {
+                  teacher_id: teacherId,
+                  key: "teacher_agenda_tasks",
+                  value: parsed,
+                  updated_at: new Date().toISOString(),
+                },
+                { onConflict: "teacher_id,key" }
+              );
+            } catch (e) {
+              console.error("[TeacherDashboard] Error migrasi teacher_agenda_tasks:", e);
+            }
+            try {
+              localStorage.removeItem("teacher_agenda_tasks");
+            } catch {}
+          }
+        }
+
+        // 2. teacher_class_sessions
+        let loadedSessions: ClassSession[] = DEFAULT_SESSIONS;
+        if (sessionsRes.data?.value) {
+          loadedSessions = sessionsRes.data.value;
+          try {
+            localStorage.removeItem("teacher_class_sessions");
+          } catch {}
+        } else {
+          const local = localStorage.getItem("teacher_class_sessions");
+          if (local) {
+            try {
+              const parsed = JSON.parse(local);
+              loadedSessions = parsed;
+              await supabase.from("teacher_data").upsert(
+                {
+                  teacher_id: teacherId,
+                  key: "teacher_class_sessions",
+                  value: parsed,
+                  updated_at: new Date().toISOString(),
+                },
+                { onConflict: "teacher_id,key" }
+              );
+            } catch (e) {
+              console.error("[TeacherDashboard] Error migrasi teacher_class_sessions:", e);
+            }
+            try {
+              localStorage.removeItem("teacher_class_sessions");
+            } catch {}
+          }
+        }
+
+        // 3. teacher_schedule_days
+        let loadedScheduleDays: DaySchedule[] = DEFAULT_SCHEDULE_DAYS;
+        if (scheduleRes.data?.value) {
+          loadedScheduleDays = scheduleRes.data.value;
+          try {
+            localStorage.removeItem("teacher_schedule_days");
+          } catch {}
+        } else {
+          const local = localStorage.getItem("teacher_schedule_days");
+          if (local) {
+            try {
+              const parsed = JSON.parse(local);
+              loadedScheduleDays = parsed;
+              await supabase.from("teacher_data").upsert(
+                {
+                  teacher_id: teacherId,
+                  key: "teacher_schedule_days",
+                  value: parsed,
+                  updated_at: new Date().toISOString(),
+                },
+                { onConflict: "teacher_id,key" }
+              );
+            } catch (e) {
+              console.error("[TeacherDashboard] Error migrasi teacher_schedule_days:", e);
+            }
+            try {
+              localStorage.removeItem("teacher_schedule_days");
+            } catch {}
+          }
+        }
+
+        // 4. teacher_madrasah_agenda
+        let loadedMadrasahAgenda: MadrasahAgendaItem[] = DEFAULT_MADRASAH_AGENDA;
+        if (agendaRes.data?.value) {
+          loadedMadrasahAgenda = agendaRes.data.value;
+          try {
+            localStorage.removeItem("teacher_madrasah_agenda");
+          } catch {}
+        } else {
+          const local = localStorage.getItem("teacher_madrasah_agenda");
+          if (local) {
+            try {
+              const parsed = JSON.parse(local);
+              loadedMadrasahAgenda = parsed;
+              await supabase.from("teacher_data").upsert(
+                {
+                  teacher_id: teacherId,
+                  key: "teacher_madrasah_agenda",
+                  value: parsed,
+                  updated_at: new Date().toISOString(),
+                },
+                { onConflict: "teacher_id,key" }
+              );
+            } catch (e) {
+              console.error("[TeacherDashboard] Error migrasi teacher_madrasah_agenda:", e);
+            }
+            try {
+              localStorage.removeItem("teacher_madrasah_agenda");
+            } catch {}
+          }
+        }
+
+        setTasks(loadedTasks);
+        setSessions(loadedSessions);
+        setScheduleDays(loadedScheduleDays);
+        setMadrasahAgenda(loadedMadrasahAgenda);
+        isLoadedRef.current = true;
+        setAgendaLoading(false);
+      } catch (err) {
+        console.error("[TeacherDashboard] Exception saat memuat teacher_data:", err);
+        toast.error("Terjadi kesalahan saat memuat agenda guru.");
+        if (active) setAgendaLoading(false);
+      }
+    };
+
+    loadTeacherData();
+
+    return () => {
+      active = false;
+    };
+  }, [teacherId]);
+
+  // Debounced write (~800ms) to Supabase teacher_data
+  useEffect(() => {
+    if (!isLoadedRef.current || !teacherId) return;
+    const timer = setTimeout(async () => {
+      try {
+        const { error } = await supabase.from("teacher_data").upsert(
+          {
+            teacher_id: teacherId,
+            key: "teacher_agenda_tasks",
+            value: tasks,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "teacher_id,key" }
+        );
+        if (error) {
+          console.error("[TeacherDashboard] Gagal menyimpan teacher_agenda_tasks ke Supabase:", error);
+          toast.error("Gagal menyimpan agenda pengajaran ke server.");
+        }
+      } catch (err) {
+        console.error("[TeacherDashboard] Exception saat menyimpan teacher_agenda_tasks:", err);
+        toast.error("Terjadi kesalahan saat menyimpan agenda pengajaran.");
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [tasks, teacherId]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("teacher_class_sessions", JSON.stringify(sessions));
-    } catch {}
-  }, [sessions]);
+    if (!isLoadedRef.current || !teacherId) return;
+    const timer = setTimeout(async () => {
+      try {
+        const { error } = await supabase.from("teacher_data").upsert(
+          {
+            teacher_id: teacherId,
+            key: "teacher_class_sessions",
+            value: sessions,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "teacher_id,key" }
+        );
+        if (error) {
+          console.error("[TeacherDashboard] Gagal menyimpan teacher_class_sessions ke Supabase:", error);
+          toast.error("Gagal menyimpan sesi kelas ke server.");
+        }
+      } catch (err) {
+        console.error("[TeacherDashboard] Exception saat menyimpan teacher_class_sessions:", err);
+        toast.error("Terjadi kesalahan saat menyimpan sesi kelas.");
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [sessions, teacherId]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("teacher_schedule_days", JSON.stringify(scheduleDays));
-    } catch {}
-  }, [scheduleDays]);
+    if (!isLoadedRef.current || !teacherId) return;
+    const timer = setTimeout(async () => {
+      try {
+        const { error } = await supabase.from("teacher_data").upsert(
+          {
+            teacher_id: teacherId,
+            key: "teacher_schedule_days",
+            value: scheduleDays,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "teacher_id,key" }
+        );
+        if (error) {
+          console.error("[TeacherDashboard] Gagal menyimpan teacher_schedule_days ke Supabase:", error);
+          toast.error("Gagal menyimpan jadwal mengajar ke server.");
+        }
+      } catch (err) {
+        console.error("[TeacherDashboard] Exception saat menyimpan teacher_schedule_days:", err);
+        toast.error("Terjadi kesalahan saat menyimpan jadwal mengajar.");
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [scheduleDays, teacherId]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("teacher_madrasah_agenda", JSON.stringify(madrasahAgenda));
-    } catch {}
-  }, [madrasahAgenda]);
+    if (!isLoadedRef.current || !teacherId) return;
+    const timer = setTimeout(async () => {
+      try {
+        const { error } = await supabase.from("teacher_data").upsert(
+          {
+            teacher_id: teacherId,
+            key: "teacher_madrasah_agenda",
+            value: madrasahAgenda,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "teacher_id,key" }
+        );
+        if (error) {
+          console.error("[TeacherDashboard] Gagal menyimpan teacher_madrasah_agenda ke Supabase:", error);
+          toast.error("Gagal menyimpan agenda madrasah ke server.");
+        }
+      } catch (err) {
+        console.error("[TeacherDashboard] Exception saat menyimpan teacher_madrasah_agenda:", err);
+        toast.error("Terjadi kesalahan saat menyimpan agenda madrasah.");
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [madrasahAgenda, teacherId]);
 
   // Query real students and submissions from Supabase
   const loadTeacherMetrics = async () => {
@@ -446,7 +690,11 @@ export default function TeacherDashboard() {
     toast.success(`Jadwal tanggal ${dayNumber} Oktober berhasil diperbarui!`);
   };
 
-  const activeDay = scheduleDays.find((d) => d.dayNumber === selectedDayNumber) || scheduleDays[3];
+  const activeDay =
+    scheduleDays.find((d) => d.dayNumber === selectedDayNumber) ||
+    scheduleDays[3] ||
+    scheduleDays[0] ||
+    DEFAULT_SCHEDULE_DAYS[3];
 
   return (
     <div className="w-full space-y-6">
@@ -761,7 +1009,12 @@ export default function TeacherDashboard() {
 
                 {/* Checklist stream */}
                 <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {tasks.length === 0 ? (
+                  {agendaLoading ? (
+                    <div className="py-8 flex flex-col items-center justify-center gap-2">
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+                      <span className="font-mono text-xs text-slate-400">Memuat agenda pengajaran...</span>
+                    </div>
+                  ) : tasks.length === 0 ? (
                     <div className="py-6 text-center text-xs text-slate-400">
                       Belum ada agenda pengajaran. Tambahkan agenda baru di atas!
                     </div>
@@ -945,7 +1198,12 @@ export default function TeacherDashboard() {
 
             {/* Lesson Cards */}
             <div className="space-y-2.5">
-              {sessions.length === 0 ? (
+              {agendaLoading ? (
+                <div className="py-8 flex flex-col items-center justify-center gap-2">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+                  <span className="font-mono text-xs text-slate-400">Memuat sesi kelas...</span>
+                </div>
+              ) : sessions.length === 0 ? (
                 <div className="py-6 text-center text-xs text-slate-400">
                   Belum ada sesi kelas hari ini. Klik "+ Tambah Sesi" untuk menambahkan.
                 </div>
@@ -1048,7 +1306,12 @@ export default function TeacherDashboard() {
             </div>
 
             <div className="space-y-2.5">
-              {madrasahAgenda.length === 0 ? (
+              {agendaLoading ? (
+                <div className="py-8 flex flex-col items-center justify-center gap-2">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+                  <span className="font-mono text-xs text-slate-400">Memuat agenda madrasah...</span>
+                </div>
+              ) : madrasahAgenda.length === 0 ? (
                 <div className="py-6 text-center text-xs text-slate-400">
                   Belum ada agenda madrasah. Klik "+ Tambah Agenda" untuk menambahkan.
                 </div>
