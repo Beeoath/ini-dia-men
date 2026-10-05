@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
-import { isSupabaseConfigured } from "../lib/supabaseClient";
+import { supabase, isSupabaseConfigured } from "../lib/supabaseClient";
 import { toast } from "sonner";
 
 export default function Login() {
@@ -277,8 +277,31 @@ export default function Login() {
     }
   };
 
-  const handleRecoverPassword = () => {
-    toast.info("Link reset password dikirim ke email kamu", { duration: 5000 });
+  const handleRecoverPassword = async () => {
+    const targetEmail = email.trim();
+    if (!targetEmail || !targetEmail.includes("@")) {
+      toast.error(
+        language === "ID"
+          ? "Masukkan alamat email Anda di kolom email terlebih dahulu."
+          : "Please enter your email address in the email field first."
+      );
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(targetEmail, {
+        redirectTo: window.location.origin + "/reset-password",
+      });
+      if (error) {
+        console.error("[resetPasswordForEmail] Supabase error:", error);
+      }
+    } catch (err) {
+      console.error("[resetPasswordForEmail] Exception:", err);
+    }
+
+    toast.info("Kalau email terdaftar, link reset sudah dikirim", {
+      duration: 6000,
+    });
   };
 
   // Selama profil masih dimuat dari database, tampilkan loading state dan jangan redirect dulu
@@ -550,14 +573,14 @@ export default function Login() {
                 </div>
               )}
 
-              {/* Warning when Supabase Env is missing on Vercel or other devices */}
+              {/* Notice when Supabase is not configured */}
               {!isSupabaseConfigured && (
                 <div className="mb-4 flex items-start gap-2.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
                   <AlertTriangle size={18} className="shrink-0 text-amber-400 mt-0.5" />
                   <div className="leading-relaxed">
                     <span className="font-semibold block text-amber-300">Konfigurasi Database Belum Aktif</span>
                     <span className="text-[11px] text-amber-400/90 block">
-                      Jika membuka di hosting/Vercel, pastikan <code>VITE_SUPABASE_URL</code> dan <code>VITE_SUPABASE_ANON_KEY</code> sudah disetel di menu Environment Variables Vercel lalu lakukan <em>Redeploy</em>.
+                      Pastikan <code>VITE_SUPABASE_URL</code> dan <code>VITE_SUPABASE_ANON_KEY</code> sudah disetel di variabel lingkungan.
                     </span>
                   </div>
                 </div>

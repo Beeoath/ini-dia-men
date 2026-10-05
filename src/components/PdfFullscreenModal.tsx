@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, ExternalLink } from "lucide-react";
+import { isAllowedIframeUrl, isValidPdfUrl } from "./EditMaterialModal";
 
 interface PdfFullscreenModalProps {
   isOpen: boolean;
@@ -93,14 +94,41 @@ export const PdfFullscreenModal: React.FC<PdfFullscreenModalProps> = ({
         </div>
       </div>
 
-      {/* 3. Fullscreen Iframe */}
-      <div className="flex-1 w-full h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] bg-[#1e222d] relative overflow-hidden">
-        <iframe
-          src={pdfUrl}
-          title={title}
-          className="w-full h-full border-none"
-          allow="fullscreen"
-        />
+      {/* 3. Fullscreen Iframe or External Link Fallback */}
+      <div className="flex-1 w-full h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] bg-[#1e222d] relative overflow-hidden flex items-center justify-center">
+        {isAllowedIframeUrl(pdfUrl) ? (
+          <iframe
+            src={pdfUrl}
+            title={title}
+            className="w-full h-full border-none"
+            allow="fullscreen"
+          />
+        ) : (
+          <div className="p-8 sm:p-14 text-center flex flex-col items-center justify-center gap-4 max-w-lg">
+            <div className="w-16 h-16 rounded-2xl bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center text-cyan-400">
+              <FileText size={32} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-display font-bold text-lg text-white">
+                {title}
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Dokumen PDF ini berasal dari tautan eksternal di luar Google Docs / Drive. Demi keamanan peramban, dokumen tidak disematkan dalam iframe.
+              </p>
+            </div>
+            {isValidPdfUrl(pdfUrl) && (
+              <a
+                href={pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-xs bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-400/25 transition-all cursor-pointer"
+              >
+                <ExternalLink size={16} />
+                <span>Buka di tab baru</span>
+              </a>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

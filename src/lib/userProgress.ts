@@ -259,14 +259,19 @@ export async function saveModuleProgress(
 
   try {
     // Ambil dulu row yang ada di database (pakai select("*") agar tidak error jika ada nama kolom berbeda)
-    const { data: existingRow } = await supabase
+    const { data: existingRow, error: selectErr } = await supabase
       .from("user_progress")
       .select("*")
       .eq("user_id", userId)
       .eq("module_id", moduleId)
       .maybeSingle();
 
-    const existingDbScore = existingRow?.quiz_score ?? existingRow?.score;
+    if (selectErr) {
+      console.error("[userProgress.saveModuleProgress] Supabase error saat mengecek progress modul:", selectErr);
+    }
+
+    const validExistingRow = !selectErr ? existingRow : null;
+    const existingDbScore = validExistingRow?.quiz_score ?? validExistingRow?.score;
     const dbQuizScore =
       existingDbScore !== null && existingDbScore !== undefined
         ? Math.max(Number(existingDbScore), preservedQuizScore ?? 0)
@@ -274,7 +279,7 @@ export async function saveModuleProgress(
 
     const finalCompleted = Boolean(
       preservedCompleted ||
-        existingRow?.completed ||
+        validExistingRow?.completed ||
         (dbQuizScore !== undefined && dbQuizScore >= MIN_PASSING_SCORE)
     );
 
@@ -283,7 +288,7 @@ export async function saveModuleProgress(
       module_id: moduleId,
       slide_idx: slideIdx,
       total_slides: totalSlides,
-      percent: Math.max(percent, Number(existingRow?.percent ?? 0)),
+      percent: Math.max(percent, Number(validExistingRow?.percent ?? 0)),
       completed: finalCompleted,
       last_studied_at: new Date().toISOString(),
     };
@@ -359,19 +364,20 @@ export async function recordQuizCompletion(userId: string, moduleId: string, sco
       console.error("[userProgress.recordQuizCompletion] Supabase error saat mengecek progress sebelumnya:", selectError);
     }
 
-    const existingDbScore = existing?.quiz_score ?? existing?.score;
+    const validExisting = !selectError ? existing : null;
+    const existingDbScore = validExisting?.quiz_score ?? validExisting?.score;
     const finalScore =
       existingDbScore !== null && existingDbScore !== undefined
         ? Math.max(Number(existingDbScore), bestLocalScore)
         : bestLocalScore;
-    const finalCompleted = Boolean(finalScore >= MIN_PASSING_SCORE || existing?.completed || isCompleted);
+    const finalCompleted = Boolean(finalScore >= MIN_PASSING_SCORE || validExisting?.completed || isCompleted);
 
     const { error } = await supabase.from("user_progress").upsert(
       {
         user_id: userId,
         module_id: moduleId,
-        slide_idx: existing?.slide_idx ?? localExisting?.slideIdx ?? 0,
-        total_slides: existing?.total_slides ?? localExisting?.totalSlides ?? 14,
+        slide_idx: validExisting?.slide_idx ?? localExisting?.slideIdx ?? 0,
+        total_slides: validExisting?.total_slides ?? localExisting?.totalSlides ?? 14,
         percent: 100,
         quiz_score: finalScore,
         completed: finalCompleted,

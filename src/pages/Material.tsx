@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Zap,
   ArrowRight,
+  ExternalLink,
 } from "lucide-react";
 import { MODULES } from "../lib/sigmaData";
 import { useTheme } from "../lib/theme";
@@ -17,6 +18,7 @@ import { PdfFullscreenModal } from "../components/PdfFullscreenModal";
 import { getModulePdfUrl } from "../lib/pdfStorage";
 import { useStudentProgress, getModuleUnlockStatus } from "../lib/userProgress";
 import { getAssessmentResult } from "../lib/testAssessmentData";
+import { isAllowedIframeUrl, isValidPdfUrl } from "../components/EditMaterialModal";
 
 export default function Material() {
   const { id, moduleId } = useParams();
@@ -380,14 +382,26 @@ export default function Material() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 w-full md:w-auto">
-            <button
-              type="button"
-              onClick={() => setIsPdfModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs sm:text-sm shadow-[0_0_30px_rgba(0,240,255,0.45)] hover:scale-105 active:scale-95 transition-all cursor-pointer"
-            >
-              <Maximize2 size={16} className="stroke-[2.5]" />
-              <span>Buka Modul PDF (Fullscreen)</span>
-            </button>
+            {isAllowedIframeUrl(activePdfUrl) ? (
+              <button
+                type="button"
+                onClick={() => setIsPdfModalOpen(true)}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs sm:text-sm shadow-[0_0_30px_rgba(0,240,255,0.45)] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              >
+                <Maximize2 size={16} className="stroke-[2.5]" />
+                <span>Buka Modul PDF (Fullscreen)</span>
+              </button>
+            ) : isValidPdfUrl(activePdfUrl) ? (
+              <a
+                href={activePdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs sm:text-sm shadow-[0_0_30px_rgba(0,240,255,0.45)] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              >
+                <ExternalLink size={16} className="stroke-[2.5]" />
+                <span>Buka di tab baru</span>
+              </a>
+            ) : null}
 
             <Link
               to={`/app/kuis/${moduleData.id}`}
@@ -403,13 +417,15 @@ export default function Material() {
         <div className="space-y-3 pt-2">
           <div className="flex items-center justify-between text-xs font-mono font-bold text-slate-400">
             <span>PRATINJAU DOKUMEN PDF ({pageCountBadge})</span>
-            <button
-              type="button"
-              onClick={() => setIsPdfModalOpen(true)}
-              className="text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
-            >
-              <Maximize2 size={12} /> Buka Layar Penuh
-            </button>
+            {isAllowedIframeUrl(activePdfUrl) && (
+              <button
+                type="button"
+                onClick={() => setIsPdfModalOpen(true)}
+                className="text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <Maximize2 size={12} /> Buka Layar Penuh
+              </button>
+            )}
           </div>
 
           <div
@@ -417,11 +433,38 @@ export default function Material() {
               isDark ? "border-cyan-500/20 bg-[#090e1f]" : "border-slate-300 bg-slate-100"
             }`}
           >
-            <iframe
-              src={activePdfUrl}
-              title={`Pratinjau Modul PDF ${pdfTitle}`}
-              className="w-full h-[520px] sm:h-[640px] border-none"
-            />
+            {isAllowedIframeUrl(activePdfUrl) ? (
+              <iframe
+                src={activePdfUrl}
+                title={`Pratinjau Modul PDF ${pdfTitle}`}
+                className="w-full h-[520px] sm:h-[640px] border-none"
+              />
+            ) : (
+              <div className="p-8 sm:p-14 text-center flex flex-col items-center justify-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center text-cyan-400">
+                  <FileText size={32} />
+                </div>
+                <div className="space-y-1.5 max-w-md">
+                  <h3 className="font-display font-bold text-base sm:text-lg">
+                    {pdfTitle}
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Dokumen PDF ini disediakan dari tautan eksternal di luar Google Docs / Drive. Untuk keamanan peramban (CSP), dokumen tidak ditampilkan di dalam iframe. Silakan buka dokumen di tab baru.
+                  </p>
+                </div>
+                {isValidPdfUrl(activePdfUrl) && (
+                  <a
+                    href={activePdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-400/20 transition-all cursor-pointer"
+                  >
+                    <ExternalLink size={14} />
+                    <span>Buka di tab baru</span>
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -429,12 +472,14 @@ export default function Material() {
       {/* ================================================================== */}
       {/* MODAL / OVERLAY FULLSCREEN BERISI <iframe> DENGAN TOMBOL CLOSE (X) */}
       {/* ================================================================== */}
-      <PdfFullscreenModal
-        isOpen={isPdfModalOpen}
-        onClose={() => setIsPdfModalOpen(false)}
-        pdfUrl={activePdfUrl}
-        title={pdfTitle}
-      />
+      {isAllowedIframeUrl(activePdfUrl) && (
+        <PdfFullscreenModal
+          isOpen={isPdfModalOpen}
+          onClose={() => setIsPdfModalOpen(false)}
+          pdfUrl={activePdfUrl}
+          title={pdfTitle}
+        />
+      )}
     </div>
   );
 }

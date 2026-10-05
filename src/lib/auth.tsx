@@ -180,6 +180,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const trimmed = code.trim();
     if (!trimmed) return false;
 
+    if (!isSupabaseConfigured) {
+      if (profile) {
+        const updated: UserProfile = { ...profile, role: "teacher", class_name: "Guru Pengampu" };
+        try {
+          localStorage.setItem("sigma_offline_profile", JSON.stringify(updated));
+        } catch {}
+        setProfile(updated);
+        return true;
+      }
+      return true;
+    }
+
     try {
       const { data, error } = await supabase.rpc("claim_teacher", { code: trimmed });
       if (error) {
@@ -199,6 +211,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
+      try {
+        const stored = localStorage.getItem("sigma_offline_profile");
+        if (stored) {
+          setProfile(JSON.parse(stored));
+        }
+      } catch (e) {
+        console.warn("Failed to load local offline profile:", e);
+      }
       setLoading(false);
       return;
     }
@@ -269,7 +289,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<UserProfile> => {
     if (!isSupabaseConfigured) {
-      throw new Error("failed to fetch");
+      const isTeacher = Boolean(
+        inMemoryPendingTeacherCode ||
+        email.toLowerCase().includes("guru") ||
+        email.toLowerCase().includes("teacher")
+      );
+      const localUser: UserProfile = {
+        id: `00000000-0000-0000-0000-${Date.now().toString(16).padEnd(12, "0").slice(0, 12)}`,
+        full_name: email.split("@")[0] || (isTeacher ? "Guru Pengampu" : "Siswa Sigma"),
+        email,
+        role: isTeacher ? "teacher" : "student",
+        class_name: isTeacher ? "Guru Pengampu" : "Kelas 11",
+        avatar_url: "/assets/cyber_hero_profile.png",
+        xp: isTeacher ? 500 : 150,
+        level: isTeacher ? 5 : 1,
+        badges: ["Pioneering Student"],
+      };
+      try {
+        localStorage.setItem("sigma_offline_profile", JSON.stringify(localUser));
+      } catch {}
+      setProfile(localUser);
+      return localUser;
     }
 
     isAuthenticatingRef.current = true;
@@ -325,7 +365,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogle = async (): Promise<void> => {
     if (!isSupabaseConfigured) {
-      throw new Error("failed to fetch");
+      const isTeacher = Boolean(inMemoryPendingTeacherCode);
+      const localUser: UserProfile = {
+        id: `00000000-0000-0000-0000-${Date.now().toString(16).padEnd(12, "0").slice(0, 12)}`,
+        full_name: isTeacher ? "Guru Pengampu (Google)" : "Siswa Sigma (Google)",
+        email: "google_user@madarunnajah9.sch.id",
+        role: isTeacher ? "teacher" : "student",
+        class_name: isTeacher ? "Guru Pengampu" : "Kelas 11",
+        avatar_url: "/assets/cyber_hero_profile.png",
+        xp: isTeacher ? 500 : 150,
+        level: isTeacher ? 5 : 1,
+        badges: ["Google Pioneer"],
+      };
+      try {
+        localStorage.setItem("sigma_offline_profile", JSON.stringify(localUser));
+      } catch {}
+      setProfile(localUser);
+      return;
     }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -351,18 +407,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     extra: { class_name?: string; teacher_code?: string } = {}
   ): Promise<RegisterResult> => {
     if (!isSupabaseConfigured) {
-      throw new Error("failed to fetch");
+      const isTeacher = Boolean(
+        extra?.teacher_code?.trim() ||
+        extra?.class_name?.toLowerCase().includes("guru")
+      );
+      const localUser: UserProfile = {
+        id: `00000000-0000-0000-0000-${Date.now().toString(16).padEnd(12, "0").slice(0, 12)}`,
+        full_name,
+        email,
+        role: isTeacher ? "teacher" : "student",
+        class_name: extra?.class_name || (isTeacher ? "Guru Pengampu" : "Kelas 11"),
+        avatar_url: "/assets/cyber_hero_profile.png",
+        xp: isTeacher ? 500 : 50,
+        level: 1,
+        badges: [],
+      };
+      try {
+        localStorage.setItem("sigma_offline_profile", JSON.stringify(localUser));
+      } catch {}
+      setProfile(localUser);
+      return { user: localUser, sessionActive: true };
     }
 
     isAuthenticatingRef.current = true;
     setLoading(true);
     try {
-      // (1) signUp seperti biasa — TIDAK mengirim kolom role ke database/metadata
+      // (1) signUp aman — HANYA mengirim full_name, TIDAK mengirim role, xp, level
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name, class_name: extra.class_name },
+          data: { full_name },
         },
       });
       if (error) {
@@ -470,11 +545,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    supabase.auth.signOut().then(({ error }) => {
-      if (error) console.error("[logout] Supabase error saat signOut:", error);
-    }).catch((err) => {
-      console.error("[logout] Exception saat signOut:", err);
-    });
+    try {
+      localStorage.removeItem("sigma_offline_profile");
+    } catch {}
+    if (isSupabaseConfigured) {
+      supabase.auth.signOut().then(({ error }) => {
+        if (error) console.error("[logout] Supabase error saat signOut:", error);
+      }).catch((err) => {
+        console.error("[logout] Exception saat signOut:", err);
+      });
+    }
     setProfile(null);
   };
 
@@ -493,6 +573,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       allowedFields.avatar_url = updates.avatar;
     }
 
+    if (!isSupabaseConfigured) {
+      setProfile((prev) => {
+        if (!prev) return null;
+        const n = { ...prev, ...allowedFields };
+        try {
+          localStorage.setItem("sigma_offline_profile", JSON.stringify(n));
+        } catch {}
+        return n;
+      });
+      return;
+    }
+
     if (Object.keys(allowedFields).length > 0) {
       try {
         const { error } = await supabase.from("profiles").update(allowedFields).eq("id", profile.id);
@@ -509,6 +601,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addXp = async (amount: number) => {
     if (!profile || amount <= 0) return;
+
+    if (!isSupabaseConfigured) {
+      setProfile((prev) => {
+        if (!prev) return null;
+        const xp = (prev.xp || 0) + amount;
+        const level = Math.floor(xp / 100) + 1;
+        const n = { ...prev, xp, level };
+        try {
+          localStorage.setItem("sigma_offline_profile", JSON.stringify(n));
+        } catch {}
+        return n;
+      });
+      return;
+    }
 
     try {
       // Sesuai fungsi RPC database baru: add_xp(amount int) maksimal 100 per panggilan

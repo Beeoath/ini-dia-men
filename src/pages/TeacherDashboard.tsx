@@ -5,23 +5,16 @@ import {
   Plus,
   Edit,
   Clock,
-  Timer,
-  FileText,
-  Eye,
   GraduationCap,
   Calendar,
-  MoreHorizontal,
   Bell,
   Search,
   Check,
   Inbox,
-  BookOpen,
   Trash2,
   X,
-  Sparkles,
   MapPin,
   Pencil,
-  ChevronRight,
   Settings,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -248,8 +241,8 @@ export default function TeacherDashboard() {
         console.error("[TeacherDashboard] Supabase error saat memuat user_progress:", progressRes.error);
       }
 
-      const students = studentsRes.data || [];
-      const progressRows = [...(progressRes.data || [])].sort((a: any, b: any) => {
+      const students = !studentsRes.error && studentsRes.data ? studentsRes.data : [];
+      const progressRows = (!progressRes.error && progressRes.data ? [...progressRes.data] : []).sort((a: any, b: any) => {
         const timeA = new Date(a.last_studied_at || a.updated_at || a.created_at || 0).getTime();
         const timeB = new Date(b.last_studied_at || b.updated_at || b.created_at || 0).getTime();
         return timeB - timeA;

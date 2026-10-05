@@ -23,6 +23,34 @@ import {
   CustomMaterialData,
 } from "../lib/pdfStorage";
 
+export function isAllowedIframeUrl(url?: string | null): boolean {
+  if (!url) return false;
+  if (url.startsWith("blob:")) return true;
+  if (url.startsWith("/") && !url.startsWith("//")) return true;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+    const hostname = parsed.hostname.toLowerCase();
+    const isSameOrigin = parsed.origin === window.location.origin;
+    const isGoogleDocs = hostname === "docs.google.com";
+    const isGoogleDrive = hostname === "drive.google.com";
+    return isSameOrigin || isGoogleDocs || isGoogleDrive;
+  } catch {
+    return false;
+  }
+}
+
+export function isValidPdfUrl(url?: string | null): boolean {
+  if (!url) return false;
+  if (url.startsWith("blob:") || (url.startsWith("/") && !url.startsWith("//"))) return true;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 interface EditMaterialModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -192,6 +220,15 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
           pdfFileSize = selectedFile.size;
         } else if (existingMeta?.pdfBlob) {
           pdfBlob = existingMeta.pdfBlob;
+        }
+      }
+
+      if (uploadMethod === "url" && externalUrl.trim()) {
+        const trimmedUrl = externalUrl.trim();
+        if (!trimmedUrl.startsWith("https://")) {
+          toast.error("Tautan URL PDF harus diawali dengan https://");
+          setIsSaving(false);
+          return;
         }
       }
 
@@ -579,13 +616,38 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
                     Tutup (X)
                   </button>
                 </div>
-                <div className="rounded-xl border border-white/15 overflow-hidden bg-black/50 shadow-inner h-64 sm:h-80">
-                  <iframe
-                    src={filePreviewUrl}
-                    title="Pratinjau PDF Guru"
-                    className="w-full h-full border-none"
-                  />
-                </div>
+                {isAllowedIframeUrl(filePreviewUrl) ? (
+                  <div className="rounded-xl border border-white/15 overflow-hidden bg-black/50 shadow-inner h-64 sm:h-80">
+                    <iframe
+                      src={filePreviewUrl}
+                      title="Pratinjau PDF Guru"
+                      className="w-full h-full border-none"
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/20 p-6 text-center flex flex-col items-center justify-center gap-3">
+                    <FileText size={32} className="text-cyan-400 opacity-80" />
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-slate-200">
+                        Dokumen PDF Berasal dari Domain Eksternal
+                      </p>
+                      <p className="text-[11px] text-slate-400 max-w-md">
+                        Untuk keamanan peramban (CSP), tautan di luar Google Docs / Drive tidak disematkan di dalam iframe. Silakan buka dokumen di tab baru.
+                      </p>
+                    </div>
+                    {isValidPdfUrl(filePreviewUrl) && (
+                      <a
+                        href={filePreviewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-md transition-all cursor-pointer"
+                      >
+                        <ExternalLink size={14} />
+                        <span>Buka di tab baru</span>
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

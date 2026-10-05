@@ -84,11 +84,6 @@ export default function Landing() {
   };
   const theme = getThemeColor();
 
-  const handleOpenTrailer = (title = "Official Mission Teaser") => {
-    setTrailerTitle(title);
-    setTrailerOpen(true);
-  };
-
   return (
     <div
       className={`relative min-h-screen w-full font-sans selection:bg-[#00f0ff] selection:text-black overflow-x-hidden transition-colors duration-300 ${

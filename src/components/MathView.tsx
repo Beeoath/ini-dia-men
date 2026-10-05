@@ -104,25 +104,37 @@ export const MathView: React.FC<MathViewProps> = ({
       .replace(/\/text(?=\{)/g, "\\text");
   }, [rawFormula]);
 
-  const html = useMemo(() => {
-    if (!formula) return "";
+  const rendered = useMemo(() => {
+    if (!formula) return { success: true, html: "" };
     try {
-      return katex.renderToString(formula, {
+      const htmlStr = katex.renderToString(formula, {
         displayMode: block,
         throwOnError: false,
         output: "html",
       });
-    } catch {
-      return formula;
+      return { success: true, html: htmlStr };
+    } catch (e) {
+      console.error("[MathView] KaTeX render error:", e);
+      return { success: false, text: formula };
     }
   }, [formula, block]);
 
   if (!formula) return null;
 
+  if (!rendered.success || !rendered.html) {
+    return (
+      <span
+        className={`inline-math ${block ? "block text-center my-2 overflow-x-auto" : "inline"} ${className}`}
+      >
+        {formula}
+      </span>
+    );
+  }
+
   return (
     <span
       className={`inline-math ${block ? "block text-center my-2 overflow-x-auto" : "inline"} ${className}`}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: rendered.html }}
     />
   );
 };
