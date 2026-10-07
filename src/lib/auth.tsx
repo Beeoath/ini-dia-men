@@ -30,7 +30,7 @@ interface AuthContextType {
   setPendingTeacherCode: (code: string | null) => void;
   claimTeacher: (code: string) => Promise<boolean>;
   login: (email: string, password: string) => Promise<UserProfile>;
-  loginWithGoogle: () => Promise<void>;
+  loginWithGoogle: (redirectPath?: string) => Promise<void>;
   register: (
     full_name: string,
     email: string,
@@ -133,6 +133,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [pendingTeacherCode, setPendingTeacherCodeState] = useState<string | null>(inMemoryPendingTeacherCode);
   const isAuthenticatingRef = useRef(false);
+  const currentUserIdRef = useRef<string | null>(null);
+
+  // Blok mode offline/mock HANYA aktif jika dalam mode DEV
+  const isMockOfflineMode = !isSupabaseConfigured && Boolean(import.meta.env.DEV);
 
   const setPendingTeacherCode = (code: string | null) => {
     const cleaned = code && code.trim() ? code.trim() : null;
@@ -180,12 +184,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const trimmed = code.trim();
     if (!trimmed) return false;
 
-    if (!isSupabaseConfigured) {
+    if (isMockOfflineMode) {
       if (profile) {
         const updated: UserProfile = { ...profile, role: "teacher", class_name: "Guru Pengampu" };
         try {
           localStorage.setItem("sigma_offline_profile", JSON.stringify(updated));
         } catch {}
+        currentUserIdRef.current = updated.id;
         setProfile(updated);
         return true;
       }
@@ -210,11 +215,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    if (!isSupabaseConfigured) {
+    if (isMockOfflineMode) {
       try {
         const stored = localStorage.getItem("sigma_offline_profile");
         if (stored) {
-          setProfile(JSON.parse(stored));
+          const parsed = JSON.parse(stored);
+          currentUserIdRef.current = parsed.id;
+          setProfile(parsed);
         }
       } catch (e) {
         console.warn("Failed to load local offline profile:", e);
@@ -241,6 +248,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               toast.error("Kode guru salah");
             }
           }
+          currentUserIdRef.current = userProf.id;
           setProfile(userProf);
         } catch (e) {
           console.error("[Auth] Exception saat memuat profil sesi:", e);
@@ -253,39 +261,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     // Dengerin perubahan login/logout (termasuk dari tab lain atau redirect OAuth)
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      // 1. Abaikan event TOKEN_REFRESHED
+      if (event === "TOKEN_REFRESHED") {
+        return;
+      }
+
       if (isAuthenticatingRef.current) {
         // Biarkan fungsi login() / register() menyelesaikan alur pemuatan profil terlebih dahulu
         return;
       }
-      if (session?.user) {
-        setLoading(true);
-        try {
-          let userProf = await loadProfile(session.user.id, session.user.email!, session.user.user_metadata);
-          if (inMemoryPendingTeacherCode && userProf.role === "student") {
-            const codeToClaim = inMemoryPendingTeacherCode;
-            setPendingTeacherCode(null);
-            const claimed = await claimTeacher(codeToClaim, session.user.id);
-            if (claimed) {
-              userProf = await loadProfile(session.user.id, session.user.email!, session.user.user_metadata);
-            } else {
-              toast.error("Kode guru salah");
+
+      // 2. Bungkus pekerjaan async dengan setTimeout(..., 0)
+      setTimeout(async () => {
+        if (session?.user) {
+          const isSameUser = currentUserIdRef.current === session.user.id;
+          // 3. Jangan setLoading(true) jika user.id tidak berubah agar form yang sedang diisi tidak hilang
+          if (!isSameUser) {
+            setLoading(true);
+          }
+          try {
+            let userProf = await loadProfile(session.user.id, session.user.email!, session.user.user_metadata);
+            if (inMemoryPendingTeacherCode && userProf.role === "student") {
+              const codeToClaim = inMemoryPendingTeacherCode;
+              setPendingTeacherCode(null);
+              const claimed = await claimTeacher(codeToClaim, session.user.id);
+              if (claimed) {
+                userProf = await loadProfile(session.user.id, session.user.email!, session.user.user_metadata);
+              } else {
+                toast.error("Kode guru salah");
+              }
+            }
+            currentUserIdRef.current = userProf.id;
+            setProfile(userProf);
+          } catch (e) {
+            console.error("[Auth] Exception saat memuat profil pada onAuthStateChange:", e);
+          } finally {
+            if (!isSameUser) {
+              setLoading(false);
             }
           }
-          setProfile(userProf);
-        } catch (e) {
-          console.error("[Auth] Exception saat memuat profil pada onAuthStateChange:", e);
-        } finally {
+        } else {
+          currentUserIdRef.current = null;
+          setProfile(null);
           setLoading(false);
         }
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
+      }, 0);
     });
 
     return () => listener.subscription.unsubscribe();
-  }, []);
+  }, [isMockOfflineMode]);
 
   const login = async (email: string, password: string): Promise<UserProfile> => {
     if (!isSupabaseConfigured) {
@@ -363,8 +388,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginWithGoogle = async (): Promise<void> => {
-    if (!isSupabaseConfigured) {
+  const loginWithGoogle = async (redirectPath?: string): Promise<void> => {
+    if (!isMockOfflineMode && !isSupabaseConfigured) {
+      throw new Error("Supabase belum dikonfigurasi. Pastikan VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY telah diatur.");
+    }
+    if (isMockOfflineMode) {
       const isTeacher = Boolean(inMemoryPendingTeacherCode);
       const localUser: UserProfile = {
         id: `00000000-0000-0000-0000-${Date.now().toString(16).padEnd(12, "0").slice(0, 12)}`,
@@ -383,10 +411,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(localUser);
       return;
     }
+    const safeRedirect = redirectPath && /^\/(?![\/\\])/.test(redirectPath) ? redirectPath : undefined;
+    const targetUrl = safeRedirect
+      ? `${window.location.origin}/masuk?redirect=${encodeURIComponent(safeRedirect)}`
+      : `${window.location.origin}/masuk`;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/masuk`,
+        redirectTo: targetUrl,
       },
     });
     if (error) {

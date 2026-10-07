@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "./lib/auth";
 import { ThemeProvider } from "./lib/theme";
@@ -26,6 +26,19 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import ResetPassword from "./pages/ResetPassword";
 
+function AppLayout({ requireRole }: { requireRole?: "student" | "teacher" }) {
+  return (
+    <ProtectedRoute requireRole={requireRole}>
+      <AppShell />
+    </ProtectedRoute>
+  );
+}
+
+function DiscussionDetailRedirect() {
+  const { id } = useParams();
+  return <Navigate to={id ? `/app/diskusi/${id}` : "/app/diskusi"} replace />;
+}
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -42,247 +55,42 @@ export default function App() {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
 
-            {/* Student Spatial Views (Protected) */}
-            <Route
-              path="/app"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <StudentDashboard />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/dashboard"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <StudentDashboard />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/hub"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <SigmaHub />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/diskusi"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <Discussions />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/discussions"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <Discussions />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/diskusi/:id"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <ThreadDetail />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/discussions/:id"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <ThreadDetail />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/profil"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <Profile />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/profile"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <Profile />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
+            {/* Student & General Protected Routes (Single Layout Route) */}
+            <Route element={<AppLayout />}>
+              <Route path="/app" element={<StudentDashboard />} />
+              <Route path="/app/dashboard" element={<StudentDashboard />} />
+              <Route path="/app/hub" element={<SigmaHub />} />
+              
+              {/* Forum Diskusi */}
+              <Route path="/app/diskusi" element={<Discussions />} />
+              <Route path="/app/diskusi/:id" element={<ThreadDetail />} />
+              <Route path="/app/discussions" element={<Navigate to="/app/diskusi" replace />} />
+              <Route path="/app/discussions/:id" element={<DiscussionDetailRedirect />} />
 
-            {/* Module, Material & Quiz Views (Protected) */}
-            <Route
-              path="/app/modul/:id"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <ModuleDetail />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/module/:id"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <ModuleDetail />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/materi/:id"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <Material />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/material/:id"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <Material />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/kuis/:id"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <Quiz />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/quiz/:id"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <Quiz />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/hasil-kuis/:id"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <QuizResult />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/quiz-result/:id"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <QuizResult />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/pretest/:id"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <Pretest />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/app/posttest/:id"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <Posttest />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
+              <Route path="/app/profil" element={<Profile />} />
+              <Route path="/app/profile" element={<Profile />} />
 
-            {/* Teacher Routes (Protected, require teacher role) */}
-            <Route
-              path="/teacher"
-              element={
-                <ProtectedRoute requireRole="teacher">
-                  <Navigate to="/teacher/dashboard" replace />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teacher/dashboard"
-              element={
-                <ProtectedRoute requireRole="teacher">
-                  <AppShell>
-                    <TeacherDashboard />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teacher/content"
-              element={
-                <ProtectedRoute requireRole="teacher">
-                  <AppShell>
-                    <TeacherContent />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teacher/moderation"
-              element={
-                <ProtectedRoute requireRole="teacher">
-                  <AppShell>
-                    <TeacherModeration />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/teacher/*"
-              element={
-                <ProtectedRoute requireRole="teacher">
-                  <Navigate to="/teacher/dashboard" replace />
-                </ProtectedRoute>
-              }
-            />
+              {/* Module, Material & Quiz Views */}
+              <Route path="/app/modul/:id" element={<ModuleDetail />} />
+              <Route path="/app/module/:id" element={<ModuleDetail />} />
+              <Route path="/app/materi/:id" element={<Material />} />
+              <Route path="/app/material/:id" element={<Material />} />
+              <Route path="/app/kuis/:id" element={<Quiz />} />
+              <Route path="/app/quiz/:id" element={<Quiz />} />
+              <Route path="/app/hasil-kuis/:id" element={<QuizResult />} />
+              <Route path="/app/quiz-result/:id" element={<QuizResult />} />
+              <Route path="/app/pretest/:id" element={<Pretest />} />
+              <Route path="/app/posttest/:id" element={<Posttest />} />
+            </Route>
+
+            {/* Teacher Routes (Protected Teacher Layout) */}
+            <Route element={<AppLayout requireRole="teacher" />}>
+              <Route path="/teacher" element={<Navigate to="/teacher/dashboard" replace />} />
+              <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+              <Route path="/teacher/content" element={<TeacherContent />} />
+              <Route path="/teacher/moderation" element={<TeacherModeration />} />
+              <Route path="/teacher/*" element={<Navigate to="/teacher/dashboard" replace />} />
+            </Route>
 
             {/* Catch-all redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

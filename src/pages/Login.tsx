@@ -58,7 +58,8 @@ export default function Login() {
   // Tentukan tujuan halaman HANYA berdasarkan profile.role dari tabel profiles di database
   const getDestinationByRole = (dbRole: "student" | "teacher") => {
     const redirectParam = searchParams.get("redirect");
-    if (redirectParam && redirectParam.startsWith("/")) {
+    // Validasi regex: harus diawali / dan tidak boleh diikuti / atau \ untuk mencegah open redirect
+    if (redirectParam && /^\/(?![\/\\])/.test(redirectParam)) {
       // Cegah siswa diarahkan ke halaman /teacher/* jika ada parameter redirect
       if (redirectParam.startsWith("/teacher") && dbRole !== "teacher") {
         return "/app/dashboard";
@@ -254,7 +255,10 @@ export default function Login() {
       if (selectedTab === "teacher" && teacherCode.trim()) {
         setPendingTeacherCode(teacherCode.trim());
       }
-      await loginWithGoogle();
+      const redirectParam = searchParams.get("redirect");
+      const safeRedirect =
+        redirectParam && /^\/(?![\/\\])/.test(redirectParam) ? redirectParam : undefined;
+      await loginWithGoogle(safeRedirect);
       // Browser will redirect to Google login screen
     } catch (err: any) {
       console.error("Google login error:", err);

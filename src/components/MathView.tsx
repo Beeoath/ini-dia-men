@@ -110,6 +110,7 @@ export const MathView: React.FC<MathViewProps> = ({
       const htmlStr = katex.renderToString(formula, {
         displayMode: block,
         throwOnError: false,
+        trust: false,
         output: "html",
       });
       return { success: true, html: htmlStr };

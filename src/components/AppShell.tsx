@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
 import {
   Compass,
   LayoutDashboard,
@@ -15,7 +15,7 @@ import { useAuth, getUserDisplayName } from "../lib/auth";
 import { useTheme, ThemeToggle } from "../lib/theme";
 import { SigmaBackground } from "./SigmaBackground";
 
-export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AppShell: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { profile, logout } = useAuth();
   const { isDark } = useTheme();
   const location = useLocation();
@@ -27,7 +27,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const studentNavItems = [
     { label: "Dashboard", path: "/app/dashboard", icon: LayoutDashboard },
     { label: "Sigma Hub", path: "/app/hub", icon: Compass },
-    { label: "Forum Diskusi", path: "/app/discussions", icon: MessageSquare },
+    { label: "Forum Diskusi", path: "/app/diskusi", icon: MessageSquare },
     { label: "Profil", path: "/app/profile", icon: User },
   ];
 
@@ -317,7 +317,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
           isSpatialView ? "overflow-x-hidden" : "w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6"
         }`}
       >
-        {children}
+        {children ?? <Outlet />}
       </main>
 
       {/* Footer shown on non-spatial pages */}
