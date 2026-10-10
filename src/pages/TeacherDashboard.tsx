@@ -151,6 +151,14 @@ export default function TeacherDashboard() {
 
   const { profile } = useAuth();
   const teacherId = profile?.id;
+  const teacherDisplayName = profile?.full_name || "Guru Pengampu";
+  const teacherInitials =
+    teacherDisplayName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase())
+      .join("") || "GP";
   const [agendaLoading, setAgendaLoading] = useState(true);
   const isLoadedRef = useRef(false);
 
@@ -738,12 +746,22 @@ export default function TeacherDashboard() {
               isDark ? "border-white/10 bg-white/5 text-white" : "border-slate-200 bg-white text-slate-900 shadow-sm"
             }`}
           >
-            <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-cyan-400 to-indigo-600 grid place-items-center text-slate-950 font-black text-xs">
-              AF
-            </div>
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt={teacherDisplayName}
+                className="h-8 w-8 rounded-full object-cover border border-white/20"
+              />
+            ) : (
+              <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-cyan-400 to-indigo-600 grid place-items-center text-slate-950 font-black text-xs">
+                {teacherInitials}
+              </div>
+            )}
             <div className="text-left hidden sm:block">
-              <div className="text-xs font-bold leading-tight">Ust. Ahmad Fauzi, S.Pd.</div>
-              <div className="text-[10px] text-cyan-500 font-mono">Guru Pengampu Matematika</div>
+              <div className="text-xs font-bold leading-tight">{teacherDisplayName}</div>
+              <div className="text-[10px] text-cyan-500 font-mono">
+                {profile?.class_name ? `Guru ${profile.class_name}` : "Guru Pengampu Matematika"}
+              </div>
             </div>
           </div>
         </div>
