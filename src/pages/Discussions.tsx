@@ -39,9 +39,13 @@ export default function Discussions() {
   // State
   const [threads, setThreads] = useState<ThreadWithStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("Semua");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
   // Modal Topik Baru
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,13 +56,26 @@ export default function Discussions() {
   const [showPreview, setShowPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load threads from Supabase
-  const fetchThreads = async () => {
+  // Debounce input pencarian 300ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Load threads dari Supabase (server-side pagination & filter)
+  const fetchThreads = async (resetPage: boolean = true) => {
     try {
-      setLoading(true);
+      if (resetPage) {
+        setLoading(true);
+        setPage(0);
+      }
       setError(null);
-      const data = await listThreads(selectedCategory);
-      setThreads(data);
+      const targetPage = resetPage ? 0 : page;
+      const res = await listThreads(selectedCategory, targetPage, debouncedSearch);
+      setThreads(res.threads);
+      setHasMore(res.hasMore);
     } catch (err: any) {
       console.error("[Discussions] Error fetching threads:", err);
       setError(err?.message || "Gagal memuat daftar topik diskusi.");
@@ -69,20 +86,25 @@ export default function Discussions() {
   };
 
   useEffect(() => {
-    fetchThreads();
-  }, [selectedCategory]);
+    fetchThreads(true);
+  }, [selectedCategory, debouncedSearch]);
 
-  // Filter threads by search query
-  const filteredThreads = useMemo(() => {
-    if (!searchQuery.trim()) return threads;
-    const q = searchQuery.toLowerCase();
-    return threads.filter(
-      (t) =>
-        t.title.toLowerCase().includes(q) ||
-        t.content.toLowerCase().includes(q) ||
-        (t.author_name && t.author_name.toLowerCase().includes(q))
-    );
-  }, [threads, searchQuery]);
+  const handleLoadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    try {
+      setLoadingMore(true);
+      const nextPage = page + 1;
+      const res = await listThreads(selectedCategory, nextPage, debouncedSearch);
+      setThreads((prev) => [...prev, ...res.threads]);
+      setPage(nextPage);
+      setHasMore(res.hasMore);
+    } catch (err: any) {
+      console.error("[Discussions] Error loading more threads:", err);
+      toast.error("Gagal memuat topik tambahan.");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // Handle Create Thread
   const handleCreateThread = async (e: React.FormEvent) => {
@@ -200,7 +222,7 @@ export default function Discussions() {
           {/* Quick Refresh Button */}
           <button
             type="button"
-            onClick={fetchThreads}
+            onClick={() => fetchThreads(true)}
             disabled={loading}
             className={`self-end sm:self-auto inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
               isDark
@@ -258,7 +280,7 @@ export default function Discussions() {
             </div>
             <button
               type="button"
-              onClick={fetchThreads}
+              onClick={() => fetchThreads(true)}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-all cursor-pointer shadow-md"
             >
               <RefreshCw size={14} /> Coba Lagi
@@ -267,7 +289,7 @@ export default function Discussions() {
         )}
 
         {/* Empty State */}
-        {!loading && !error && filteredThreads.length === 0 && (
+        {!loading && !error && threads.length === 0 && (
           <div
             className={`p-12 rounded-3xl border text-center space-y-4 ${
               isDark
@@ -287,8 +309,8 @@ export default function Discussions() {
                 Belum Ada Topik Diskusi
               </h3>
               <p className="text-xs leading-relaxed">
-                {searchQuery
-                  ? `Tidak ada topik yang cocok dengan pencarian "${searchQuery}". Coba kata kunci lain.`
+                {debouncedSearch
+                  ? `Tidak ada topik yang cocok dengan pencarian "${debouncedSearch}". Coba kata kunci lain.`
                   : `Belum ada pertanyaan pada kategori "${selectedCategory}". Jadilah yang pertama memulai diskusi!`}
               </p>
             </div>
@@ -305,9 +327,9 @@ export default function Discussions() {
         )}
 
         {/* Threads List */}
-        {!loading && !error && filteredThreads.length > 0 && (
+        {!loading && !error && threads.length > 0 && (
           <div className="space-y-3.5">
-            {filteredThreads.map((thread) => {
+            {threads.map((thread) => {
               const isTeacherAuthor = thread.author_role === "teacher";
               return (
                 <Link
@@ -446,6 +468,34 @@ export default function Discussions() {
                 </Link>
               );
             })}
+
+            {/* Tombol Muat Lebih Banyak */}
+            {hasMore && (
+              <div className="pt-4 flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer shadow-md ${
+                    isDark
+                      ? "bg-white/5 hover:bg-white/10 text-cyan-400 border border-cyan-500/30 hover:border-cyan-400"
+                      : "bg-white hover:bg-slate-50 text-cyan-700 border border-cyan-200"
+                  } disabled:opacity-50`}
+                >
+                  {loadingMore ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                      <span>Memuat topik lainnya...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw size={14} />
+                      <span>Muat Lebih Banyak</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -471,7 +471,7 @@ export default function TeacherDashboard() {
       const [studentsRes, progressRes] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id, full_name, class_name, role, xp, level")
+          .select("id, full_name, role, class_name, avatar_url, xp, level, created_at")
           .eq("role", "student"),
         supabase
           .from("user_progress")

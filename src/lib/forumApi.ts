@@ -67,10 +67,33 @@ export function formatRelativeTime(dateString?: string | null): string {
   });
 }
 
+export const FORUM_PAGE_SIZE = 20;
+
+export interface ListThreadsResponse {
+  threads: ThreadWithStats[];
+  hasMore: boolean;
+}
+
 /**
- * Ambil daftar threads dengan statistik jumlah balasan & like
+ * Escape karakter khusus PostgREST filter (%, ,, (, )) untuk pencarian server-side aman
  */
-export async function listThreads(category?: string): Promise<ThreadWithStats[]> {
+export function escapeSearchTerm(term: string): string {
+  return term
+    .replace(/\\/g, "\\\\")
+    .replace(/%/g, "\\%")
+    .replace(/,/g, "\\,")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)");
+}
+
+/**
+ * Ambil daftar threads dengan pagination server-side (20 per halaman) dan pencarian di server
+ */
+export async function listThreads(
+  category?: string,
+  page: number = 0,
+  search?: string
+): Promise<ListThreadsResponse> {
   let query = supabase
     .from("threads_with_stats")
     .select("*")
@@ -81,13 +104,26 @@ export async function listThreads(category?: string): Promise<ThreadWithStats[]>
     query = query.eq("category", category);
   }
 
+  if (search && search.trim()) {
+    const cleanSearch = escapeSearchTerm(search.trim());
+    query = query.or(`title.ilike.%${cleanSearch}%,content.ilike.%${cleanSearch}%`);
+  }
+
+  const from = Math.max(0, page) * FORUM_PAGE_SIZE;
+  const to = from + FORUM_PAGE_SIZE; // Minta 21 baris untuk mendeteksi hasMore
+  query = query.range(from, to);
+
   const { data, error } = await query;
   if (error) {
     console.error("[forumApi.listThreads] Error:", error);
     throw new Error(`Gagal memuat daftar topik: ${error.message}`);
   }
 
-  return (data as ThreadWithStats[]) || [];
+  const items = (data as ThreadWithStats[]) || [];
+  const hasMore = items.length > FORUM_PAGE_SIZE;
+  const threads = hasMore ? items.slice(0, FORUM_PAGE_SIZE) : items;
+
+  return { threads, hasMore };
 }
 
 /**
@@ -257,7 +293,8 @@ export async function checkUserLiked(threadId: string, userId: string): Promise<
 }
 
 /**
- * Toggle like/unlike pada thread
+ * Toggle like/unlike pada thread langsung dengan insert tanpa cek-lalu-insert.
+ * Jika error code 23505 (unique_violation / sudah like), lakukan delete (unlike).
  */
 export async function toggleLike(
   threadId: string,
@@ -265,32 +302,37 @@ export async function toggleLike(
 ): Promise<{ liked: boolean }> {
   if (!userId) throw new Error("Anda harus masuk untuk menyukai topik.");
 
-  const isLiked = await checkUserLiked(threadId, userId);
+  // Coba insert langsung
+  const { error: insertError } = await supabase.from("thread_likes").insert({
+    thread_id: threadId,
+    user_id: userId,
+  });
 
-  if (isLiked) {
-    const { error } = await supabase
+  if (!insertError) {
+    return { liked: true };
+  }
+
+  // Jika error code 23505 (sudah like), berarti aksi saat ini adalah unlike (delete)
+  if (
+    insertError.code === "23505" ||
+    insertError.message?.includes("23505") ||
+    insertError.message?.toLowerCase().includes("duplicate key")
+  ) {
+    const { error: deleteError } = await supabase
       .from("thread_likes")
       .delete()
       .eq("thread_id", threadId)
       .eq("user_id", userId);
 
-    if (error) {
-      console.error("[forumApi.toggleLike] Error delete like:", error);
-      throw new Error("Gagal menghapus like: " + error.message);
+    if (deleteError) {
+      console.error("[forumApi.toggleLike] Error delete like:", deleteError);
+      throw new Error(`Gagal menghapus like: ${deleteError.message}`);
     }
     return { liked: false };
-  } else {
-    const { error } = await supabase.from("thread_likes").insert({
-      thread_id: threadId,
-      user_id: userId,
-    });
-
-    if (error) {
-      console.error("[forumApi.toggleLike] Error insert like:", error);
-      throw new Error("Gagal memberikan like: " + error.message);
-    }
-    return { liked: true };
   }
+
+  console.error("[forumApi.toggleLike] Error insert like:", insertError);
+  throw new Error(`Gagal memberikan like: ${insertError.message}`);
 }
 
 /**

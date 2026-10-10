@@ -65,6 +65,8 @@ export default function ThreadDetail() {
   const [deleteThreadConfirm, setDeleteThreadConfirm] = useState(false);
   const [deleteReplyId, setDeleteReplyId] = useState<string | null>(null);
 
+  // CATATAN KEAMANAN: isTeacher pada client ini HANYA untuk kenyamanan tampilan antarmuka (UI/UX).
+  // Keamanan sesungguhnya ditegakkan di database Supabase melalui RLS policy dan trigger check_thread_update_privileges().
   const isTeacher = profile?.role === "teacher";
   const currentUserId = profile?.id;
 
@@ -155,7 +157,7 @@ export default function ThreadDetail() {
     };
   }, [currentId]);
 
-  // Handle Like / Unlike
+  // Handle Like / Unlike dengan Optimistic Update & Rollback
   const handleToggleLike = async () => {
     if (!currentId) return;
     if (!currentUserId) {
@@ -164,15 +166,28 @@ export default function ThreadDetail() {
     }
     if (likeLoading) return;
 
+    // Simpan state sebelumnya untuk rollback jika gagal
+    const prevLiked = hasLiked;
+    const prevCount = likeCount;
+
+    // Optimistic update: langsung ubah UI seketika
+    const nextLiked = !prevLiked;
+    const nextCount = nextLiked ? prevCount + 1 : Math.max(0, prevCount - 1);
+    setHasLiked(nextLiked);
+    setLikeCount(nextCount);
+    setLikeLoading(true);
+
     try {
-      setLikeLoading(true);
       const res = await toggleLike(currentId, currentUserId);
+      // Sinkronkan status akhir dari server
       setHasLiked(res.liked);
-      setLikeCount((prev) => (res.liked ? prev + 1 : Math.max(0, prev - 1)));
       if (res.liked) {
         toast.success("Anda menyukai topik ini");
       }
     } catch (err: any) {
+      // Rollback jika terjadi kesalahan
+      setHasLiked(prevLiked);
+      setLikeCount(prevCount);
       console.error("[ThreadDetail] Error toggling like:", err);
       toast.error(err?.message || "Gagal memperbarui status like.");
     } finally {

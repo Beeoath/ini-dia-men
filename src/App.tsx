@@ -26,6 +26,7 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import ResetPassword from "./pages/ResetPassword";
 
+// CATATAN KEAMANAN: requireRole pada layout ini hanya untuk kenyamanan UI/UX routing sisi client, bukan pengganti keamanan otorisasi (keamanan data sesungguhnya ditegakkan oleh RLS Supabase).
 function AppLayout({ requireRole }: { requireRole?: "student" | "teacher" }) {
   return (
     <ProtectedRoute requireRole={requireRole}>

@@ -49,8 +49,8 @@ export default function TeacherModeration() {
     try {
       setLoading(true);
       setError(null);
-      const data = await listThreads();
-      setThreads(data);
+      const res = await listThreads();
+      setThreads(res.threads);
     } catch (err: any) {
       console.error("[TeacherModeration] Error fetching threads:", err);
       setError(err?.message || "Gagal memuat topik untuk moderasi.");

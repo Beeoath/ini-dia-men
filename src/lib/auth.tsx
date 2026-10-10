@@ -57,7 +57,7 @@ async function loadProfile(userId: string, email: string, userMetadata?: any): P
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, role, class_name, avatar_url, xp, level")
+        .select("id, full_name, role, class_name, avatar_url, xp, level, created_at")
         .eq("id", userId)
         .maybeSingle();
 
@@ -151,7 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, role, class_name, avatar_url, xp, level")
+        .select("id, full_name, role, class_name, avatar_url, xp, level, created_at")
         .eq("id", targetId)
         .maybeSingle();
 
@@ -160,19 +160,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return profile;
       } else if (data) {
         const dbRole: "student" | "teacher" = data.role === "teacher" ? "teacher" : "student";
-        const normalizedData = { ...data, role: dbRole };
+        const email = profile?.email || "";
+        const normalizedData: UserProfile = {
+          ...data,
+          role: dbRole,
+          email,
+          badges: profile?.badges || [],
+        };
         let updatedProfile: UserProfile | null = null;
         setProfile((prev) => {
           updatedProfile = prev
-            ? { ...prev, ...normalizedData }
-            : {
-                ...normalizedData,
-                email: "",
-                badges: [],
-              };
+            ? { ...prev, ...data, role: dbRole }
+            : normalizedData;
           return updatedProfile;
         });
-        return updatedProfile || (normalizedData as UserProfile);
+        return updatedProfile || normalizedData;
       }
     } catch (err) {
       console.error("[refreshProfile] Exception saat memuat ulang profil:", err);
@@ -465,12 +467,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticatingRef.current = true;
     setLoading(true);
     try {
-      // (1) signUp aman — HANYA mengirim full_name, TIDAK mengirim role, xp, level
+      // (1) signUp aman — HANYA mengirim full_name (dan class_name bila ada), TIDAK mengirim role
+      const signUpData: { full_name: string; class_name?: string } = { full_name };
+      if (extra?.class_name) {
+        signUpData.class_name = extra.class_name;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name },
+          data: signUpData,
         },
       });
       if (error) {
@@ -623,9 +630,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { error } = await supabase.from("profiles").update(allowedFields).eq("id", profile.id);
         if (error) {
           console.error("[updateProfile] Supabase error saat update profil:", error);
+          toast.error("Gagal memperbarui profil: perubahan ditolak oleh server.");
+          return;
         }
       } catch (e) {
         console.error("[updateProfile] Exception saat update profil:", e);
+        toast.error("Terjadi kesalahan saat menyimpan perubahan profil.");
+        return;
       }
     }
 

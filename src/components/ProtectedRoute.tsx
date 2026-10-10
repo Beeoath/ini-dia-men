@@ -36,6 +36,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
+  // CATATAN KEAMANAN: Pengecekan requireRole di client routing ini HANYA untuk kenyamanan navigasi UI.
+  // Otorisasi dan keamanan data sesungguhnya selalu ditegakkan oleh RLS (Row Level Security) dan RPC di server database Supabase.
   if (requireRole === "teacher" && profile.role !== "teacher") {
     return <Navigate to="/app/dashboard" replace />;
   }
