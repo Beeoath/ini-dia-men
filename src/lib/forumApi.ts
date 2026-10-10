@@ -74,16 +74,8 @@ export interface ListThreadsResponse {
   hasMore: boolean;
 }
 
-/**
- * Escape karakter khusus PostgREST filter (%, ,, (, )) untuk pencarian server-side aman
- */
 export function escapeSearchTerm(term: string): string {
-  return term
-    .replace(/\\/g, "\\\\")
-    .replace(/%/g, "\\%")
-    .replace(/,/g, "\\,")
-    .replace(/\(/g, "\\(")
-    .replace(/\)/g, "\\)");
+  return term.replace(/[%,()"\\*]/g, " ").replace(/\s+/g, " ").trim();
 }
 
 /**
@@ -106,7 +98,9 @@ export async function listThreads(
 
   if (search && search.trim()) {
     const cleanSearch = escapeSearchTerm(search.trim());
-    query = query.or(`title.ilike.%${cleanSearch}%,content.ilike.%${cleanSearch}%`);
+    if (cleanSearch) {
+      query = query.or(`title.ilike.%${cleanSearch}%,content.ilike.%${cleanSearch}%`);
+    }
   }
 
   const from = Math.max(0, page) * FORUM_PAGE_SIZE;
