@@ -7,7 +7,6 @@ import {
   Trash2,
   Eye,
   ExternalLink,
-  AlertCircle,
   Sparkles,
   Link as LinkIcon,
   RefreshCw,

@@ -2,7 +2,6 @@ import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import {
-  Play,
   ArrowRight,
   Shield,
   GraduationCap,

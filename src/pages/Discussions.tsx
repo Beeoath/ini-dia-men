@@ -1,15 +1,13 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   MessageSquare,
   Plus,
-  Search,
   Pin,
   CheckCircle2,
   MessageCircle,
   ThumbsUp,
   ShieldCheck,
-  GraduationCap,
   X,
   Calculator,
   AlertCircle,
@@ -18,7 +16,6 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
 import { StudentSpatialLayout } from "../components/StudentSpatialLayout";
 import { FormattedMathText } from "../components/MathView";
@@ -32,7 +29,6 @@ import {
 } from "../lib/forumApi";
 
 export default function Discussions() {
-  const { profile } = useAuth();
   const { isDark } = useTheme();
   const navigate = useNavigate();
 

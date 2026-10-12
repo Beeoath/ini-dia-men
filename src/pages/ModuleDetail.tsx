@@ -64,7 +64,7 @@ export default function ModuleDetail() {
 
   // Pre-test & Post-test state for Bab 1
   const isBab1 = moduleData.id === "mod-aljabar-1" || moduleData.districtId === 1;
-  const [assessmentUpdated, setAssessmentUpdated] = useState(0);
+  const [, setAssessmentUpdated] = useState(0);
 
   useEffect(() => {
     const handleUpdate = () => setAssessmentUpdated((v) => v + 1);

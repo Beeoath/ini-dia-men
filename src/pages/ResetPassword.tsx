@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle, ArrowLeft, KeyRound } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, ArrowLeft, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { useTheme } from "../lib/theme";
 import { supabase } from "../lib/supabaseClient";
@@ -15,7 +15,6 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [isRecoveryReady, setIsRecoveryReady] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
@@ -27,9 +26,6 @@ export default function ResetPassword() {
         console.error("[ResetPassword] Error saat memeriksa sesi pemulihan:", error);
       }
       if (mounted) {
-        if (session) {
-          setIsRecoveryReady(true);
-        }
         setCheckingSession(false);
       }
     });
@@ -40,7 +36,6 @@ export default function ResetPassword() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
         if (mounted) {
-          setIsRecoveryReady(true);
           setCheckingSession(false);
         }
       }

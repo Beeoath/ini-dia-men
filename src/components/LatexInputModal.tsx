@@ -1,17 +1,15 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
   X,
   Sparkles,
   Check,
   Copy,
   RotateCcw,
-  BookOpen,
   Calculator,
   Compass,
   Box,
   Layers,
   TrendingUp,
-  HelpCircle,
   Eye,
   CornerDownLeft,
 } from "lucide-react";

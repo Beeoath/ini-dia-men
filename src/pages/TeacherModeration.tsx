@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   MessageSquare,
@@ -12,7 +12,6 @@ import {
   AlertCircle,
   MessageCircle,
   ThumbsUp,
-  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "../components/Primitives";

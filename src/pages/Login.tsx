@@ -10,10 +10,8 @@ import {
   AlertCircle,
   Sun,
   Moon,
-  CheckCircle2,
   Sparkles,
   ChevronDown,
-  Compass,
   AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";

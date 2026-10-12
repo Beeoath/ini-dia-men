@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Layers,
   Plus,
-  Edit,
   Clock,
   GraduationCap,
   Calendar,
@@ -18,15 +17,11 @@ import {
   Settings,
 } from "lucide-react";
 import { toast } from "sonner";
-import { MODULES, DISTRICTS, SigmaModule } from "../lib/sigmaData";
+import { MODULES, SigmaModule } from "../lib/sigmaData";
 import { useTheme } from "../lib/theme";
 import { useAuth } from "../lib/auth";
 import { EditMaterialModal } from "../components/EditMaterialModal";
-import { getMaterialMetaSync } from "../lib/pdfStorage";
 import { supabase } from "../lib/supabaseClient";
-
-// Math visual artwork
-const heroMathDark = "/src/assets/images/hero_math_spatial_dark_1790935716688.jpg";
 
 interface StudentSubmission {
   id: string;
@@ -138,8 +133,7 @@ const DEFAULT_TASKS: TeacherTask[] = [
 export default function TeacherDashboard() {
   const { isDark } = useTheme();
   const navigate = useNavigate();
-  const [modulesList] = useState<SigmaModule[]>(MODULES);
-  const [refreshKey, setRefreshKey] = useState<number>(0);
+  const [, setRefreshKey] = useState<number>(0);
 
   // Student metrics & submissions
   const [totalStudents, setTotalStudents] = useState<number>(0);

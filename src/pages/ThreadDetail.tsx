@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -11,9 +11,6 @@ import {
   Calculator,
   Trash2,
   Check,
-  Sparkles,
-  AlertCircle,
-  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../lib/auth";
@@ -48,7 +45,7 @@ export default function ThreadDetail() {
   const [thread, setThread] = useState<ThreadWithStats | null>(null);
   const [replies, setReplies] = useState<ReplyWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
 
   // Likes
   const [hasLiked, setHasLiked] = useState(false);

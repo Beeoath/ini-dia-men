@@ -12,7 +12,6 @@ import {
   Lock,
   LayoutDashboard,
 } from "lucide-react";
-import { useAuth } from "../lib/auth";
 import { MODULES } from "../lib/sigmaData";
 import { useTheme } from "../lib/theme";
 import { StudentSpatialLayout } from "../components/StudentSpatialLayout";
@@ -207,7 +206,6 @@ const RECOMMENDATIONS = [
 ];
 
 export default function StudentDashboard() {
-  const { profile } = useAuth();
   const { isDark } = useTheme();
   const navigate = useNavigate();
 
