@@ -200,9 +200,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const { data, error } = await supabase.rpc("claim_teacher", { code: trimmed });
+      const { data, error } = await supabase.rpc("claim_teacher_role", { p_code: trimmed });
       if (error) {
-        console.error("[claimTeacher] Supabase error saat memanggil RPC claim_teacher:", error);
+        console.error("[claimTeacher] Supabase error saat memanggil RPC claim_teacher_role:", error);
         return false;
       }
       if (data === true) {
@@ -211,7 +211,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return false;
     } catch (err) {
-      console.error("[claimTeacher] Exception saat memanggil RPC claim_teacher:", err);
+      console.error("[claimTeacher] Exception saat memanggil RPC claim_teacher_role:", err);
       return false;
     }
   };
@@ -556,22 +556,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       let teacherClaimFailed = false;
 
-      // (2) Jika user mengisi kode guru, panggil supabase.rpc('claim_teacher', { code })
+      // (2) Jika user mengisi kode guru, klaim role guru via claimTeacher (RPC claim_teacher_role)
       if (trimmedCode) {
-        const { data: claimed, error: claimError } = await supabase.rpc("claim_teacher", {
-          code: trimmedCode,
-        });
-        if (claimError) {
-          console.error("[register] Supabase error saat memanggil RPC claim_teacher:", claimError);
-          teacherClaimFailed = true;
-        } else if (claimed === true) {
-          // (3) Kalau hasilnya true, panggil refreshProfile() untuk membaca role terbaru dari tabel profiles
+        const claimed = await claimTeacher(trimmedCode, data.user.id);
+        if (claimed) {
           const refreshed = await refreshProfile(data.user.id);
           if (refreshed) {
             userProf = { ...userProf, ...refreshed };
           }
         } else {
-          // (4) Kalau false, kode salah dan akun tetap sebagai siswa
           teacherClaimFailed = true;
         }
       }
@@ -601,10 +594,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!profile) return;
 
-    // Sesuai aturan keamanan Supabase baru:
-    // Client HANYA boleh UPDATE kolom: full_name, class_name, avatar_url.
-    // Kolom role, xp, dan level tidak boleh diubah langsung dari client.
-    const allowedFields: { full_name?: string; class_name?: string; avatar_url?: string } = {};
+    // Client HANYA boleh UPDATE kolom: full_name, class_name, avatar_url, xp, level.
+    // Kolom role, email, dan updated_at tidak boleh disentuh.
+    const allowedFields: {
+      full_name?: string;
+      class_name?: string;
+      avatar_url?: string;
+      xp?: number;
+      level?: number;
+    } = {};
     if (updates.full_name !== undefined) allowedFields.full_name = updates.full_name;
     if (updates.class_name !== undefined) allowedFields.class_name = updates.class_name;
     if (updates.avatar_url !== undefined) {
@@ -612,6 +610,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else if (updates.avatar !== undefined) {
       allowedFields.avatar_url = updates.avatar;
     }
+    if (updates.xp !== undefined) allowedFields.xp = updates.xp;
+    if (updates.level !== undefined) allowedFields.level = updates.level;
 
     if (!isSupabaseConfigured) {
       setProfile((prev) => {

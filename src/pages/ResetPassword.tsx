@@ -16,26 +16,51 @@ export default function ResetPassword() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [checkingSession, setCheckingSession] = useState(true);
+  const [isRecoveryReady, setIsRecoveryReady] = useState(false);
+  const [linkError, setLinkError] = useState("");
 
   useEffect(() => {
     let mounted = true;
 
-    // 1. Cek session aktif saat tiba dari link pemulihan email
+    // 1. Baca window.location.hash dan window.location.search
+    const rawHash = window.location.hash.startsWith("#")
+      ? window.location.hash.substring(1)
+      : window.location.hash;
+    const hashParams = new URLSearchParams(rawHash);
+    const searchParams = new URLSearchParams(window.location.search);
+    const hasError = hashParams.get("error") || searchParams.get("error");
+
+    if (hasError) {
+      if (mounted) {
+        setLinkError("Link reset sudah kedaluwarsa atau sudah dipakai. Silakan minta link baru.");
+        setIsRecoveryReady(false);
+        setCheckingSession(false);
+      }
+      return;
+    }
+
+    // 2. Cek session aktif saat tiba dari link pemulihan email
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
         console.error("[ResetPassword] Error saat memeriksa sesi pemulihan:", error);
       }
       if (mounted) {
+        if (session) {
+          setIsRecoveryReady(true);
+        } else {
+          setLinkError((prev) => prev || "Link reset sudah kedaluwarsa atau sudah dipakai. Silakan minta link baru.");
+        }
         setCheckingSession(false);
       }
     });
 
-    // 2. Tangkap event PASSWORD_RECOVERY dari Supabase auth
+    // 3. Tangkap event PASSWORD_RECOVERY dari Supabase auth
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
         if (mounted) {
+          setIsRecoveryReady(true);
           setCheckingSession(false);
         }
       }
@@ -159,6 +184,23 @@ export default function ResetPassword() {
           <div className="py-8 flex flex-col items-center justify-center gap-3">
             <div className="h-7 w-7 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
             <span className="font-mono text-xs text-slate-400">Memeriksa link pemulihan...</span>
+          </div>
+        ) : !isRecoveryReady ? (
+          <div className="py-2 space-y-4 text-center">
+            <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400 text-xs font-lexend text-left">
+              <AlertCircle size={18} className="shrink-0" />
+              <span>{linkError || "Link reset sudah kedaluwarsa atau sudah dipakai. Silakan minta link baru."}</span>
+            </div>
+            <Link
+              to="/masuk"
+              className={`block w-full py-3 rounded-xl sm:rounded-2xl font-lexend font-bold text-xs sm:text-sm text-center transition-all cursor-pointer shadow-lg ${
+                isDark
+                  ? "bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-cyan-400/20"
+                  : "bg-cyan-600 hover:bg-cyan-700 text-white shadow-cyan-600/20"
+              }`}
+            >
+              Kembali & Minta Link Baru
+            </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
