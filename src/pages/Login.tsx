@@ -279,31 +279,13 @@ export default function Login() {
     }
   };
 
-  const handleRecoverPassword = async () => {
+  const handleRecoverPassword = () => {
     const targetEmail = email.trim();
-    if (!targetEmail || !targetEmail.includes("@")) {
-      toast.error(
-        language === "ID"
-          ? "Masukkan alamat email Anda di kolom email terlebih dahulu."
-          : "Please enter your email address in the email field first."
-      );
-      return;
+    if (targetEmail) {
+      navigate(`/reset-password?email=${encodeURIComponent(targetEmail)}`);
+    } else {
+      navigate("/reset-password");
     }
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(targetEmail, {
-        redirectTo: window.location.origin + "/reset-password",
-      });
-      if (error) {
-        console.error("[resetPasswordForEmail] Supabase error:", error);
-      }
-    } catch (err) {
-      console.error("[resetPasswordForEmail] Exception:", err);
-    }
-
-    toast.info("Kalau email terdaftar, link reset sudah dikirim", {
-      duration: 6000,
-    });
   };
 
   // Selama profil masih dimuat dari database, tampilkan loading state dan jangan redirect dulu
