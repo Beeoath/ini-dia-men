@@ -390,13 +390,21 @@ export default function Discussions() {
                       <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-400">
                         <div className="flex items-center gap-2">
                           <div
-                            className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] uppercase ${
+                            className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] uppercase overflow-hidden shrink-0 ${
                               isTeacherAuthor
                                 ? "bg-amber-500 text-slate-950 font-black"
                                 : "bg-cyan-500 text-slate-950"
                             }`}
                           >
-                            {thread.author_name?.charAt(0) || "U"}
+                            {thread.author_avatar ? (
+                              <img
+                                src={thread.author_avatar}
+                                alt={thread.author_name || "Pengguna"}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              thread.author_name?.charAt(0) || "U"
+                            )}
                           </div>
                           <span
                             className={`font-semibold ${

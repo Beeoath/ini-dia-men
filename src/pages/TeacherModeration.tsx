@@ -322,9 +322,20 @@ export default function TeacherModeration() {
                   </span>
                 </div>
 
-                <div className={`text-[11px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                  Oleh <strong className={isDark ? "text-slate-200" : "text-slate-800"}>{thr.author_name}</strong>
-                  {thr.author_class ? ` (${thr.author_class})` : ""} · {formatRelativeTime(thr.created_at)}
+                <div className={`text-[11px] flex items-center gap-1.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  <span>Oleh</span>
+                  <strong className={isDark ? "text-slate-200" : "text-slate-800"}>
+                    {thr.author_name || "Pengguna"}
+                  </strong>
+                  {thr.author_role === "teacher" ? (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      <ShieldCheck size={9} /> Guru
+                    </span>
+                  ) : thr.author_class ? (
+                    <span>({thr.author_class})</span>
+                  ) : null}
+                  <span>·</span>
+                  <span>{formatRelativeTime(thr.created_at)}</span>
                 </div>
               </div>
 

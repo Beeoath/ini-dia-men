@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Home,
@@ -15,10 +15,21 @@ import {
   LayoutDashboard,
   Maximize2,
   Minimize2,
+  Pin,
 } from "lucide-react";
 import { useAuth, getUserDisplayName } from "../lib/auth";
 import { useTheme, ThemeToggle } from "../lib/theme";
 import { useFullscreen } from "../lib/useFullscreen";
+import { supabase } from "../lib/supabaseClient";
+
+export interface AnnouncementItem {
+  id: string;
+  title: string;
+  content: string;
+  is_pinned: boolean;
+  created_by?: string;
+  created_at?: string;
+}
 
 export type StudentDockItem = "dashboard" | "hub" | "discussions" | "profile";
 
@@ -46,6 +57,52 @@ export const StudentSpatialLayout: React.FC<StudentSpatialLayoutProps> = ({
 
   const [showNotification, setShowNotification] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(true);
+
+  // Fetch announcements from Supabase
+  const fetchAnnouncements = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("announcements")
+        .select("id, title, content, is_pinned, created_by, created_at")
+        .order("is_pinned", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("[StudentSpatialLayout] Error fetching announcements:", error);
+        return;
+      }
+      setAnnouncements(data || []);
+    } catch (err) {
+      console.error("[StudentSpatialLayout] Exception fetching announcements:", err);
+    } finally {
+      setLoadingAnnouncements(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnnouncements();
+
+    const channel = supabase
+      .channel("student_realtime_announcements")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "announcements",
+        },
+        () => {
+          fetchAnnouncements();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Fullscreen mode via shared hook
   const { isFullScreen, toggleFullScreen } = useFullscreen(true);
@@ -333,20 +390,22 @@ export const StudentSpatialLayout: React.FC<StudentSpatialLayoutProps> = ({
                     title="Pengumuman Guru Pengampu"
                   >
                     <Bell size={15} />
-                    <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#00f0ff]" />
+                    {announcements.length > 0 && (
+                      <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#00f0ff]" />
+                    )}
                   </button>
 
                   {/* Notification Popover */}
                   {showNotification && (
                     <div
-                      className={`absolute right-0 top-12 z-50 w-72 rounded-3xl p-4 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 ${
+                      className={`absolute right-0 top-12 z-50 w-72 sm:w-80 rounded-3xl p-4 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 ${
                         isDark
                           ? "border border-white/20 bg-[#161826]/95 text-slate-100"
                           : "border border-slate-200 bg-white/95 text-slate-900"
                       }`}
                     >
                       <div
-                        className={`flex items-center justify-between border-b pb-2 mb-2 ${
+                        className={`flex items-center justify-between border-b pb-2 mb-2.5 ${
                           isDark ? "border-white/10" : "border-slate-200"
                         }`}
                       >
@@ -358,29 +417,78 @@ export const StudentSpatialLayout: React.FC<StudentSpatialLayoutProps> = ({
                           <Bell size={13} /> Pengumuman TKA
                         </span>
                         <button
+                          type="button"
                           onClick={() => setShowNotification(false)}
                           className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
                         >
                           <X size={14} />
                         </button>
                       </div>
-                      <div
-                        className={`p-2.5 rounded-2xl text-xs border ${
-                          isDark
-                            ? "bg-white/5 border-white/10 text-slate-300"
-                            : "bg-slate-50 border-slate-200 text-slate-700"
-                        }`}
-                      >
-                        <div
-                          className={`font-bold flex items-center gap-1.5 ${
-                            isDark ? "text-white" : "text-slate-900"
-                          }`}
-                        >
-                          <GraduationCap size={14} className="text-amber-500" /> Ust. Ahmad Fauzi, S.Pd.
-                        </div>
-                        <p className="text-[11px] mt-1 leading-relaxed">
-                          Assalamu'alaikum siswa-siswi MAS Darunnajah 9. Sesi simulasi kuis Distrik 1 &amp; 2 siap dikerjakan. Target kelulusan skor 75+.
-                        </p>
+
+                      <div className="max-h-80 overflow-y-auto space-y-2.5 pr-0.5">
+                        {loadingAnnouncements ? (
+                          <div className="py-6 text-center text-xs text-slate-400">
+                            Memuat pengumuman...
+                          </div>
+                        ) : announcements.length === 0 ? (
+                          <div
+                            className={`p-4 text-center text-xs ${
+                              isDark ? "text-slate-400" : "text-slate-500"
+                            }`}
+                          >
+                            Belum ada pengumuman.
+                          </div>
+                        ) : (
+                          announcements.map((ann) => (
+                            <div
+                              key={ann.id}
+                              className={`p-3 rounded-2xl text-xs border transition-all ${
+                                ann.is_pinned
+                                  ? isDark
+                                    ? "bg-amber-500/10 border-amber-500/30 text-slate-200 shadow-sm"
+                                    : "bg-amber-50/80 border-amber-300 text-slate-800 shadow-sm"
+                                  : isDark
+                                  ? "bg-white/5 border-white/10 text-slate-300"
+                                  : "bg-slate-50 border-slate-200 text-slate-700"
+                              }`}
+                            >
+                              <div
+                                className={`font-bold flex items-center justify-between gap-1.5 ${
+                                  isDark ? "text-white" : "text-slate-900"
+                                }`}
+                              >
+                                <div className="flex items-center gap-1.5 truncate">
+                                  <GraduationCap
+                                    size={14}
+                                    className={ann.is_pinned ? "text-amber-400 shrink-0" : "text-cyan-400 shrink-0"}
+                                  />
+                                  <span className="truncate">{ann.title}</span>
+                                </div>
+                                {ann.is_pinned && (
+                                  <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                                    <Pin size={9} className="fill-amber-300" /> Disematkan
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] mt-1.5 leading-relaxed whitespace-pre-wrap">
+                                {ann.content}
+                              </p>
+                              {ann.created_at && (
+                                <div
+                                  className={`text-[9px] font-mono mt-2 text-right ${
+                                    isDark ? "text-slate-400" : "text-slate-500"
+                                  }`}
+                                >
+                                  {new Date(ann.created_at).toLocaleDateString("id-ID", {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
                   )}

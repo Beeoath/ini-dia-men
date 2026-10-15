@@ -15,6 +15,7 @@ import {
   MapPin,
   Pencil,
   Settings,
+  Pin,
 } from "lucide-react";
 import { toast } from "sonner";
 import { MODULES, SigmaModule } from "../lib/sigmaData";
@@ -22,6 +23,15 @@ import { useTheme } from "../lib/theme";
 import { useAuth } from "../lib/auth";
 import { EditMaterialModal } from "../components/EditMaterialModal";
 import { supabase } from "../lib/supabaseClient";
+
+export interface TeacherAnnouncement {
+  id: string;
+  title: string;
+  content: string;
+  is_pinned: boolean;
+  created_by?: string;
+  created_at?: string;
+}
 
 interface StudentSubmission {
   id: string;
@@ -175,6 +185,175 @@ export default function TeacherDashboard() {
   const [madrasahAgenda, setMadrasahAgenda] = useState<MadrasahAgendaItem[]>(DEFAULT_MADRASAH_AGENDA);
   const [agendaModalOpen, setAgendaModalOpen] = useState(false);
   const [editingAgenda, setEditingAgenda] = useState<MadrasahAgendaItem | null>(null);
+
+  // 5. Announcements state (Kelola Pengumuman TKA)
+  const [announcements, setAnnouncements] = useState<TeacherAnnouncement[]>([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState<boolean>(true);
+  const [announcementModalOpen, setAnnouncementModalOpen] = useState<boolean>(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<TeacherAnnouncement | null>(null);
+  const [deletingAnnouncementId, setDeletingAnnouncementId] = useState<string | null>(null);
+  const [isDeletingAnnouncement, setIsDeletingAnnouncement] = useState<boolean>(false);
+
+  const loadAnnouncements = async () => {
+    try {
+      setAnnouncementsLoading(true);
+      const { data, error } = await supabase
+        .from("announcements")
+        .select("id, title, content, is_pinned, created_by, created_at")
+        .order("is_pinned", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("[TeacherDashboard] Error memuat announcements:", error);
+        toast.error("Gagal memuat pengumuman dari server.");
+        return;
+      }
+      setAnnouncements(data || []);
+    } catch (err) {
+      console.error("[TeacherDashboard] Exception saat memuat announcements:", err);
+      toast.error("Terjadi kesalahan saat memuat pengumuman.");
+    } finally {
+      setAnnouncementsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAnnouncements();
+
+    const channel = supabase
+      .channel("teacher_announcements_realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "announcements",
+        },
+        () => {
+          loadAnnouncements();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const saveAnnouncement = async (
+    data: { title: string; content: string; is_pinned: boolean },
+    id?: string
+  ) => {
+    if (profile?.role !== "teacher") {
+      toast.error("Hanya guru yang berwenang mengelola pengumuman.");
+      return;
+    }
+    if (!profile?.id) {
+      toast.error("Sesi pengguna tidak valid.");
+      return;
+    }
+
+    try {
+      if (id) {
+        const { error } = await supabase
+          .from("announcements")
+          .update({
+            title: data.title.trim(),
+            content: data.content.trim(),
+            is_pinned: data.is_pinned,
+          })
+          .eq("id", id);
+
+        if (error) {
+          console.error("[TeacherDashboard] Error update announcement:", error);
+          toast.error(`Gagal memperbarui pengumuman: ${error.message}`);
+          return;
+        }
+        toast.success("Pengumuman berhasil diperbarui!");
+      } else {
+        const { error } = await supabase
+          .from("announcements")
+          .insert({
+            title: data.title.trim(),
+            content: data.content.trim(),
+            is_pinned: data.is_pinned,
+            created_by: profile.id,
+          });
+
+        if (error) {
+          console.error("[TeacherDashboard] Error insert announcement:", error);
+          toast.error(`Gagal menerbitkan pengumuman: ${error.message}`);
+          return;
+        }
+        toast.success("Pengumuman berhasil diterbitkan!");
+      }
+
+      setAnnouncementModalOpen(false);
+      setEditingAnnouncement(null);
+      await loadAnnouncements();
+    } catch (err: any) {
+      console.error("[TeacherDashboard] Exception save announcement:", err);
+      toast.error(err?.message || "Terjadi kesalahan saat menyimpan pengumuman.");
+    }
+  };
+
+  const togglePinAnnouncement = async (ann: TeacherAnnouncement) => {
+    if (profile?.role !== "teacher") {
+      toast.error("Hanya guru yang berwenang mengubah pin pengumuman.");
+      return;
+    }
+
+    try {
+      const nextPinned = !ann.is_pinned;
+      const { error } = await supabase
+        .from("announcements")
+        .update({ is_pinned: nextPinned })
+        .eq("id", ann.id);
+
+      if (error) {
+        console.error("[TeacherDashboard] Error toggle pin announcement:", error);
+        toast.error(`Gagal mengubah status sematan: ${error.message}`);
+        return;
+      }
+
+      toast.success(nextPinned ? "Pengumuman berhasil disematkan!" : "Sematan pengumuman dilepas.");
+      await loadAnnouncements();
+    } catch (err: any) {
+      console.error("[TeacherDashboard] Exception toggle pin announcement:", err);
+      toast.error(err?.message || "Terjadi kesalahan saat mengubah status pin.");
+    }
+  };
+
+  const confirmDeleteAnnouncement = async () => {
+    if (!deletingAnnouncementId) return;
+    if (profile?.role !== "teacher") {
+      toast.error("Hanya guru yang berwenang menghapus pengumuman.");
+      return;
+    }
+
+    setIsDeletingAnnouncement(true);
+    try {
+      const { error } = await supabase
+        .from("announcements")
+        .delete()
+        .eq("id", deletingAnnouncementId);
+
+      if (error) {
+        console.error("[TeacherDashboard] Error delete announcement:", error);
+        toast.error(`Gagal menghapus pengumuman: ${error.message}`);
+        return;
+      }
+
+      toast.success("Pengumuman berhasil dihapus.");
+      setDeletingAnnouncementId(null);
+      await loadAnnouncements();
+    } catch (err: any) {
+      console.error("[TeacherDashboard] Exception delete announcement:", err);
+      toast.error(err?.message || "Terjadi kesalahan saat menghapus pengumuman.");
+    } finally {
+      setIsDeletingAnnouncement(false);
+    }
+  };
 
   // Load teacher_data from Supabase (with one-time migration from localStorage)
   useEffect(() => {
@@ -1094,6 +1273,151 @@ export default function TeacherDashboard() {
               </div>
             </div>
           </div>
+
+          {/* D. KELOLA PENGUMUMAN TKA */}
+          <div
+            className={`rounded-3xl border p-5 sm:p-6 transition-all shadow-sm ${
+              isDark ? "border-white/10 bg-[#121629]" : "border-slate-200 bg-white"
+            }`}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    <Bell size={16} />
+                  </span>
+                  <h2
+                    className={`font-display text-base sm:text-lg font-black ${
+                      isDark ? "text-white" : "text-slate-950"
+                    }`}
+                  >
+                    Kelola Pengumuman TKA
+                  </h2>
+                </div>
+                <p className={`text-xs mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  Pengumuman langsung tersinkronisasi ke bilah notifikasi siswa di seluruh portal secara real-time.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingAnnouncement(null);
+                  setAnnouncementModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs tracking-wide shadow-md transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+              >
+                <Plus size={15} className="stroke-[3]" />
+                <span>Buat Pengumuman</span>
+              </button>
+            </div>
+
+            {/* List of Announcements */}
+            <div className="mt-4 space-y-3">
+              {announcementsLoading ? (
+                <div className="py-8 text-center text-xs text-slate-400">
+                  Memuat pengumuman...
+                </div>
+              ) : announcements.length === 0 ? (
+                <div
+                  className={`p-8 rounded-2xl border text-center space-y-2 ${
+                    isDark ? "bg-white/[0.02] border-white/5 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"
+                  }`}
+                >
+                  <Bell size={24} className="mx-auto opacity-40 text-cyan-400" />
+                  <p className="text-xs font-semibold">Belum ada pengumuman yang diterbitkan.</p>
+                  <p className="text-[11px] opacity-80">
+                    Klik tombol "+ Buat Pengumuman" di atas untuk menyiarkan informasi kepada siswa.
+                  </p>
+                </div>
+              ) : (
+                announcements.map((ann) => (
+                  <div
+                    key={ann.id}
+                    className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-start justify-between gap-3 ${
+                      ann.is_pinned
+                        ? isDark
+                          ? "bg-amber-500/10 border-amber-500/30 text-white"
+                          : "bg-amber-50/70 border-amber-300 text-slate-900"
+                        : isDark
+                        ? "bg-white/[0.03] border-white/10 text-white"
+                        : "bg-slate-50 border-slate-200 text-slate-900"
+                    }`}
+                  >
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {ann.is_pinned && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            <Pin size={10} className="fill-amber-300" /> Disematkan
+                          </span>
+                        )}
+                        <h3 className="text-sm font-bold truncate">{ann.title}</h3>
+                      </div>
+                      <p className={`text-xs leading-relaxed whitespace-pre-wrap ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                        {ann.content}
+                      </p>
+                      {ann.created_at && (
+                        <p className={`text-[10px] font-mono ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                          Diterbitkan {new Date(ann.created_at).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })} WIB
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center border-t sm:border-t-0 pt-2 sm:pt-0 border-white/5">
+                      {/* Toggle Pin */}
+                      <button
+                        type="button"
+                        onClick={() => togglePinAnnouncement(ann)}
+                        className={`p-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                          ann.is_pinned
+                            ? "bg-amber-500 text-slate-950 border-amber-400"
+                            : isDark
+                            ? "bg-white/5 border-white/10 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10"
+                            : "bg-white border-slate-200 text-slate-600 hover:text-amber-600 hover:bg-amber-50"
+                        }`}
+                        title={ann.is_pinned ? "Lepas Sematan" : "Sematkan di Bagian Atas"}
+                      >
+                        <Pin size={13} className={ann.is_pinned ? "fill-slate-950" : ""} />
+                      </button>
+
+                      {/* Edit */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingAnnouncement(ann);
+                          setAnnouncementModalOpen(true);
+                        }}
+                        className={`p-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                          isDark
+                            ? "bg-white/5 border-white/10 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10"
+                            : "bg-white border-slate-200 text-slate-600 hover:text-cyan-600 hover:bg-cyan-50"
+                        }`}
+                        title="Edit Pengumuman"
+                      >
+                        <Pencil size={13} />
+                      </button>
+
+                      {/* Delete */}
+                      <button
+                        type="button"
+                        onClick={() => setDeletingAnnouncementId(ann.id)}
+                        className="p-2 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 transition-all cursor-pointer"
+                        title="Hapus Pengumuman"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
         {/* ================================================================== */}
@@ -1429,6 +1753,33 @@ export default function TeacherDashboard() {
           task={editingTask}
           onClose={() => setEditingTask(null)}
           onSave={updateTask}
+          isDark={isDark}
+        />
+      )}
+
+      {/* ==================================================================== */}
+      {/* MODAL 5: TAMBAH / EDIT PENGUMUMAN TKA                                */}
+      {/* ==================================================================== */}
+      {announcementModalOpen && (
+        <AnnouncementEditDialog
+          announcement={editingAnnouncement}
+          onClose={() => {
+            setAnnouncementModalOpen(false);
+            setEditingAnnouncement(null);
+          }}
+          onSave={saveAnnouncement}
+          isDark={isDark}
+        />
+      )}
+
+      {/* ==================================================================== */}
+      {/* MODAL 6: KONFIRMASI HAPUS PENGUMUMAN TKA                            */}
+      {/* ==================================================================== */}
+      {deletingAnnouncementId && (
+        <DeleteAnnouncementConfirmDialog
+          onClose={() => setDeletingAnnouncementId(null)}
+          onConfirm={confirmDeleteAnnouncement}
+          isDeleting={isDeletingAnnouncement}
           isDark={isDark}
         />
       )}
@@ -1937,6 +2288,212 @@ function TaskEditDialog({
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// ANNOUNCEMENT EDIT & DELETE DIALOGS
+// -----------------------------------------------------------------------------
+
+function AnnouncementEditDialog({
+  announcement,
+  onClose,
+  onSave,
+  isDark,
+}: {
+  announcement: TeacherAnnouncement | null;
+  onClose: () => void;
+  onSave: (data: { title: string; content: string; is_pinned: boolean }, id?: string) => void;
+  isDark: boolean;
+}) {
+  const [title, setTitle] = useState(announcement?.title || "");
+  const [content, setContent] = useState(announcement?.content || "");
+  const [isPinned, setIsPinned] = useState(announcement?.is_pinned || false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      toast.error("Judul pengumuman tidak boleh kosong.");
+      return;
+    }
+    if (!content.trim()) {
+      toast.error("Isi pengumuman tidak boleh kosong.");
+      return;
+    }
+    setSubmitting(true);
+    onSave(
+      {
+        title: title.trim(),
+        content: content.trim(),
+        is_pinned: isPinned,
+      },
+      announcement?.id
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm grid place-items-center p-4">
+      <div
+        className={`w-full max-w-lg rounded-3xl border p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 ${
+          isDark ? "bg-[#15192e] border-white/10 text-white" : "bg-white border-slate-200 text-slate-900"
+        }`}
+      >
+        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <span className="p-1 rounded-lg bg-cyan-400/10 text-cyan-400">
+              <Bell size={16} />
+            </span>
+            <h3 className="font-display font-black text-lg">
+              {announcement ? "Edit Pengumuman TKA" : "Buat Pengumuman Baru"}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-full hover:bg-white/10 text-slate-400 hover:text-white cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <div>
+            <label className="block text-xs font-mono font-bold text-slate-400 mb-1">
+              Judul Pengumuman <span className="text-rose-400">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Contoh: Sesi Simulasi Kuis Distrik 1 & 2 Siap Dikerjakan"
+              className={`w-full rounded-xl px-3.5 py-2.5 text-xs border outline-none ${
+                isDark
+                  ? "bg-white/5 border-white/10 text-white focus:border-cyan-400"
+                  : "bg-slate-50 border-slate-200 text-slate-900 focus:border-cyan-500"
+              }`}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-mono font-bold text-slate-400 mb-1">
+              Isi Pengumuman <span className="text-rose-400">*</span>
+            </label>
+            <textarea
+              required
+              rows={4}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Tuliskan isi pengumuman atau instruksi untuk siswa..."
+              className={`w-full rounded-xl px-3.5 py-2.5 text-xs border outline-none resize-y ${
+                isDark
+                  ? "bg-white/5 border-white/10 text-white focus:border-cyan-400"
+                  : "bg-slate-50 border-slate-200 text-slate-900 focus:border-cyan-500"
+              }`}
+            />
+          </div>
+
+          <label
+            className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors ${
+              isDark
+                ? "border-white/10 bg-white/[0.02] hover:bg-white/[0.04]"
+                : "border-slate-200 bg-slate-50 hover:bg-slate-100"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={isPinned}
+              onChange={(e) => setIsPinned(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded accent-cyan-400 cursor-pointer shrink-0"
+            />
+            <div className="text-xs">
+              <span className="font-bold flex items-center gap-1.5 text-amber-400">
+                <Pin size={12} className="fill-amber-400" /> Sematkan di bagian atas (Pinned)
+              </span>
+              <span className={`text-[11px] block mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                Pengumuman yang disematkan akan selalu berada di urutan teratas daftar notifikasi siswa.
+              </span>
+            </div>
+          </label>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-5 py-2.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50"
+            >
+              {submitting ? "Menyimpan..." : announcement ? "Simpan Perubahan" : "Terbitkan Pengumuman"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function DeleteAnnouncementConfirmDialog({
+  onClose,
+  onConfirm,
+  isDeleting,
+  isDark,
+}: {
+  onClose: () => void;
+  onConfirm: () => void;
+  isDeleting: boolean;
+  isDark: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm grid place-items-center p-4">
+      <div
+        className={`w-full max-w-sm rounded-3xl border p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200 ${
+          isDark ? "bg-[#15192e] border-white/10 text-white" : "bg-white border-slate-200 text-slate-900"
+        }`}
+      >
+        <div className="flex items-center gap-3 text-rose-400">
+          <div className="p-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 shrink-0">
+            <Trash2 size={20} />
+          </div>
+          <div>
+            <h3 className="font-display font-black text-base">Hapus Pengumuman?</h3>
+            <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+              Tindakan ini tidak dapat dibatalkan.
+            </p>
+          </div>
+        </div>
+
+        <p className={`text-xs leading-relaxed ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+          Apakah Anda yakin ingin menghapus pengumuman ini? Pengumuman tidak akan lagi ditampilkan pada akun siswa.
+        </p>
+
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isDeleting}
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold transition-all shadow-md cursor-pointer disabled:opacity-50"
+          >
+            {isDeleting ? "Menghapus..." : "Hapus Pengumuman"}
+          </button>
+        </div>
       </div>
     </div>
   );

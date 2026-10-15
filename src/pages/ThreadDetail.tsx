@@ -470,13 +470,21 @@ export default function ThreadDetail() {
         {/* Author info */}
         <div className="flex items-center gap-3">
           <div
-            className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm uppercase ${
+            className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm uppercase overflow-hidden shrink-0 ${
               thread.author_role === "teacher"
                 ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20"
                 : "bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20"
             }`}
           >
-            {thread.author_name?.charAt(0) || "U"}
+            {thread.author_avatar ? (
+              <img
+                src={thread.author_avatar}
+                alt={thread.author_name || "Pengguna"}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              thread.author_name?.charAt(0) || "U"
+            )}
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -485,7 +493,7 @@ export default function ThreadDetail() {
               </span>
               {thread.author_role === "teacher" ? (
                 <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  <ShieldCheck size={11} /> Guru Pengampu
+                  <ShieldCheck size={11} /> Guru
                 </span>
               ) : thread.author_class ? (
                 <span
@@ -566,10 +574,10 @@ export default function ThreadDetail() {
           </div>
         ) : (
           replies.map((rep) => {
-            const author = rep.author;
-            const authorName = author?.full_name || "Pengguna";
-            const isRepTeacher = author?.role === "teacher";
-            const authorClass = author?.class_name;
+            const authorName = rep.author_name || rep.author?.full_name || "Pengguna";
+            const authorAvatar = rep.author_avatar || rep.author?.avatar_url;
+            const authorRole = rep.author_role || rep.author?.role;
+            const isRepTeacher = authorRole === "teacher";
             const isReplyAuthor = currentUserId === rep.author_id;
             const canDeleteReply = isReplyAuthor || isTeacher;
 
@@ -590,32 +598,32 @@ export default function ThreadDetail() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs uppercase ${
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs uppercase overflow-hidden shrink-0 ${
                         isRepTeacher
                           ? "bg-amber-500 text-slate-950 font-black"
                           : "bg-cyan-500 text-slate-950"
                       }`}
                     >
-                      {authorName.charAt(0)}
+                      {authorAvatar ? (
+                        <img
+                          src={authorAvatar}
+                          alt={authorName}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        authorName.charAt(0) || "U"
+                      )}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-bold ${isDark ? "text-white" : "text-slate-900"}`}>
                           {authorName}
                         </span>
-                        {isRepTeacher ? (
+                        {isRepTeacher && (
                           <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
                             <ShieldCheck size={10} /> Guru
                           </span>
-                        ) : authorClass ? (
-                          <span
-                            className={`text-[9px] px-1.5 py-0.5 rounded ${
-                              isDark ? "bg-white/5 text-slate-400 border border-white/5" : "bg-slate-100 text-slate-500 border border-slate-200"
-                            }`}
-                          >
-                            {authorClass}
-                          </span>
-                        ) : null}
+                        )}
                       </div>
                       <p className={`text-[10px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                         {formatRelativeTime(rep.created_at)}

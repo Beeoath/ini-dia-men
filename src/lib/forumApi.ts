@@ -24,6 +24,9 @@ export interface ReplyWithAuthor {
   content: string;
   is_verified: boolean;
   created_at: string;
+  author_name: string;
+  author_avatar?: string | null;
+  author_role: "student" | "teacher";
   author?: {
     id: string;
     full_name: string;
@@ -188,35 +191,78 @@ export async function createThread(params: {
 }
 
 /**
- * Ambil daftar balasan pada thread tertentu
+ * Ambil daftar balasan pada thread tertentu.
+ * Tidak menggunakan embed profiles(...), melainkan mengambil balasan dulu,
+ * mengumpulkan author_id unik, query terpisah profiles, lalu menggabungkannya di client.
  */
 export async function listReplies(threadId: string): Promise<ReplyWithAuthor[]> {
-  const { data, error } = await supabase
+  const { data: repliesData, error: repliesError } = await supabase
     .from("replies")
-    .select(`
-      id,
-      thread_id,
-      author_id,
-      content,
-      is_verified,
-      created_at,
-      author:profiles!replies_author_id_fkey(
-        id,
-        full_name,
-        class_name,
-        avatar_url,
-        role
-      )
-    `)
+    .select("id, thread_id, author_id, content, is_verified, created_at")
     .eq("thread_id", threadId)
     .order("created_at", { ascending: true });
 
-  if (error) {
-    console.error("[forumApi.listReplies] Error:", error);
-    throw new Error(`Gagal memuat balasan diskusi: ${error.message}`);
+  if (repliesError) {
+    console.error("[forumApi.listReplies] Error querying replies:", repliesError);
+    throw new Error(`Gagal memuat balasan diskusi: ${repliesError.message}`);
   }
 
-  return (data as any[]) || [];
+  const rawReplies = repliesData || [];
+  if (rawReplies.length === 0) {
+    return [];
+  }
+
+  // Kumpulkan author_id unik
+  const authorIds = Array.from(new Set(rawReplies.map((r) => r.author_id).filter(Boolean)));
+
+  // Query terpisah ke profiles
+  const profilesMap = new Map<
+    string,
+    { id: string; full_name?: string | null; avatar_url?: string | null; role?: string | null }
+  >();
+
+  if (authorIds.length > 0) {
+    const { data: profilesData, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url, role")
+      .in("id", authorIds);
+
+    if (profilesError) {
+      console.error("[forumApi.listReplies] Error querying profiles for authors:", profilesError);
+    } else if (profilesData) {
+      for (const p of profilesData) {
+        profilesMap.set(p.id, p);
+      }
+    }
+  }
+
+  // Gabungkan di client
+  return rawReplies.map((rep) => {
+    const prof = profilesMap.get(rep.author_id);
+    const authorName = prof?.full_name?.trim() || "Pengguna";
+    const authorAvatar = prof?.avatar_url || null;
+    const authorRole = (prof?.role === "teacher" ? "teacher" : "student") as "student" | "teacher";
+
+    return {
+      id: rep.id,
+      thread_id: rep.thread_id,
+      author_id: rep.author_id,
+      content: rep.content,
+      is_verified: rep.is_verified,
+      created_at: rep.created_at,
+      author_name: authorName,
+      author_avatar: authorAvatar,
+      author_role: authorRole,
+      author: prof
+        ? {
+            id: prof.id,
+            full_name: authorName,
+            avatar_url: authorAvatar,
+            role: authorRole,
+          }
+        : undefined,
+    };
+  });
 }
 
 /**
@@ -245,29 +291,48 @@ export async function createReply(params: {
       content: trimmedContent,
       is_verified: false,
     })
-    .select(`
-      id,
-      thread_id,
-      author_id,
-      content,
-      is_verified,
-      created_at,
-      author:profiles!replies_author_id_fkey(
-        id,
-        full_name,
-        class_name,
-        avatar_url,
-        role
-      )
-    `)
+    .select("id, thread_id, author_id, content, is_verified, created_at")
     .single();
 
   if (insertErr || !inserted) {
-    console.error("[forumApi.createReply] Error:", insertErr);
+    console.error("[forumApi.createReply] Error inserting reply:", insertErr);
     throw new Error(insertErr?.message || "Gagal mengirim balasan.");
   }
 
-  return inserted as any;
+  // Query terpisah profil author
+  const { data: profileData, error: profileErr } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url, role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileErr) {
+    console.error("[forumApi.createReply] Error querying author profile:", profileErr);
+  }
+
+  const authorName = profileData?.full_name?.trim() || "Pengguna";
+  const authorAvatar = profileData?.avatar_url || null;
+  const authorRole = (profileData?.role === "teacher" ? "teacher" : "student") as "student" | "teacher";
+
+  return {
+    id: inserted.id,
+    thread_id: inserted.thread_id,
+    author_id: inserted.author_id,
+    content: inserted.content,
+    is_verified: inserted.is_verified,
+    created_at: inserted.created_at,
+    author_name: authorName,
+    author_avatar: authorAvatar,
+    author_role: authorRole,
+    author: profileData
+      ? {
+          id: profileData.id,
+          full_name: authorName,
+          avatar_url: authorAvatar,
+          role: authorRole,
+        }
+      : undefined,
+  };
 }
 
 /**
@@ -282,7 +347,10 @@ export async function checkUserLiked(threadId: string, userId: string): Promise<
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (error) return false;
+  if (error) {
+    console.error("[forumApi.checkUserLiked] Error checking like status:", error);
+    return false;
+  }
   return Boolean(data);
 }
 

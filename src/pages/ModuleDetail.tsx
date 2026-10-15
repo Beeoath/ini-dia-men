@@ -328,7 +328,7 @@ export default function ModuleDetail() {
                 Alur Evaluasi Terpadu Bab 1 (Pre-Test & Post-Test)
               </span>
               <h2 className="text-lg sm:text-xl font-bold font-display mt-0.5">
-                Alur Belajar: Pre-Test $\to$ Modul/Kuis $\to$ Post-Test
+                Alur Belajar: Pre-Test → Modul/Kuis → Post-Test
               </h2>
             </div>
             {nGain && (

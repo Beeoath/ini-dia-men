@@ -162,7 +162,7 @@ export default function Profile() {
 
                 <div className="flex items-center justify-center sm:justify-start gap-3 pt-1 text-xs font-mono">
                   <span className="text-cyan-600 dark:text-cyan-400 font-bold">
-                    Target UTBK 2026
+                    Target TKA 2027
                   </span>
                   <span className="text-slate-400">•</span>
                   <span className="text-amber-600 dark:text-amber-300 font-bold">

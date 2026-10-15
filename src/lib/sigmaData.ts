@@ -449,7 +449,7 @@ export const MODULES: SigmaModule[] = [
       },
       {
         id: "s-13",
-        title: "Deret Geometri Tak Hingga ($\\infty$)",
+        title: "Deret Geometri Tak Hingga (∞)",
         content: "Menjumlahkan barisan yang ukurannya mengecil tanpa batas, atau membesar tanpa batas.\n\n1. Konvergen (Memusat):\n• Syarat: $-1 < r < 1$\n• Deret memiliki jumlah limit pasti: $S_\\infty = \\frac{a}{1 - r}$\n\n2. Divergen (Menyebar):\n• Syarat: $r \\le -1$ atau $r \\ge 1$\n• Deret membesar tanpa batas: $S_\\infty = \\pm \\infty$ (Tak Terhingga).",
         formula: "S_\\infty = \\frac{a}{1 - r} \\quad (-1 < r < 1 \\text{ Konvergen})",
         exampleProblem: "Hitung jumlah deret: $18 + 6 + 2 + \\frac{2}{3} + \\dots$",
