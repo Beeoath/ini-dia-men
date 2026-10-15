@@ -16,6 +16,7 @@ import {
   Pencil,
   Settings,
   Pin,
+  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { MODULES, SigmaModule } from "../lib/sigmaData";
@@ -1040,9 +1041,20 @@ export default function TeacherDashboard() {
                 </p>
               </div>
 
-              <span className="font-mono text-xs font-bold text-cyan-500 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/30">
-                {studentSubmissions.length} Data Siswa
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate("/teacher/rekap")}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-400/30 transition-all cursor-pointer"
+                  title="Buka Halaman Rekapitulasi Progres Siswa Lengkap"
+                >
+                  <BarChart3 size={13} />
+                  <span>Rekap Lengkap</span>
+                </button>
+                <span className="font-mono text-xs font-bold text-cyan-500 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/30">
+                  {studentSubmissions.length} Data Siswa
+                </span>
+              </div>
             </div>
 
             {/* Zero State for Student Submissions (Clear ke 0) */}

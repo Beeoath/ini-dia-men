@@ -22,6 +22,7 @@ import Profile from "./pages/Profile";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import TeacherContent from "./pages/TeacherContent";
 import TeacherModeration from "./pages/TeacherModeration";
+import TeacherProgressRecap from "./pages/TeacherProgressRecap";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import ResetPassword from "./pages/ResetPassword";
@@ -90,6 +91,7 @@ export default function App() {
               <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
               <Route path="/teacher/content" element={<TeacherContent />} />
               <Route path="/teacher/moderation" element={<TeacherModeration />} />
+              <Route path="/teacher/rekap" element={<TeacherProgressRecap />} />
               <Route path="/teacher/*" element={<Navigate to="/teacher/dashboard" replace />} />
             </Route>
 
