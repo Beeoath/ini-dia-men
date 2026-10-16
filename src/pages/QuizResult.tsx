@@ -178,13 +178,10 @@ export default function QuizResult() {
 
           <Link
             to="/app/dashboard"
-            className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-black shadow-lg transition-all cursor-pointer ${
-              isDark
-                ? "bg-cyan-400 text-slate-950 hover:bg-cyan-300 shadow-cyan-400/20"
-                : "bg-cyan-600 text-white hover:bg-cyan-700 shadow-cyan-600/20"
-            }`}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-black shadow-lg transition-all cursor-pointer bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-cyan-400/20"
           >
-            Kembali ke Dashboard <ArrowRight size={15} />
+            <span className="text-slate-950 font-black">Kembali ke Dashboard</span>
+            <ArrowRight size={15} className="text-slate-950" />
           </Link>
         </div>
       </div>

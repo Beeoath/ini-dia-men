@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { supabase } from "./supabaseClient";
 import { useAuth } from "./auth";
 import { MODULES, SigmaModule } from "./sigmaData";
@@ -59,7 +60,7 @@ export const isLocalSessionUser = (userId?: string | null): boolean => {
 };
 
 function rowToProgress(row: any): StudentModuleProgress {
-  const rawScore = row.quiz_score ?? row.score ?? undefined;
+  const rawScore = row.quiz_score ?? undefined;
   const quizScore = rawScore !== null && rawScore !== undefined ? Number(rawScore) : undefined;
   const completed = Boolean(
     row.completed ?? (quizScore !== undefined && quizScore >= MIN_PASSING_SCORE)
@@ -258,20 +259,24 @@ export async function saveModuleProgress(
   }
 
   try {
-    // Ambil dulu row yang ada di database (pakai select("*") agar tidak error jika ada nama kolom berbeda)
     const { data: existingRow, error: selectErr } = await supabase
       .from("user_progress")
-      .select("*")
+      .select("quiz_score, slide_idx, total_slides, percent, completed")
       .eq("user_id", userId)
       .eq("module_id", moduleId)
       .maybeSingle();
 
     if (selectErr) {
-      console.error("[userProgress.saveModuleProgress] Supabase error saat mengecek progress modul:", selectErr);
+      console.error("[userProgress.saveModuleProgress] Supabase error saat mengecek progress modul:", {
+        code: selectErr.code,
+        message: selectErr.message,
+        details: selectErr.details,
+        hint: selectErr.hint,
+      });
     }
 
     const validExistingRow = !selectErr ? existingRow : null;
-    const existingDbScore = validExistingRow?.quiz_score ?? validExistingRow?.score;
+    const existingDbScore = validExistingRow?.quiz_score;
     const dbQuizScore =
       existingDbScore !== null && existingDbScore !== undefined
         ? Math.max(Number(existingDbScore), preservedQuizScore ?? 0)
@@ -283,7 +288,16 @@ export async function saveModuleProgress(
         (dbQuizScore !== undefined && dbQuizScore >= MIN_PASSING_SCORE)
     );
 
-    const payload: Record<string, any> = {
+    const payload: {
+      user_id: string;
+      module_id: string;
+      slide_idx: number;
+      total_slides: number;
+      percent: number;
+      completed: boolean;
+      last_studied_at: string;
+      quiz_score?: number;
+    } = {
       user_id: userId,
       module_id: moduleId,
       slide_idx: slideIdx,
@@ -301,25 +315,20 @@ export async function saveModuleProgress(
       .upsert(payload, { onConflict: "user_id,module_id" });
 
     if (error) {
-      console.error("[userProgress.saveModuleProgress] Supabase error saat menyimpan progress modul (mencoba fallback kolom minimal):", error);
-      // Fallback jika tabel user_progress di Supabase hanya punya kolom minimal
-      const minimalPayload: Record<string, any> = {
-        user_id: userId,
-        module_id: moduleId,
-        completed: finalCompleted,
-      };
-      if (dbQuizScore !== undefined) {
-        minimalPayload.quiz_score = dbQuizScore;
-      }
-      const { error: fallbackErr } = await supabase
-        .from("user_progress")
-        .upsert(minimalPayload, { onConflict: "user_id,module_id" });
-      if (fallbackErr) {
-        console.error("[userProgress.saveModuleProgress] Fallback upsert juga gagal:", fallbackErr);
-      }
+      console.error("[userProgress.saveModuleProgress] Gagal upsert user_progress:", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
     }
-  } catch (e) {
-    console.error("[userProgress.saveModuleProgress] Exception saat menyimpan progress modul:", e);
+  } catch (e: any) {
+    console.error("[userProgress.saveModuleProgress] Exception saat menyimpan progress modul:", {
+      code: e?.code,
+      message: e?.message || String(e),
+      details: e?.details,
+      hint: e?.hint,
+    });
   }
 
   localStorage.setItem(LAST_MODULE_KEY, moduleId);
@@ -352,72 +361,64 @@ export async function recordQuizCompletion(userId: string, moduleId: string, sco
   }
 
   try {
-    // Ambil dulu row yang ada dengan select("*") agar aman terhadap perbedaan kolom
+    // Ambil data yang ada di database untuk membandingkan skor tertinggi
     const { data: existing, error: selectError } = await supabase
       .from("user_progress")
-      .select("*")
+      .select("quiz_score, slide_idx, total_slides, percent, completed")
       .eq("user_id", userId)
       .eq("module_id", moduleId)
       .maybeSingle();
 
     if (selectError) {
-      console.error("[userProgress.recordQuizCompletion] Supabase error saat mengecek progress sebelumnya:", selectError);
+      console.error("[userProgress.recordQuizCompletion] Supabase select error:", {
+        code: selectError.code,
+        message: selectError.message,
+        details: selectError.details,
+        hint: selectError.hint,
+      });
     }
 
-    const validExisting = !selectError ? existing : null;
-    const existingDbScore = validExisting?.quiz_score ?? validExisting?.score;
+    // Skor tertinggi: bandingkan nilai kuis baru dengan yang sudah ada di database dan lokal
+    const existingDbScore = existing?.quiz_score;
     const finalScore =
       existingDbScore !== null && existingDbScore !== undefined
         ? Math.max(Number(existingDbScore), bestLocalScore)
         : bestLocalScore;
-    const finalCompleted = Boolean(finalScore >= MIN_PASSING_SCORE || validExisting?.completed || isCompleted);
+    const finalCompleted = Boolean(finalScore >= MIN_PASSING_SCORE || existing?.completed || isCompleted);
 
+    // Upsert tunggal dengan kolom yang valid:
+    // user_id, module_id, slide_idx, total_slides, percent, completed, quiz_score, last_studied_at
     const { error } = await supabase.from("user_progress").upsert(
       {
         user_id: userId,
         module_id: moduleId,
-        slide_idx: validExisting?.slide_idx ?? localExisting?.slideIdx ?? 0,
-        total_slides: validExisting?.total_slides ?? localExisting?.totalSlides ?? 14,
+        slide_idx: existing?.slide_idx ?? localExisting?.slideIdx ?? 0,
+        total_slides: existing?.total_slides ?? localExisting?.totalSlides ?? 14,
         percent: 100,
-        quiz_score: finalScore,
         completed: finalCompleted,
+        quiz_score: finalScore,
         last_studied_at: new Date().toISOString(),
       },
       { onConflict: "user_id,module_id" }
     );
 
     if (error) {
-      console.error("[userProgress.recordQuizCompletion] Supabase error saat menyimpan hasil kuis (mencoba fallback kolom minimal):", error);
-      // Fallback 1: hanya user_id, module_id, quiz_score, completed
-      const { error: errMinimal1 } = await supabase.from("user_progress").upsert(
-        {
-          user_id: userId,
-          module_id: moduleId,
-          quiz_score: finalScore,
-          completed: finalCompleted,
-        },
-        { onConflict: "user_id,module_id" }
-      );
-
-      if (errMinimal1) {
-        console.error("[userProgress.recordQuizCompletion] Fallback 1 gagal (mencoba kolom score):", errMinimal1);
-        // Fallback 2: jika nama kolom di tabel adalah score (bukan quiz_score)
-        const { error: errMinimal2 } = await supabase.from("user_progress").upsert(
-          {
-            user_id: userId,
-            module_id: moduleId,
-            score: finalScore,
-            completed: finalCompleted,
-          },
-          { onConflict: "user_id,module_id" }
-        );
-        if (errMinimal2) {
-          console.error("[userProgress.recordQuizCompletion] Fallback 2 juga gagal:", errMinimal2);
-        }
-      }
+      console.error("[userProgress.recordQuizCompletion] Gagal upsert user_progress:", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
+      toast.error("Progres gagal disimpan");
     }
-  } catch (e) {
-    console.error("[userProgress.recordQuizCompletion] Exception saat menyimpan hasil kuis:", e);
+  } catch (e: any) {
+    console.error("[userProgress.recordQuizCompletion] Exception saat menyimpan hasil kuis:", {
+      code: e?.code,
+      message: e?.message || String(e),
+      details: e?.details,
+      hint: e?.hint,
+    });
+    toast.error("Progres gagal disimpan");
   }
 
   localStorage.setItem(LAST_MODULE_KEY, moduleId);

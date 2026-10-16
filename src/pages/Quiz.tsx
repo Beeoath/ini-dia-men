@@ -472,7 +472,7 @@ export default function Quiz() {
                 : "border-slate-300 text-slate-700 hover:text-slate-950 hover:bg-slate-100"
             }`}
           >
-            Sebelumnya
+            Soal Sebelumnya
           </button>
 
           {isLast ? (
@@ -480,26 +480,19 @@ export default function Quiz() {
               type="button"
               onClick={() => handleSubmit(false)}
               disabled={selectedAnswers[currentIdx] === undefined}
-              className={`inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-xs font-black shadow-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                isDark
-                  ? "bg-cyan-400 text-slate-950 hover:bg-cyan-300 shadow-cyan-400/20"
-                  : "bg-cyan-600 text-white hover:bg-cyan-700 shadow-cyan-600/20"
-              }`}
+              className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-xs font-black shadow-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-cyan-400/20"
             >
-              <Send size={15} /> Selesaikan Kuis
+              <Send size={15} className="text-slate-950" />
+              <span className="text-slate-950 font-black">Selesaikan Kuis</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={() => setCurrentIdx((prev) => prev + 1)}
               disabled={selectedAnswers[currentIdx] === undefined}
-              className={`inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-xs font-black shadow-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                isDark
-                  ? "bg-cyan-400 text-slate-950 hover:bg-cyan-300 shadow-cyan-400/20"
-                  : "bg-cyan-600 text-white hover:bg-cyan-700 shadow-cyan-600/20"
-              }`}
+              className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-xs font-black shadow-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-cyan-400/20"
             >
-              Soal Selanjutnya
+              <span className="text-slate-950 font-black">Soal Selanjutnya</span>
             </button>
           )}
         </div>
