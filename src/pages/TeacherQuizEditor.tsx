@@ -36,7 +36,7 @@ import {
   upsertQuizQuestion,
   deleteQuizQuestion,
   toggleQuizQuestionActive,
-  swapQuizQuestionPositions,
+  swapQuizQuestionOrders,
 } from "../lib/quizApi";
 
 export default function TeacherQuizEditor() {
@@ -123,7 +123,7 @@ export default function TeacherQuizEditor() {
     setEditingQuestion(q);
     setQuestionText(q.question);
     setOptions(q.options.length >= 2 ? [...q.options] : ["", ""]);
-    setCorrectIndex(q.correct_index ?? 0);
+    setCorrectIndex(q.correct_answer ?? 0);
     setExplanationText(q.explanation || "");
     setIsActive(Boolean(q.is_active));
     setIsFormOpen(true);
@@ -220,19 +220,19 @@ export default function TeacherQuizEditor() {
 
     try {
       setSaving(true);
-      const nextPosition =
-        editingQuestion?.position ??
-        (questions.length > 0 ? Math.max(...questions.map((q) => q.position)) + 1 : 1);
+      const nextOrderIndex =
+        editingQuestion?.order_index ??
+        (questions.length > 0 ? Math.max(...questions.map((q) => q.order_index)) + 1 : 1);
 
       await upsertQuizQuestion({
         id: editingQuestion?.id,
         moduleId: selectedModuleId,
         question: questionText.trim(),
         options: options.map((opt) => opt.trim()),
-        correctIndex,
+        correctAnswer: correctIndex,
         explanation: explanationText.trim() || null,
         isActive,
-        position: nextPosition,
+        orderIndex: nextOrderIndex,
         userId: profile?.id,
       });
 
@@ -292,16 +292,16 @@ export default function TeacherQuizEditor() {
     try {
       // Optimistic update
       const newQuestions = [...questions];
-      const tempPos = qCurrent.position;
-      qCurrent.position = qTarget.position;
-      qTarget.position = tempPos;
+      const tempOrder = qCurrent.order_index;
+      qCurrent.order_index = qTarget.order_index;
+      qTarget.order_index = tempOrder;
       newQuestions[index] = qTarget;
       newQuestions[targetIndex] = qCurrent;
       setQuestions(newQuestions);
 
-      await swapQuizQuestionPositions(
-        { id: qCurrent.id, position: qCurrent.position },
-        { id: qTarget.id, position: qTarget.position }
+      await swapQuizQuestionOrders(
+        { id: qCurrent.id, order_index: qCurrent.order_index },
+        { id: qTarget.id, order_index: qTarget.order_index }
       );
 
       toast.success("Urutan soal berhasil diperbarui.");
@@ -737,7 +737,7 @@ export default function TeacherQuizEditor() {
                     {/* Options Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                       {q.options.map((opt, optIdx) => {
-                        const isCorrect = optIdx === q.correct_index;
+                        const isCorrect = optIdx === q.correct_answer;
                         const letter = optionLetters[optIdx] || String(optIdx + 1);
 
                         return (
@@ -814,7 +814,7 @@ export default function TeacherQuizEditor() {
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div className="space-y-0.5">
                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-400">
-                  {editingQuestion ? "EDIT SOAL #" + editingQuestion.position : "TAMBAH SOAL BARU"}
+                  {editingQuestion ? "EDIT SOAL #" + editingQuestion.order_index : "TAMBAH SOAL BARU"}
                 </span>
                 <h3 className="font-display text-xl font-bold">
                   {editingQuestion ? "Perbarui Soal Kuis" : "Buat Soal Kuis Baru"}
@@ -1095,7 +1095,7 @@ export default function TeacherQuizEditor() {
               <div>
                 <h3 className="font-display text-lg font-bold">Hapus Soal Kuis?</h3>
                 <span className="text-xs text-slate-400 font-mono">
-                  Posisi #{questionToDelete.position}
+                  Urutan #{questionToDelete.order_index}
                 </span>
               </div>
             </div>

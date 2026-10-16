@@ -2,13 +2,13 @@ import { supabase } from "./supabaseClient";
 import { QuizQuestion } from "./sigmaData";
 
 export interface QuizQuestionRow {
-  id: string | number;
+  id: string;
   module_id: string;
+  order_index: number;
   question: string;
   options: string[];
-  correct_index: number;
+  correct_answer: number;
   explanation: string | null;
-  position: number;
   is_active: boolean;
   created_by?: string | null;
   created_at?: string | null;
@@ -16,6 +16,8 @@ export interface QuizQuestionRow {
 
 /**
  * Mengambil soal aktif untuk siswa dari tabel quiz_questions.
+ * Kolom yang diminta: id, module_id, order_index, question, options, correct_answer, explanation, is_active.
+ * Diurutkan berdasarkan order_index ASC.
  * Jika kosong atau terjadi kesalahan, menggunakan fallback soal bawaan di kode.
  */
 export async function getStudentQuizQuestions(
@@ -25,10 +27,10 @@ export async function getStudentQuizQuestions(
   try {
     const { data, error } = await supabase
       .from("quiz_questions")
-      .select("id, module_id, question, options, correct_index, explanation, position, is_active")
+      .select("id, module_id, order_index, question, options, correct_answer, explanation, is_active")
       .eq("module_id", moduleId)
       .eq("is_active", true)
-      .order("position", { ascending: true });
+      .order("order_index", { ascending: true });
 
     if (error) {
       console.error(`[QuizApi] Gagal memuat soal kuis siswa untuk modul ${moduleId}:`, error);
@@ -40,22 +42,17 @@ export async function getStudentQuizQuestions(
     }
 
     return data.map((row, idx) => {
-      let parsedOptions: string[] = [];
-      if (Array.isArray(row.options)) {
-        parsedOptions = row.options;
-      } else if (typeof row.options === "string") {
-        try {
-          parsedOptions = JSON.parse(row.options);
-        } catch {
-          parsedOptions = [row.options];
-        }
-      }
+      const optionsArray: string[] = Array.isArray(row.options)
+        ? row.options
+        : typeof row.options === "string"
+        ? [row.options]
+        : [];
 
       return {
-        id: typeof row.id === "number" ? row.id : idx + 1,
-        question: row.question,
-        options: parsedOptions,
-        correctAnswer: typeof row.correct_index === "number" ? row.correct_index : 0,
+        id: idx + 1,
+        question: row.question || "",
+        options: optionsArray,
+        correctAnswer: typeof row.correct_answer === "number" ? row.correct_answer : 0,
         explanation: row.explanation || undefined,
       };
     });
@@ -67,14 +64,16 @@ export async function getStudentQuizQuestions(
 
 /**
  * Mengambil seluruh soal (aktif & nonaktif) untuk guru di editor soal.
+ * Kolom: id, module_id, order_index, question, options, correct_answer, explanation, is_active, created_by, created_at.
+ * Diurutkan berdasarkan order_index ASC.
  */
 export async function getTeacherQuizQuestions(moduleId: string): Promise<QuizQuestionRow[]> {
   try {
     const { data, error } = await supabase
       .from("quiz_questions")
-      .select("id, module_id, question, options, correct_index, explanation, position, is_active, created_by, created_at")
+      .select("id, module_id, order_index, question, options, correct_answer, explanation, is_active, created_by, created_at")
       .eq("module_id", moduleId)
-      .order("position", { ascending: true });
+      .order("order_index", { ascending: true });
 
     if (error) {
       console.error(`[QuizApi] Gagal memuat daftar soal guru untuk modul ${moduleId}:`, error);
@@ -83,23 +82,10 @@ export async function getTeacherQuizQuestions(moduleId: string): Promise<QuizQue
 
     if (!data) return [];
 
-    return data.map((row) => {
-      let parsedOptions: string[] = [];
-      if (Array.isArray(row.options)) {
-        parsedOptions = row.options;
-      } else if (typeof row.options === "string") {
-        try {
-          parsedOptions = JSON.parse(row.options);
-        } catch {
-          parsedOptions = [row.options];
-        }
-      }
-
-      return {
-        ...row,
-        options: parsedOptions,
-      };
-    });
+    return data.map((row) => ({
+      ...row,
+      options: Array.isArray(row.options) ? row.options : [],
+    }));
   } catch (err) {
     console.error(`[QuizApi] Exception saat mengambil soal guru untuk ${moduleId}:`, err);
     throw err;
@@ -108,6 +94,8 @@ export async function getTeacherQuizQuestions(moduleId: string): Promise<QuizQue
 
 /**
  * Impor soal bawaan di kode ke tabel quiz_questions untuk modul terkait.
+ * Tidak mengirim kolom id (uuid dibuat otomatis oleh database).
+ * Mengisi created_by dengan id user yang login.
  */
 export async function importBuiltinQuizQuestions(
   moduleId: string,
@@ -121,11 +109,11 @@ export async function importBuiltinQuizQuestions(
 
     const payload = builtinQuestions.map((q, idx) => ({
       module_id: moduleId,
+      order_index: idx + 1,
       question: q.question,
       options: q.options,
-      correct_index: q.correctAnswer,
+      correct_answer: q.correctAnswer,
       explanation: q.explanation || null,
-      position: idx + 1,
       is_active: true,
       created_by: userId,
     }));
@@ -144,29 +132,31 @@ export async function importBuiltinQuizQuestions(
 
 /**
  * Menyimpan soal baru atau memperbarui soal yang sudah ada.
+ * Saat insert, id TIDAK disertakan (dibuat otomatis oleh database).
+ * created_by diisi dengan id user guru yang login.
  */
 export async function upsertQuizQuestion(params: {
-  id?: string | number | null;
+  id?: string | null;
   moduleId: string;
   question: string;
   options: string[];
-  correctIndex: number;
+  correctAnswer: number;
   explanation: string | null;
   isActive?: boolean;
-  position?: number;
+  orderIndex?: number;
   userId?: string;
 }): Promise<void> {
-  const { id, moduleId, question, options, correctIndex, explanation, isActive = true, position, userId } = params;
+  const { id, moduleId, question, options, correctAnswer, explanation, isActive = true, orderIndex, userId } = params;
 
   try {
     if (id) {
-      // Update
+      // Update data yang sudah ada
       const { error } = await supabase
         .from("quiz_questions")
         .update({
           question,
           options,
-          correct_index: correctIndex,
+          correct_answer: correctAnswer,
           explanation: explanation || null,
           is_active: isActive,
         })
@@ -177,14 +167,23 @@ export async function upsertQuizQuestion(params: {
         throw error;
       }
     } else {
-      // Insert baru
-      const insertPayload: Record<string, any> = {
+      // Insert baru tanpa menyertakan kolom id
+      const insertPayload: {
+        module_id: string;
+        order_index: number;
+        question: string;
+        options: string[];
+        correct_answer: number;
+        explanation: string | null;
+        is_active: boolean;
+        created_by?: string;
+      } = {
         module_id: moduleId,
+        order_index: typeof orderIndex === "number" ? orderIndex : 1,
         question,
         options,
-        correct_index: correctIndex,
+        correct_answer: correctAnswer,
         explanation: explanation || null,
-        position: typeof position === "number" ? position : 1,
         is_active: isActive,
       };
 
@@ -208,7 +207,7 @@ export async function upsertQuizQuestion(params: {
 /**
  * Hapus soal dari database.
  */
-export async function deleteQuizQuestion(id: string | number): Promise<void> {
+export async function deleteQuizQuestion(id: string): Promise<void> {
   try {
     const { error } = await supabase.from("quiz_questions").delete().eq("id", id);
     if (error) {
@@ -224,7 +223,7 @@ export async function deleteQuizQuestion(id: string | number): Promise<void> {
 /**
  * Toggle status aktif / nonaktif soal.
  */
-export async function toggleQuizQuestionActive(id: string | number, currentActive: boolean): Promise<boolean> {
+export async function toggleQuizQuestionActive(id: string, currentActive: boolean): Promise<boolean> {
   const newActive = !currentActive;
   try {
     const { error } = await supabase
@@ -244,17 +243,17 @@ export async function toggleQuizQuestionActive(id: string | number, currentActiv
 }
 
 /**
- * Menukar posisi dua soal (reorder naik / turun).
+ * Menukar urutan (order_index) dua soal (naik / turun).
  */
-export async function swapQuizQuestionPositions(
-  q1: { id: string | number; position: number },
-  q2: { id: string | number; position: number }
+export async function swapQuizQuestionOrders(
+  q1: { id: string; order_index: number },
+  q2: { id: string; order_index: number }
 ): Promise<void> {
   try {
-    const res1 = await supabase.from("quiz_questions").update({ position: q2.position }).eq("id", q1.id);
+    const res1 = await supabase.from("quiz_questions").update({ order_index: q2.order_index }).eq("id", q1.id);
     if (res1.error) throw res1.error;
 
-    const res2 = await supabase.from("quiz_questions").update({ position: q1.position }).eq("id", q2.id);
+    const res2 = await supabase.from("quiz_questions").update({ order_index: q1.order_index }).eq("id", q2.id);
     if (res2.error) throw res2.error;
   } catch (err) {
     console.error(`[QuizApi] Gagal menukar urutan soal ${q1.id} <-> ${q2.id}:`, err);
