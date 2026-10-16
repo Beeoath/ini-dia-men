@@ -17,6 +17,7 @@ import {
   Settings,
   Pin,
   BarChart3,
+  HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { MODULES, SigmaModule } from "../lib/sigmaData";
@@ -1042,6 +1043,15 @@ export default function TeacherDashboard() {
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate("/teacher/soal")}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-400/30 transition-all cursor-pointer"
+                  title="Kelola Bank Soal Kuis"
+                >
+                  <HelpCircle size={13} />
+                  <span>Editor Soal</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => navigate("/teacher/rekap")}

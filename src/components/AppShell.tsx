@@ -11,6 +11,7 @@ import {
   X,
   Layers,
   BarChart3,
+  HelpCircle,
 } from "lucide-react";
 import { useAuth, getUserDisplayName } from "../lib/auth";
 import { useTheme, ThemeToggle } from "../lib/theme";
@@ -35,6 +36,7 @@ export const AppShell: React.FC<{ children?: React.ReactNode }> = ({ children })
   const teacherNavItems = [
     { label: "Ringkasan Kelas", path: "/teacher/dashboard", icon: LayoutDashboard },
     { label: "Rekap Progres", path: "/teacher/rekap", icon: BarChart3 },
+    { label: "Editor Soal", path: "/teacher/soal", icon: HelpCircle },
     { label: "Moderasi Diskusi", path: "/teacher/moderation", icon: MessageSquare },
     { label: "Kelola Materi", path: "/teacher/content", icon: Layers },
     { label: "Mode Siswa", path: "/app/dashboard", icon: Compass },

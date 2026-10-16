@@ -8,6 +8,7 @@ import {
   Check,
   FileText,
   Eye,
+  HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { MODULES, DISTRICTS, SigmaModule } from "../lib/sigmaData";
@@ -357,6 +358,17 @@ export default function TeacherContent() {
                   >
                     <Edit size={13} /> Edit / Upload PDF
                   </button>
+
+                  <Link
+                    to={`/teacher/soal?moduleId=${mod.id}`}
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                      isDark
+                        ? "border-purple-400/30 bg-purple-400/10 text-purple-300 hover:bg-purple-400/20"
+                        : "border-purple-200 bg-purple-50 text-purple-800 hover:bg-purple-100"
+                    }`}
+                  >
+                    <HelpCircle size={13} /> Edit Soal
+                  </Link>
 
                   <Link
                     to={`/app/materi/${mod.id}`}

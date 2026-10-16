@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Send, Clock, Lock, AlertCircle, Play, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { MODULES } from "../lib/sigmaData";
+import { MODULES, QuizQuestion } from "../lib/sigmaData";
 import { ProgressBar } from "../components/Primitives";
 import { useTheme } from "../lib/theme";
 import { recordQuizCompletion, useStudentProgress, getModuleUnlockStatus } from "../lib/userProgress";
@@ -10,6 +10,7 @@ import { FormattedMathText } from "../components/MathView";
 import { useAuth } from "../lib/auth";
 import { getAssessmentResult } from "../lib/testAssessmentData";
 import { supabase } from "../lib/supabaseClient";
+import { getStudentQuizQuestions } from "../lib/quizApi";
 
 export default function Quiz() {
   const { id, moduleId } = useParams();
@@ -22,10 +23,41 @@ export default function Quiz() {
   const { userProgress } = useStudentProgress();
   const lockStatus = getModuleUnlockStatus(moduleData.id, userProgress);
   const isLocked = !lockStatus.isUnlocked;
-  const questions = moduleData.quiz;
+
+  // Soal kuis: dinamis dari database quiz_questions (is_active = true), fallback ke moduleData.quiz
+  const [questions, setQuestions] = useState<QuizQuestion[]>(moduleData.quiz);
+  const [loadingQuestions, setLoadingQuestions] = useState<boolean>(true);
 
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
+
+  // Muat soal dari database Supabase
+  useEffect(() => {
+    let active = true;
+
+    const loadQuestions = async () => {
+      setLoadingQuestions(true);
+      try {
+        const loaded = await getStudentQuizQuestions(moduleData.id, moduleData.quiz);
+        if (active) {
+          setQuestions(loaded && loaded.length > 0 ? loaded : moduleData.quiz);
+          setLoadingQuestions(false);
+        }
+      } catch (err) {
+        console.error("[Quiz] Gagal memuat soal kuis dari database:", err);
+        if (active) {
+          setQuestions(moduleData.quiz);
+          setLoadingQuestions(false);
+        }
+      }
+    };
+
+    loadQuestions();
+
+    return () => {
+      active = false;
+    };
+  }, [moduleData.id, moduleData.quiz]);
 
   // Countdown timer configurations from Supabase quiz_settings
   const [timerLoading, setTimerLoading] = useState<boolean>(true);
@@ -90,9 +122,9 @@ export default function Quiz() {
     };
   }, [moduleData.id, moduleData.quizTimeLimitMinutes]);
 
-  const q = questions[currentIdx];
-  const progress = ((currentIdx + 1) / questions.length) * 100;
-  const isLast = currentIdx === questions.length - 1;
+  const q = questions[currentIdx] || questions[0];
+  const progress = questions.length > 0 ? ((currentIdx + 1) / questions.length) * 100 : 0;
+  const isLast = questions.length > 0 ? currentIdx === questions.length - 1 : false;
 
   const handleSelect = (optIdx: number) => {
     setSelectedAnswers((prev) => ({ ...prev, [currentIdx]: optIdx }));
@@ -106,7 +138,8 @@ export default function Quiz() {
       }
     });
 
-    const score = Math.round((correctCount / questions.length) * 100);
+    const totalQuestions = questions.length > 0 ? questions.length : 1;
+    const score = Math.round((correctCount / totalQuestions) * 100);
 
     sessionStorage.setItem(
       `quiz_result_${moduleData.id}`,
@@ -118,6 +151,7 @@ export default function Quiz() {
         isTimeout,
         timeLimitMinutes: timerEnabled ? timeLimitMinutes : null,
         completedAt: new Date().toISOString(),
+        questions: questions,
       })
     );
 

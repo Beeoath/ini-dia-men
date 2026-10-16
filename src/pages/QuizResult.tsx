@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Award, CheckCircle2, XCircle, ArrowRight, RotateCcw, Sparkles, Clock, AlertCircle } from "lucide-react";
-import { MODULES } from "../lib/sigmaData";
+import { MODULES, QuizQuestion } from "../lib/sigmaData";
 import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
 import { FormattedMathText } from "../components/MathView";
 import { MIN_PASSING_SCORE, recordQuizCompletion } from "../lib/userProgress";
+import { getStudentQuizQuestions } from "../lib/quizApi";
 
 export default function QuizResult() {
   const { id, attemptId } = useParams();
@@ -15,6 +16,7 @@ export default function QuizResult() {
   const moduleData = MODULES.find((m) => m.id === currentId) || MODULES[0];
 
   const [result, setResult] = useState<any>(null);
+  const [dbQuestions, setDbQuestions] = useState<QuizQuestion[]>([]);
 
   useEffect(() => {
     try {
@@ -29,7 +31,23 @@ export default function QuizResult() {
     } catch {
       // ignore
     }
-  }, [moduleData.id, profile]);
+
+    // Ambil soal dari database jika di result tidak tercatat
+    getStudentQuizQuestions(moduleData.id, moduleData.quiz)
+      .then((qs) => {
+        if (qs && qs.length > 0) setDbQuestions(qs);
+      })
+      .catch((err) => {
+        console.error("[QuizResult] Error getStudentQuizQuestions:", err);
+      });
+  }, [moduleData.id, profile, moduleData.quiz]);
+
+  const questionsToDisplay: QuizQuestion[] =
+    Array.isArray(result?.questions) && result.questions.length > 0
+      ? result.questions
+      : dbQuestions.length > 0
+      ? dbQuestions
+      : moduleData.quiz;
 
   const score = result?.score ?? 100;
   const isPassed = score >= MIN_PASSING_SCORE;
@@ -180,7 +198,7 @@ export default function QuizResult() {
         >
           Pembahasan Soal Kuis
         </h3>
-        {moduleData.quiz.map((q, idx) => {
+        {questionsToDisplay.map((q, idx) => {
           const userAns = result?.selectedAnswers?.[idx];
           const isCorrect = userAns === q.correctAnswer;
 
