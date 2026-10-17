@@ -522,7 +522,7 @@ export const StudentSpatialLayout: React.FC<StudentSpatialLayoutProps> = ({
                           isDark ? "text-cyan-300" : "text-cyan-700 font-semibold"
                         }`}
                       >
-                        {displayClass} • Siswa Aktif
+                        {profile?.role === "teacher" ? "Guru Pengampu" : `${displayClass} • Siswa Aktif`}
                       </div>
                     </div>
 

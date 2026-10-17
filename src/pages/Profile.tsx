@@ -74,11 +74,16 @@ export default function Profile() {
     },
   ];
 
+  const isTeacher = profile?.role === "teacher";
+  const displayName = profile?.full_name || fullName;
+  const displayClass = profile?.class_name || className;
+  const displayLevel = profile?.level || 1;
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     await updateProfile({
       full_name: fullName,
-      class_name: className,
+      ...(isTeacher ? {} : { class_name: className }),
       avatar_url: profile?.avatar_url,
     });
     setSavedSuccess(true);
@@ -89,10 +94,6 @@ export default function Profile() {
     logout();
     navigate("/masuk");
   };
-
-  const displayName = profile?.full_name || fullName;
-  const displayClass = profile?.class_name || className;
-  const displayLevel = profile?.level || 1;
 
   return (
     <StudentSpatialLayout
@@ -132,16 +133,24 @@ export default function Profile() {
               {/* Identity details */}
               <div className="space-y-1.5">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-cyan-400/20 border border-cyan-400/40 px-2.5 py-0.5 text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-300">
-                    <Sparkles size={11} /> LEVEL {displayLevel} GUARDIAN
-                  </span>
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono ${
-                      isDark ? "bg-white/10 text-slate-300" : "bg-slate-200 text-slate-700"
-                    }`}
-                  >
-                    NISN: {nisn}
-                  </span>
+                  {isTeacher ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-cyan-400/20 border border-cyan-400/40 px-2.5 py-0.5 text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-300">
+                      <Sparkles size={11} /> Guru Pengampu
+                    </span>
+                  ) : (
+                    <>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-cyan-400/20 border border-cyan-400/40 px-2.5 py-0.5 text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-300">
+                        <Sparkles size={11} /> LEVEL {displayLevel} GUARDIAN
+                      </span>
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono ${
+                          isDark ? "bg-white/10 text-slate-300" : "bg-slate-200 text-slate-700"
+                        }`}
+                      >
+                        NISN: {nisn}
+                      </span>
+                    </>
+                  )}
                 </div>
 
                 <h1
@@ -157,7 +166,7 @@ export default function Profile() {
                     isDark ? "text-slate-300" : "text-slate-600"
                   }`}
                 >
-                  {displayClass} • MAS Darunnajah 9
+                  {isTeacher ? "Guru Pengampu • MAS Darunnajah 9" : `${displayClass} • MAS Darunnajah 9`}
                 </p>
 
                 <div className="flex items-center justify-center sm:justify-start gap-3 pt-1 text-xs font-mono">
@@ -207,15 +216,17 @@ export default function Profile() {
                     isDark ? "text-white" : "text-slate-900"
                   }`}
                 >
-                  <User size={18} className="text-cyan-500" /> Pengaturan Identitas Siswa
+                  <User size={18} className="text-cyan-500" />{" "}
+                  {isTeacher ? "Pengaturan Identitas Guru" : "Pengaturan Identitas Siswa"}
                 </h3>
                 <p
                   className={`text-xs mt-0.5 ${
                     isDark ? "text-slate-400" : "text-slate-600"
                   }`}
                 >
-                  Informasi ini digunakan pada sertifikat capaian TKA dan laporan evaluasi belajar
-                  guru.
+                  {isTeacher
+                    ? "Informasi ini digunakan pada dashboard pengelolaan materi dan rekap progres siswa."
+                    : "Informasi ini digunakan pada sertifikat capaian TKA dan laporan evaluasi belajar guru."}
                 </p>
               </div>
 
@@ -234,13 +245,13 @@ export default function Profile() {
                       isDark ? "text-slate-400" : "text-slate-600"
                     }`}
                   >
-                    Nama Lengkap Siswa
+                    {isTeacher ? "Nama Lengkap Guru" : "Nama Lengkap Siswa"}
                   </label>
                   <input
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Nama lengkap sesuai raport"
+                    placeholder={isTeacher ? "Nama lengkap beserta gelar" : "Nama lengkap sesuai raport"}
                     className={`h-11 w-full rounded-xl border px-3.5 text-xs outline-none ${
                       isDark
                         ? "border-white/15 bg-black/40 text-white placeholder-slate-500 focus:border-cyan-400/50"
@@ -249,52 +260,56 @@ export default function Profile() {
                   />
                 </div>
 
-                <div>
-                  <label
-                    className={`text-[11px] font-mono uppercase tracking-wider mb-1.5 block ${
-                      isDark ? "text-slate-400" : "text-slate-600"
-                    }`}
-                  >
-                    Tingkat / Kelas Belajar
-                  </label>
-                  <select
-                    value={className}
-                    onChange={(e) => setClassName(e.target.value)}
-                    className={`h-11 w-full rounded-xl border px-3 text-xs outline-none cursor-pointer ${
-                      isDark
-                        ? "border-white/15 bg-black/40 text-white focus:border-cyan-400/50"
-                        : "border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600"
-                    }`}
-                  >
-                    <option value="Kelas 11">Kelas 11</option>
-                    <option value="Kelas 11 IPA">Kelas 11 IPA</option>
-                    <option value="Kelas 11 IPS">Kelas 11 IPS</option>
-                    <option value="Kelas 11-A">Kelas 11-A</option>
-                    <option value="Kelas 11-B">Kelas 11-B</option>
-                    <option value="Kelas 10">Kelas 10</option>
-                    <option value="Kelas 12">Kelas 12</option>
-                  </select>
-                </div>
+                {!isTeacher && (
+                  <div>
+                    <label
+                      className={`text-[11px] font-mono uppercase tracking-wider mb-1.5 block ${
+                        isDark ? "text-slate-400" : "text-slate-600"
+                      }`}
+                    >
+                      Tingkat / Kelas Belajar
+                    </label>
+                    <select
+                      value={className}
+                      onChange={(e) => setClassName(e.target.value)}
+                      className={`h-11 w-full rounded-xl border px-3 text-xs outline-none cursor-pointer ${
+                        isDark
+                          ? "border-white/15 bg-black/40 text-white focus:border-cyan-400/50"
+                          : "border-slate-300 bg-slate-50 text-slate-900 focus:border-cyan-600"
+                      }`}
+                    >
+                      <option value="Kelas 11">Kelas 11</option>
+                      <option value="Kelas 11 IPA">Kelas 11 IPA</option>
+                      <option value="Kelas 11 IPS">Kelas 11 IPS</option>
+                      <option value="Kelas 11-A">Kelas 11-A</option>
+                      <option value="Kelas 11-B">Kelas 11-B</option>
+                      <option value="Kelas 10">Kelas 10</option>
+                      <option value="Kelas 12">Kelas 12</option>
+                    </select>
+                  </div>
+                )}
 
-                <div>
-                  <label
-                    className={`text-[11px] font-mono uppercase tracking-wider mb-1.5 block ${
-                      isDark ? "text-slate-400" : "text-slate-600"
-                    }`}
-                  >
-                    Nomor Induk Siswa Nasional (NISN)
-                  </label>
-                  <input
-                    value={nisn}
-                    onChange={(e) => setNisn(e.target.value)}
-                    placeholder="NISN resmi Kemdikbud / Kemenag"
-                    className={`h-11 w-full rounded-xl border px-3.5 text-xs outline-none ${
-                      isDark
-                        ? "border-white/15 bg-black/40 text-white placeholder-slate-500 focus:border-cyan-400/50"
-                        : "border-slate-300 bg-slate-50 text-slate-900 placeholder-slate-400 focus:border-cyan-600"
-                    }`}
-                  />
-                </div>
+                {!isTeacher && (
+                  <div>
+                    <label
+                      className={`text-[11px] font-mono uppercase tracking-wider mb-1.5 block ${
+                        isDark ? "text-slate-400" : "text-slate-600"
+                      }`}
+                    >
+                      Nomor Induk Siswa Nasional (NISN)
+                    </label>
+                    <input
+                      value={nisn}
+                      onChange={(e) => setNisn(e.target.value)}
+                      placeholder="NISN resmi Kemdikbud / Kemenag"
+                      className={`h-11 w-full rounded-xl border px-3.5 text-xs outline-none ${
+                        isDark
+                          ? "border-white/15 bg-black/40 text-white placeholder-slate-500 focus:border-cyan-400/50"
+                          : "border-slate-300 bg-slate-50 text-slate-900 placeholder-slate-400 focus:border-cyan-600"
+                      }`}
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label
@@ -306,7 +321,7 @@ export default function Profile() {
                   </label>
                   <input
                     disabled
-                    value={profile?.email || "siswa@darunnajah9.sch.id"}
+                    value={profile?.email || (isTeacher ? "guru@darunnajah9.sch.id" : "siswa@darunnajah9.sch.id")}
                     className={`h-11 w-full rounded-xl border px-3.5 text-xs cursor-not-allowed ${
                       isDark
                         ? "border-white/10 bg-black/20 text-slate-400"
