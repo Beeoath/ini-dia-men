@@ -374,8 +374,8 @@ export default function Pretest() {
                   : "border border-white/10 bg-white/5 text-slate-500 cursor-not-allowed"
               }`}
             >
-              <Send size={15} />
-              <span>
+              <Send size={15} className={canSubmit ? "text-slate-950" : "text-slate-500"} />
+              <span className={canSubmit ? "text-slate-950 font-black" : "text-slate-500"}>
                 {isSubmitting
                   ? "Mengirimkan Survei Pre-Test..."
                   : "Kirim Jawaban Pre-Test & Buka Modul"}

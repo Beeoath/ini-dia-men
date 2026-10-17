@@ -273,8 +273,8 @@ export default function ModuleDetail() {
                     to={`/app/materi/${moduleData.id}`}
                     className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-xs font-black bg-cyan-400 hover:bg-cyan-300 text-slate-950 shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all cursor-pointer"
                   >
-                    <FileText size={15} />
-                    <span>Buka Modul PDF ({displayPages} Halaman)</span>
+                    <FileText size={15} className="text-slate-950" />
+                    <span className="text-slate-950 font-black">Buka Modul PDF ({displayPages} Halaman)</span>
                   </Link>
                 </motion.div>
 
