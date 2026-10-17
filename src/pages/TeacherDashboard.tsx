@@ -18,6 +18,7 @@ import {
   Pin,
   BarChart3,
   HelpCircle,
+  ClipboardCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { MODULES, SigmaModule } from "../lib/sigmaData";
@@ -1051,6 +1052,15 @@ export default function TeacherDashboard() {
                 >
                   <HelpCircle size={13} />
                   <span>Editor Soal</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/teacher/pretest")}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-400/30 transition-all cursor-pointer"
+                  title="Buka Analisis Butir Soal dan Rekapitulasi Pre-Test Bab 1"
+                >
+                  <ClipboardCheck size={13} />
+                  <span>Rekap Pre-Test</span>
                 </button>
                 <button
                   type="button"

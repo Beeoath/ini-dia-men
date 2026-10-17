@@ -1,6 +1,230 @@
 // Assessment data and synchronization for Pre-Test and Post-Test
-// Matched directly to the official Google Forms for MA Darunnajah 9
+// Pre-Test Bab 1: 5 Soal Diagnostik Bilangan Real
+import { supabase } from "./supabaseClient";
 
+export interface PretestOption {
+  letter: "A" | "B" | "C" | "D" | "E";
+  text: string;
+}
+
+export interface PretestQuestion {
+  id: number;
+  question: string;
+  options: PretestOption[];
+  correctAnswer: "A" | "B" | "C" | "D" | "E";
+}
+
+/**
+ * 5 Soal Diagnostik Resmi Pre-Test Bab 1 (mod-aljabar-1)
+ * KUNCI: 1=C, 2=C, 3=B, 4=D, 5=D
+ */
+export const PRETEST_QUESTIONS: PretestQuestion[] = [
+  {
+    id: 1,
+    question: "Manakah pernyataan yang paling tepat mengenai bilangan real?",
+    options: [
+      { letter: "A", text: "Himpunan semua bilangan bulat positif dan negatif" },
+      { letter: "B", text: "Himpunan semua bilangan yang dapat dinyatakan dalam bentuk pecahan" },
+      { letter: "C", text: "Himpunan semua bilangan yang dapat digambarkan pada garis bilangan, termasuk bilangan rasional dan irasional" },
+      { letter: "D", text: "Himpunan semua bilangan yang hanya dapat ditulis dalam bentuk desimal" },
+      { letter: "E", text: "Himpunan semua bilangan yang tidak memiliki nilai negative" },
+    ],
+    correctAnswer: "C",
+  },
+  {
+    id: 2,
+    question: "Operasi a × b = b × a merupakan contoh sifat ...",
+    options: [
+      { letter: "A", text: "Asosiatif" },
+      { letter: "B", text: "Distributif" },
+      { letter: "C", text: "Komutatif" },
+      { letter: "D", text: "Identitas" },
+      { letter: "E", text: "Invers" },
+    ],
+    correctAnswer: "C",
+  },
+  {
+    id: 3,
+    question: "Operasi a + (b + c) = (a + b) + c menunjukkan bahwa ...",
+    options: [
+      { letter: "A", text: "Urutan bilangan dalam operasi dapat ditukar" },
+      { letter: "B", text: "Pengelompokan bilangan dalam operasi dapat diubah tanpa mengubah hasil" },
+      { letter: "C", text: "Perkalian dapat didistribusikan terhadap penjumlahan" },
+      { letter: "D", text: "Setiap bilangan memiliki bilangan kebalikan" },
+      { letter: "E", text: "Setiap bilangan jika ditambah nol tetap menghasilkan bilangan semula" },
+    ],
+    correctAnswer: "B",
+  },
+  {
+    id: 4,
+    question: "Operasi a × (b + c) = (a × b) + (a × c) merupakan sifat ...",
+    options: [
+      { letter: "A", text: "Komutatif" },
+      { letter: "B", text: "Asosiatif" },
+      { letter: "C", text: "Identitas" },
+      { letter: "D", text: "Distributif" },
+      { letter: "E", text: "Invers" },
+    ],
+    correctAnswer: "D",
+  },
+  {
+    id: 5,
+    question: "Manakah pernyataan yang paling tepat mengenai perbedaan bilangan dan angka?",
+    options: [
+      { letter: "A", text: "Bilangan dan angka merupakan istilah yang selalu memiliki arti sama" },
+      { letter: "B", text: "Bilangan adalah simbol untuk menuliskan angka, sedangkan angka adalah nilai yang dihitung" },
+      { letter: "C", text: "Angka merupakan konsep nilai, sedangkan bilangan hanya merupakan simbol" },
+      { letter: "D", text: "Bilangan merupakan konsep atau nilai yang menyatakan kuantitas, sedangkan angka merupakan simbol yang digunakan untuk menuliskan bilangan" },
+      { letter: "E", text: "Angka hanya digunakan untuk bilangan positif, sedangkan bilangan digunakan untuk bilangan negative" },
+    ],
+    correctAnswer: "D",
+  },
+];
+
+export interface AssessmentResultRow {
+  id?: string;
+  user_id: string;
+  module_id: string;
+  kind: "pretest" | "posttest";
+  score: number;
+  correct_count: number;
+  total_questions: number;
+  answers: Record<string, string>; // e.g. {"1":"C","2":"C","3":"B","4":"D","5":"D"}
+  created_at?: string;
+}
+
+/**
+ * Fetch a user's assessment result (pretest / posttest) from database
+ */
+export async function fetchUserAssessmentResult(
+  userId: string,
+  moduleId: string = "mod-aljabar-1",
+  kind: "pretest" | "posttest" = "pretest"
+): Promise<AssessmentResultRow | null> {
+  try {
+    const { data, error } = await supabase
+      .from("assessment_results")
+      .select("id, user_id, module_id, kind, score, correct_count, total_questions, answers, created_at")
+      .eq("user_id", userId)
+      .eq("module_id", moduleId)
+      .eq("kind", kind)
+      .maybeSingle();
+
+    if (error) {
+      console.error(`[testAssessmentData] Gagal mengambil assessment_results (${kind}):`, {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+      });
+      return null;
+    }
+
+    if (data) {
+      const res: AssessmentResultRow = {
+        id: data.id,
+        user_id: data.user_id,
+        module_id: data.module_id,
+        kind: data.kind,
+        score: Number(data.score) || 0,
+        correct_count: Number(data.correct_count) || 0,
+        total_questions: Number(data.total_questions) || 5,
+        answers: (data.answers as Record<string, string>) || {},
+        created_at: data.created_at,
+      };
+
+      // Cache locally
+      try {
+        localStorage.setItem(`sigma_assessment_db_${kind}_${moduleId}`, JSON.stringify(res));
+      } catch {}
+
+      return res;
+    }
+  } catch (err) {
+    console.error(`[testAssessmentData] Exception saat fetchUserAssessmentResult:`, err);
+  }
+  return null;
+}
+
+/**
+ * Save user pretest submission to public.assessment_results table
+ */
+export async function insertPretestAssessmentResult(params: {
+  userId: string;
+  moduleId?: string;
+  answers: Record<number, string>; // { 1: "C", 2: "C", ... }
+}): Promise<AssessmentResultRow> {
+  const { userId, moduleId = "mod-aljabar-1", answers } = params;
+
+  // 1. Calculate correct count and score
+  let correctCount = 0;
+  const cleanedAnswers: Record<string, string> = {};
+
+  PRETEST_QUESTIONS.forEach((q) => {
+    const userChoice = answers[q.id];
+    if (userChoice) {
+      cleanedAnswers[String(q.id)] = userChoice;
+      if (userChoice === q.correctAnswer) {
+        correctCount += 1;
+      }
+    }
+  });
+
+  const totalQuestions = PRETEST_QUESTIONS.length;
+  // Skor = jumlah benar / 5 * 100 (tiap soal bernilai 20 poin)
+  const score = Math.round((correctCount / totalQuestions) * 100);
+
+  const payload = {
+    user_id: userId,
+    module_id: moduleId,
+    kind: "pretest",
+    score,
+    correct_count: correctCount,
+    total_questions: totalQuestions,
+    answers: cleanedAnswers,
+  };
+
+  const { data, error } = await supabase
+    .from("assessment_results")
+    .insert(payload)
+    .select("id, user_id, module_id, kind, score, correct_count, total_questions, answers, created_at")
+    .single();
+
+  if (error) {
+    console.error("[testAssessmentData] Gagal menyimpan pre-test ke public.assessment_results:", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    throw error;
+  }
+
+  const result: AssessmentResultRow = {
+    id: data.id,
+    user_id: data.user_id,
+    module_id: data.module_id,
+    kind: data.kind,
+    score: data.score,
+    correct_count: data.correct_count,
+    total_questions: data.total_questions,
+    answers: (data.answers as Record<string, string>) || {},
+    created_at: data.created_at,
+  };
+
+  try {
+    localStorage.setItem(`sigma_assessment_db_pretest_${moduleId}`, JSON.stringify(result));
+  } catch {}
+
+  window.dispatchEvent(
+    new CustomEvent("sigma_assessment_updated", {
+      detail: { moduleId, kind: "pretest", score: result.score },
+    })
+  );
+
+  return result;
+}
+
+// ================= POST-TEST DATA & RETENTION (UNCHANGED) =================
 export interface LikertStatement {
   id: number;
   label: string;
@@ -36,66 +260,12 @@ export interface StudentSurveyResult {
   nama: string;
   nomorAbsen: string;
   kelas: string;
-  ratings: Record<number, number>; // statementId (1..5) -> scaleValue (1..5)
-  averageScore: number; // 1 to 5 scale
-  percentIndex: number; // 0 to 100 scale
+  ratings: Record<number, number>;
+  averageScore: number;
+  percentIndex: number;
   completedAt: string;
   submittedToGoogleForm?: boolean;
 }
-
-export const PRETEST_FORM_DATA: SurveyAssessmentData = {
-  moduleId: "mod-aljabar-1",
-  type: "pretest",
-  title: "PRE-TEST PERSEPSI DAN PENGALAMAN BELAJAR MATEMATIKA",
-  subtitle: "Sebelum Memulai Pembelajaran & Modul Bab 1",
-  badge: "SURVEI KESIAPAN AWAL",
-  description:
-    "Halo, adik-adik manis! 👋 Sebelum memulai simulasi SIGMA, kami ingin mengetahui bagaimana pandangan dan pengalaman kamu dalam belajar matematika saat ini. Pengisian ini bukan ujian dan bukan penilaian terhadap nilai matematika kamu. Tidak ada jawaban benar atau salah. Jawablah dengan jujur sesuai dengan pendapat dan kebiasaan kamu sendiri.",
-  googleFormViewUrl:
-    "https://docs.google.com/forms/d/e/1FAIpQLSerjfBME1a6seLNukLyK_haOvXO_CJC-nJHmfN5W038Yv7LgQ/viewform",
-  googleFormSubmitUrl:
-    "https://docs.google.com/forms/d/e/1FAIpQLSerjfBME1a6seLNukLyK_haOvXO_CJC-nJHmfN5W038Yv7LgQ/formResponse",
-  entryIds: {
-    nama: "entry.1719406101",
-    nomorAbsen: "entry.1867000390",
-    kelas: "entry.1006304875",
-  },
-  kelasOptions: ["XI. 1", "XI. 2"],
-  scaleOptions: [
-    { value: 1, label: "Sangat Tidak Setuju", desc: "Sama sekali tidak sesuai dengan saya" },
-    { value: 2, label: "Tidak Setuju", desc: "Kurang sesuai dengan kebiasaan saya" },
-    { value: 3, label: "Netral", desc: "Cukup / Ragu-ragu" },
-    { value: 4, label: "Setuju", desc: "Sesuai dengan apa yang saya rasakan" },
-    { value: 5, label: "Sangat Setuju", desc: "Sangat mewakili pandangan & kebiasaan saya" },
-  ],
-  statements: [
-    {
-      id: 1,
-      label: "Saya merasa siap mengerjakan soal matematika sebagai persiapan menghadapi TKA.",
-      entryId: "entry.1621123050",
-    },
-    {
-      id: 2,
-      label: "Saya lebih mudah memahami materi matematika jika materi, latihan soal, dan pembahasannya diberikan secara berurutan.",
-      entryId: "entry.1266791216",
-    },
-    {
-      id: 3,
-      label: "Saya dapat mengetahui apakah saya sudah memahami materi matematika setelah mengerjakan latihan atau kuis.",
-      entryId: "entry.86060728",
-    },
-    {
-      id: 4,
-      label: "Jika hasil latihan atau kuis saya masih kurang, saya mau mempelajari kembali materi yang belum saya pahami.",
-      entryId: "entry.83925857",
-    },
-    {
-      id: 5,
-      label: "Saya lebih tertarik belajar matematika jika pembelajarannya menggunakan materi visual, latihan soal, kuis, dan aktivitas interaktif.",
-      entryId: "entry.1158564614",
-    },
-  ],
-};
 
 export const POSTTEST_FORM_DATA: SurveyAssessmentData = {
   moduleId: "mod-aljabar-1",
@@ -155,9 +325,6 @@ export function getSurveyAssessmentData(
   moduleId: string,
   type: "pretest" | "posttest"
 ): SurveyAssessmentData {
-  if (type === "pretest") {
-    return PRETEST_FORM_DATA;
-  }
   return POSTTEST_FORM_DATA;
 }
 
@@ -165,7 +332,6 @@ export function saveSurveyResult(result: StudentSurveyResult): void {
   const key = `sigma_survey_${result.type}_${result.moduleId}`;
   localStorage.setItem(key, JSON.stringify(result));
 
-  // Legacy key compatibility so other components react
   localStorage.setItem(
     `sigma_assessment_${result.type}_${result.moduleId}`,
     JSON.stringify({
@@ -203,6 +369,14 @@ export function getAssessmentResult(
   moduleId: string,
   type: "pretest" | "posttest"
 ): { score: number; completedAt: string } | null {
+  try {
+    const dbRaw = localStorage.getItem(`sigma_assessment_db_${type}_${moduleId}`);
+    if (dbRaw) {
+      const parsed = JSON.parse(dbRaw);
+      return { score: parsed.score, completedAt: parsed.created_at || new Date().toISOString() };
+    }
+  } catch {}
+
   const survey = getSurveyResult(moduleId, type);
   if (survey) {
     return {
@@ -213,9 +387,7 @@ export function getAssessmentResult(
   try {
     const raw = localStorage.getItem(`sigma_assessment_${type}_${moduleId}`);
     if (raw) return JSON.parse(raw);
-  } catch {
-    // ignore
-  }
+  } catch {}
   return null;
 }
 
@@ -259,9 +431,6 @@ export function calculateNGain(preScore: number, postScore: number) {
   };
 }
 
-/**
- * Submits the survey response directly to the Google Form in the background.
- */
 export async function submitToGoogleForm(
   data: SurveyAssessmentData,
   nama: string,
@@ -285,7 +454,6 @@ export async function submitToGoogleForm(
       }
     });
 
-    // Send using fetch with no-cors so browser doesn't block cross-origin Google Forms
     await fetch(data.googleFormSubmitUrl, {
       method: "POST",
       mode: "no-cors",

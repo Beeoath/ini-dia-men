@@ -20,11 +20,13 @@ import { motion } from "framer-motion";
 import { MODULES } from "../lib/sigmaData";
 import { Badge } from "../components/Primitives";
 import { useTheme } from "../lib/theme";
+import { useAuth } from "../lib/auth";
 import { getMaterialMetaSync, getModuleMaterial, CustomMaterialData } from "../lib/pdfStorage";
 import { useStudentProgress, getModuleUnlockStatus, MIN_PASSING_SCORE } from "../lib/userProgress";
 import {
   getAssessmentResult,
   calculateNGain,
+  fetchUserAssessmentResult,
 } from "../lib/testAssessmentData";
 
 const containerVariants = {
@@ -91,17 +93,43 @@ export default function ModuleDetail() {
   const lockStatus = getModuleUnlockStatus(moduleData.id, userProgress);
   const isLocked = !lockStatus.isUnlocked;
 
-  // Pre-test & Post-test state for Bab 1
+  // Pre-test & Post-test state for Bab 1 (Read from database, not localStorage)
   const isBab1 = moduleData.id === "mod-aljabar-1" || moduleData.districtId === 1;
-  const [, setAssessmentUpdated] = useState(0);
+  const { user } = useAuth();
+  const [pretestDb, setPretestDb] = useState<{ score: number; completedAt: string } | null>(null);
 
   useEffect(() => {
-    const handleUpdate = () => setAssessmentUpdated((v) => v + 1);
-    window.addEventListener("sigma_assessment_updated", handleUpdate);
-    return () => window.removeEventListener("sigma_assessment_updated", handleUpdate);
-  }, []);
+    let active = true;
 
-  const pretest = isBab1 ? getAssessmentResult("mod-aljabar-1", "pretest") : null;
+    const fetchPretest = async () => {
+      if (!isBab1 || !user) {
+        setPretestDb(null);
+        return;
+      }
+      try {
+        const res = await fetchUserAssessmentResult(user.id, "mod-aljabar-1", "pretest");
+        if (active && res) {
+          setPretestDb({
+            score: res.score,
+            completedAt: res.created_at || new Date().toISOString(),
+          });
+        }
+      } catch (err) {
+        console.error("[ModuleDetail] Gagal memuat pre-test dari database:", err);
+      }
+    };
+
+    fetchPretest();
+
+    const handleUpdate = () => fetchPretest();
+    window.addEventListener("sigma_assessment_updated", handleUpdate);
+    return () => {
+      active = false;
+      window.removeEventListener("sigma_assessment_updated", handleUpdate);
+    };
+  }, [isBab1, user]);
+
+  const pretest = isBab1 ? pretestDb : null;
   const posttest = isBab1 ? getAssessmentResult("mod-aljabar-1", "posttest") : null;
   const quizScore = userProgress[moduleData.id]?.quizScore ?? 0;
   const isQuizPassed = Boolean(quizScore >= MIN_PASSING_SCORE);

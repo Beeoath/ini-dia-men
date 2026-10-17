@@ -16,8 +16,9 @@ import { MODULES } from "../lib/sigmaData";
 import { useTheme } from "../lib/theme";
 import { PdfFullscreenModal } from "../components/PdfFullscreenModal";
 import { getModulePdfUrl } from "../lib/pdfStorage";
+import { useAuth } from "../lib/auth";
 import { useStudentProgress, getModuleUnlockStatus } from "../lib/userProgress";
-import { getAssessmentResult } from "../lib/testAssessmentData";
+import { getAssessmentResult, fetchUserAssessmentResult } from "../lib/testAssessmentData";
 import { isAllowedIframeUrl, isValidPdfUrl } from "../components/EditMaterialModal";
 
 export default function Material() {
@@ -114,8 +115,38 @@ export default function Material() {
     };
   }, [moduleData.id, defaultPdfUrl, defaultPdfTitle, defaultDescription, defaultBadge]);
 
+  const { user } = useAuth();
   const isBab1 = moduleData.id === "mod-aljabar-1" || moduleData.districtId === 1;
-  const pretest = isBab1 ? getAssessmentResult("mod-aljabar-1", "pretest") : null;
+  const [pretestDb, setPretestDb] = useState<{ score: number; completedAt: string } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const checkPretest = async () => {
+      if (!isBab1 || !user) {
+        setPretestDb(null);
+        return;
+      }
+      try {
+        const res = await fetchUserAssessmentResult(user.id, "mod-aljabar-1", "pretest");
+        if (active && res) {
+          setPretestDb({ score: res.score, completedAt: res.created_at || "" });
+        }
+      } catch (err) {
+        console.error("[Material] Gagal memuat status pretest:", err);
+      }
+    };
+
+    checkPretest();
+
+    const handleUpdate = () => checkPretest();
+    window.addEventListener("sigma_assessment_updated", handleUpdate);
+    return () => {
+      active = false;
+      window.removeEventListener("sigma_assessment_updated", handleUpdate);
+    };
+  }, [isBab1, user]);
+
+  const pretest = isBab1 ? pretestDb : null;
   const isPretestMissing = isBab1 && !pretest;
 
   if (isPretestMissing) {

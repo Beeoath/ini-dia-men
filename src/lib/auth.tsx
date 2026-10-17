@@ -25,6 +25,7 @@ export interface RegisterResult {
 
 interface AuthContextType {
   profile: UserProfile | null;
+  user: UserProfile | null;
   loading: boolean;
   pendingTeacherCode: string | null;
   setPendingTeacherCode: (code: string | null) => void;
@@ -683,6 +684,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         profile,
+        user: profile,
         loading,
         pendingTeacherCode,
         setPendingTeacherCode,

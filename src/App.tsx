@@ -24,6 +24,7 @@ import TeacherContent from "./pages/TeacherContent";
 import TeacherModeration from "./pages/TeacherModeration";
 import TeacherProgressRecap from "./pages/TeacherProgressRecap";
 import TeacherQuizEditor from "./pages/TeacherQuizEditor";
+import TeacherPretestRecap from "./pages/TeacherPretestRecap";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import ResetPassword from "./pages/ResetPassword";
@@ -94,6 +95,7 @@ export default function App() {
               <Route path="/teacher/soal" element={<TeacherQuizEditor />} />
               <Route path="/teacher/moderation" element={<TeacherModeration />} />
               <Route path="/teacher/rekap" element={<TeacherProgressRecap />} />
+              <Route path="/teacher/pretest" element={<TeacherPretestRecap />} />
               <Route path="/teacher/*" element={<Navigate to="/teacher/dashboard" replace />} />
             </Route>
 
