@@ -94,31 +94,35 @@ export default function TeacherPretestRecap() {
         });
       }
 
-      const profileMap: Record<string, { name: string; className: string; avatarUrl: string | null }> = {};
-      (profilesData || []).forEach((p) => {
-        profileMap[p.id] = {
-          name: p.full_name || "Siswa (" + p.id.slice(0, 6) + ")",
-          className: p.class_name || "XI",
-          avatarUrl: p.avatar_url,
-        };
-      });
+      const studentMap = new Map<string, { name: string; className: string; avatarUrl: string | null }>();
+      (profilesData || [])
+        .filter((p) => p.role === "student")
+        .forEach((p) => {
+          studentMap.set(p.id, {
+            name: p.full_name || "Siswa (" + p.id.slice(0, 6) + ")",
+            className: p.class_name || "XI",
+            avatarUrl: p.avatar_url,
+          });
+        });
 
-      // 3. Merge results on client
-      const merged: StudentPretestItem[] = (resultsData || []).map((row) => {
-        const prof = profileMap[row.user_id];
-        return {
-          id: row.id,
-          userId: row.user_id,
-          name: prof?.name || "Siswa (" + row.user_id.slice(0, 6) + ")",
-          className: prof?.className || "-",
-          avatarUrl: prof?.avatarUrl || null,
-          score: Number(row.score) || 0,
-          correctCount: Number(row.correct_count) || 0,
-          totalQuestions: Number(row.total_questions) || 5,
-          answers: (row.answers as Record<string, string>) || {},
-          createdAt: row.created_at || new Date().toISOString(),
-        };
-      });
+      // 3. Merge results on client (hanya akun ber-role 'student')
+      const merged: StudentPretestItem[] = (resultsData || [])
+        .filter((row) => studentMap.has(row.user_id))
+        .map((row) => {
+          const prof = studentMap.get(row.user_id)!;
+          return {
+            id: row.id,
+            userId: row.user_id,
+            name: prof.name,
+            className: prof.className,
+            avatarUrl: prof.avatarUrl,
+            score: Number(row.score) || 0,
+            correctCount: Number(row.correct_count) || 0,
+            totalQuestions: Number(row.total_questions) || 5,
+            answers: (row.answers as Record<string, string>) || {},
+            createdAt: row.created_at || new Date().toISOString(),
+          };
+        });
 
       setSubmissions(merged);
     } catch (err: any) {

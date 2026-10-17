@@ -700,8 +700,7 @@ export default function TeacherDashboard() {
       const [studentsRes, progressRes] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id, full_name, role, class_name, avatar_url, xp, level, created_at")
-          .eq("role", "student"),
+          .select("id, full_name, role, class_name, avatar_url, xp, level, created_at"),
         supabase
           .from("user_progress")
           .select("*"),
@@ -714,15 +713,12 @@ export default function TeacherDashboard() {
         console.error("[TeacherDashboard] Supabase error saat memuat user_progress:", progressRes.error);
       }
 
-      const students = !studentsRes.error && studentsRes.data ? studentsRes.data : [];
-      const progressRows = (!progressRes.error && progressRes.data ? [...progressRes.data] : []).sort((a: any, b: any) => {
-        const timeA = new Date(a.last_studied_at || a.updated_at || a.created_at || 0).getTime();
-        const timeB = new Date(b.last_studied_at || b.updated_at || b.created_at || 0).getTime();
-        return timeB - timeA;
-      });
+      // Ambil profiles lewat query terpisah dan filter di client (hanya profiles.role === 'student')
+      const allProfiles = !studentsRes.error && studentsRes.data ? studentsRes.data : [];
+      const studentProfiles = allProfiles.filter((p: any) => p.role === "student");
 
       const studentMap = new Map<string, { id: string; full_name: string; class_name: string; xp?: number }>();
-      for (const s of students) {
+      for (const s of studentProfiles) {
         studentMap.set(s.id, {
           id: s.id,
           full_name: s.full_name || "Siswa",
@@ -731,16 +727,20 @@ export default function TeacherDashboard() {
         });
       }
 
-      // Hitung juga user_id unik yang ada di user_progress seandainya RLS profiles hanya mengembalikan sebagian
-      const uniqueStudentIds = new Set<string>(students.map((s) => s.id));
-      for (const p of progressRows) {
-        if (p.user_id) {
-          uniqueStudentIds.add(p.user_id);
-        }
-      }
+      // Sembunyikan baris user_progress milik user ber-role 'teacher' atau yang profilnya tidak ditemukan
+      const rawProgressRows = (!progressRes.error && progressRes.data ? [...progressRes.data] : []);
+      const progressRows = rawProgressRows
+        .filter((p: any) => p.user_id && studentMap.has(p.user_id))
+        .sort((a: any, b: any) => {
+          const timeA = new Date(a.last_studied_at || a.updated_at || a.created_at || 0).getTime();
+          const timeB = new Date(b.last_studied_at || b.updated_at || b.created_at || 0).getTime();
+          return timeB - timeA;
+        });
 
-      setTotalStudents(uniqueStudentIds.size);
+      // Total siswa terdaftar hanya menghitung akun dengan role = 'student'
+      setTotalStudents(studentProfiles.length);
 
+      // Modul tuntas hanya dihitung dari progres siswa
       const completedCount = progressRows.filter((p: any) => {
         const sc = p.quiz_score ?? p.score;
         return p.completed || (typeof sc === "number" && sc >= 70);
@@ -751,8 +751,9 @@ export default function TeacherDashboard() {
       const usersWithProgress = new Set<string>();
 
       for (const p of progressRows) {
-        usersWithProgress.add(p.user_id);
         const st = studentMap.get(p.user_id);
+        if (!st) continue;
+        usersWithProgress.add(p.user_id);
         const mod = MODULES.find((m) => m.id === p.module_id);
         const rawScore = p.quiz_score ?? p.score;
         const hasQuizScore = rawScore !== null && rawScore !== undefined;
@@ -762,8 +763,8 @@ export default function TeacherDashboard() {
 
         submissions.push({
           id: String(p.id || `${p.user_id}-${p.module_id}`),
-          name: st?.full_name || `Siswa (${String(p.user_id).slice(0, 6)})`,
-          grade: st?.class_name || "Kelas 11",
+          name: st.full_name,
+          grade: st.class_name,
           subject: "Matematika",
           topic: mod?.displayTitle || mod?.title || p.module_id,
           score: hasQuizScore ? `${scoreNum}/100` : p.completed ? "Tuntas (100%)" : `Materi ${percentNum}%`,
@@ -778,8 +779,8 @@ export default function TeacherDashboard() {
         });
       }
 
-      // Tampilkan juga siswa yang sudah daftar akun tapi belum memiliki baris di user_progress
-      for (const st of students) {
+      // Tampilkan juga siswa (role student) yang sudah daftar akun tapi belum memiliki baris di user_progress
+      for (const st of studentProfiles) {
         if (!usersWithProgress.has(st.id)) {
           const hasXp = (st.xp ?? 0) > 0;
           submissions.push({

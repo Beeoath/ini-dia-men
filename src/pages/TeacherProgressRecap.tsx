@@ -105,7 +105,6 @@ export default function TeacherProgressRecap() {
         supabase
           .from("profiles")
           .select("id, full_name, role, class_name, avatar_url, xp, level, created_at")
-          .eq("role", "student")
           .order("full_name", { ascending: true }),
         supabase
           .from("user_progress")
@@ -122,41 +121,30 @@ export default function TeacherProgressRecap() {
         throw new Error(progressRes.error.message || "Gagal memuat rekap aktivitas progres siswa");
       }
 
-      const studentProfiles: StudentProfileRow[] = profilesRes.data || [];
-      const progressRows: UserProgressRow[] = progressRes.data || [];
+      // Ambil profiles lewat query terpisah dan filter di client (hanya profiles.role === 'student')
+      const allProfiles: StudentProfileRow[] = profilesRes.data || [];
+      const studentProfiles = allProfiles.filter((p) => p.role === "student");
+      const studentMap = new Map<string, StudentProfileRow>();
+      for (const p of studentProfiles) {
+        studentMap.set(p.id, p);
+      }
 
-      // Grouping user_progress per user_id di sisi client
+      // Sembunyikan baris user_progress milik user ber-role 'teacher' atau yang profilnya tidak ditemukan
+      const rawProgressRows: UserProgressRow[] = progressRes.data || [];
+      const progressRows = rawProgressRows.filter((row) => row.user_id && studentMap.has(row.user_id));
+
+      // Grouping user_progress per user_id di sisi client (hanya untuk siswa yang valid)
       const progressByUser = new Map<string, UserProgressRow[]>();
       for (const row of progressRows) {
-        if (!row.user_id) continue;
         const current = progressByUser.get(row.user_id) || [];
         current.push(row);
         progressByUser.set(row.user_id, current);
       }
 
-      // Ambil juga user_id dari user_progress yang mungkin belum tercatat di profiles student
-      const registeredStudentIds = new Set(studentProfiles.map((s) => s.id));
-      const combinedStudents: StudentProfileRow[] = [...studentProfiles];
-
-      for (const [userId] of progressByUser.entries()) {
-        if (!registeredStudentIds.has(userId)) {
-          combinedStudents.push({
-            id: userId,
-            full_name: `Siswa (${userId.slice(0, 6)})`,
-            role: "student",
-            class_name: "Kelas 11",
-            avatar_url: null,
-            xp: 0,
-            level: 1,
-            created_at: null,
-          });
-        }
-      }
-
       const totalModules = MODULES.length;
 
-      // Gabungkan profil dan progres
-      const summaries: StudentProgressSummary[] = combinedStudents.map((st) => {
+      // Gabungkan profil dan progres hanya untuk akun ber-role 'student'
+      const summaries: StudentProgressSummary[] = studentProfiles.map((st) => {
         const records = progressByUser.get(st.id) || [];
         const moduleProgressMap: Record<string, UserProgressRow> = {};
 
