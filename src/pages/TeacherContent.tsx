@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { MODULES, DISTRICTS, SigmaModule } from "../lib/sigmaData";
 import { useTheme } from "../lib/theme";
 import { EditMaterialModal } from "../components/EditMaterialModal";
-import { getMaterialMetaSync } from "../lib/pdfStorage";
+import { getMaterialMetaSync, getAllModuleMaterials, CustomMaterialData } from "../lib/pdfStorage";
 import { supabase } from "../lib/supabaseClient";
 
 export default function TeacherContent() {
@@ -38,6 +38,26 @@ export default function TeacherContent() {
 
   // Teacher edit material & upload PDF modal state
   const [editModalModule, setEditModalModule] = useState<SigmaModule | null>(null);
+  const [materialsMap, setMaterialsMap] = useState<Record<string, CustomMaterialData>>({});
+
+  // Load all module_materials from Supabase
+  useEffect(() => {
+    let active = true;
+    const loadMaterials = async () => {
+      try {
+        const all = await getAllModuleMaterials();
+        if (active) {
+          setMaterialsMap(all);
+        }
+      } catch (err) {
+        console.error("[TeacherContent] Gagal memuat data modul:", err);
+      }
+    };
+    loadMaterials();
+    return () => {
+      active = false;
+    };
+  }, [refreshKey]);
 
   // Load quiz_settings from Supabase and migrate any leftover localStorage keys
   useEffect(() => {
@@ -281,12 +301,12 @@ export default function TeacherContent() {
         <div className="space-y-3.5">
           {filtered.map((mod) => {
             const timerInfo = getModuleTimerInfo(mod);
-            const customMeta = getMaterialMetaSync(mod.id);
+            const customMeta = materialsMap[mod.id] || getMaterialMetaSync(mod.id);
             const displayTitle = customMeta?.title || mod.title;
             const displayDesc = customMeta?.description || mod.description;
             const displayDuration = customMeta?.durationMinutes || mod.durationMinutes;
             const displayPages = customMeta?.pageCount || mod.slides.length;
-            const isCustomPdf = customMeta?.isCustomPdf;
+            const isCustomPdf = Boolean(customMeta?.isCustomPdf && customMeta?.externalPdfUrl);
 
             return (
               <div

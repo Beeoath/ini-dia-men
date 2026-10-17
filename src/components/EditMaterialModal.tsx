@@ -17,8 +17,8 @@ import { SigmaModule } from "../lib/sigmaData";
 import { useTheme } from "../lib/theme";
 import {
   saveCustomMaterial,
-  getCustomMaterial,
-  resetModuleToDefault,
+  getModuleMaterial,
+  deleteCustomMaterialPdf,
   CustomMaterialData,
 } from "../lib/pdfStorage";
 
@@ -33,7 +33,8 @@ export function isAllowedIframeUrl(url?: string | null): boolean {
     const isSameOrigin = parsed.origin === window.location.origin;
     const isGoogleDocs = hostname === "docs.google.com";
     const isGoogleDrive = hostname === "drive.google.com";
-    return isSameOrigin || isGoogleDocs || isGoogleDrive;
+    const isSupabase = hostname.endsWith(".supabase.co");
+    return isSameOrigin || isGoogleDocs || isGoogleDrive || isSupabase;
   } catch {
     return false;
   }
@@ -82,6 +83,9 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeletingFile, setIsDeletingFile] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<string>("");
   const [dragActive, setDragActive] = useState(false);
 
   // Load existing configuration on modal open
@@ -97,10 +101,12 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
     setFilePreviewUrl(null);
     setExternalUrl("");
     setIsPreviewOpen(false);
+    setUploadProgress(null);
+    setUploadStatus("");
 
     const loadData = async () => {
       try {
-        const custom = await getCustomMaterial(module.id);
+        const custom = await getModuleMaterial(module.id);
         if (active && custom) {
           setExistingMeta(custom);
           setIsCustomActive(custom.isCustomPdf);
@@ -109,20 +115,20 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
           if (custom.durationMinutes) setDurationMinutes(custom.durationMinutes);
           if (custom.pageCount) setPageCount(custom.pageCount);
           if (custom.externalPdfUrl) {
-            setExternalUrl(custom.externalPdfUrl);
-            setUploadMethod("url");
             setFilePreviewUrl(custom.externalPdfUrl);
-          } else if (custom.pdfBlob) {
-            setUploadMethod("file");
-            const blobUrl = URL.createObjectURL(custom.pdfBlob);
-            setFilePreviewUrl(blobUrl);
+            if (custom.pdfFileName && !custom.externalPdfUrl.startsWith("http") && !custom.externalPdfUrl.includes(".supabase.co")) {
+              setExternalUrl(custom.externalPdfUrl);
+              setUploadMethod("url");
+            } else {
+              setUploadMethod("file");
+            }
           }
         } else if (active) {
           setExistingMeta(null);
           setIsCustomActive(false);
         }
       } catch (err) {
-        console.error("Failed to load material:", err);
+        console.error("[EditMaterialModal] Gagal memuat data modul:", err);
       }
     };
 
@@ -184,7 +190,7 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
     }
     const newBlobUrl = URL.createObjectURL(file);
     setFilePreviewUrl(newBlobUrl);
-    toast.success(`File "${file.name}" siap diunggah!`);
+    toast.success(`File "${file.name}" siap diunggah ke server!`);
   };
 
   // Format file size
@@ -194,6 +200,54 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
       return `${(bytes / 1024).toFixed(1)} KB`;
     }
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
+  // Handle Delete Trash Icon on File
+  const handleDeleteCurrentFile = async () => {
+    const hasPersistedCustomPdf = isCustomActive || Boolean(existingMeta?.isCustomPdf);
+    const fileName = selectedFile?.name || existingMeta?.pdfFileName || "Dokumen PDF";
+
+    const confirmMsg = hasPersistedCustomPdf
+      ? `Apakah Anda yakin ingin menghapus file "${fileName}" dari server? Modul akan dikembalikan ke dokumen bawaan sistem.`
+      : `Batalkan pemilihan berkas "${fileName}"?`;
+
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    if (hasPersistedCustomPdf) {
+      setIsDeletingFile(true);
+      try {
+        await deleteCustomMaterialPdf(module.id);
+        setIsCustomActive(false);
+        setExistingMeta(null);
+        setSelectedFile(null);
+        if (filePreviewUrl && filePreviewUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(filePreviewUrl);
+        }
+        setFilePreviewUrl(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        toast.success("Dokumen PDF berhasil dihapus dan dikembalikan ke modul bawaan.");
+        onSaved();
+      } catch (err: any) {
+        console.error("[EditMaterialModal] Gagal menghapus file PDF:", {
+          code: err?.code || "DELETE_ERROR",
+          message: err?.message,
+          details: err,
+        });
+        toast.error(`Gagal menghapus dokumen: ${err?.message || "Terjadi kesalahan"}`);
+      } finally {
+        setIsDeletingFile(false);
+      }
+    } else {
+      setSelectedFile(null);
+      if (filePreviewUrl && filePreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(filePreviewUrl);
+      }
+      setFilePreviewUrl(existingMeta?.externalPdfUrl || null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      toast.success("Pilihan file dibatalkan.");
+    }
   };
 
   // Handle Save
@@ -206,62 +260,52 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
       return;
     }
 
+    if (uploadMethod === "url" && externalUrl.trim()) {
+      const trimmedUrl = externalUrl.trim();
+      if (!trimmedUrl.startsWith("https://")) {
+        toast.error("Tautan URL PDF harus diawali dengan https://");
+        return;
+      }
+    }
+
     setIsSaving(true);
+    setUploadProgress(0);
+    setUploadStatus("Menyiapkan penyimpanan...");
+
     try {
-      let pdfBlob: Blob | undefined = undefined;
-      let pdfFileName = existingMeta?.pdfFileName;
-      let pdfFileSize = existingMeta?.pdfFileSize;
-
-      if (uploadMethod === "file") {
-        if (selectedFile) {
-          pdfBlob = selectedFile;
-          pdfFileName = selectedFile.name;
-          pdfFileSize = selectedFile.size;
-        } else if (existingMeta?.pdfBlob) {
-          pdfBlob = existingMeta.pdfBlob;
-        }
-      }
-
-      if (uploadMethod === "url" && externalUrl.trim()) {
-        const trimmedUrl = externalUrl.trim();
-        if (!trimmedUrl.startsWith("https://")) {
-          toast.error("Tautan URL PDF harus diawali dengan https://");
-          setIsSaving(false);
-          return;
-        }
-      }
-
-      const hasPdf = Boolean(pdfBlob || (uploadMethod === "url" && externalUrl.trim()));
-
-      const dataToSave: CustomMaterialData = {
+      await saveCustomMaterial({
         moduleId: module.id,
         title: title.trim(),
         description: description.trim(),
         durationMinutes: Number(durationMinutes) || 20,
         pageCount: Number(pageCount) || 14,
-        pdfFileName: uploadMethod === "file" ? pdfFileName : undefined,
-        pdfFileSize: uploadMethod === "file" ? pdfFileSize : undefined,
+        file: uploadMethod === "file" ? selectedFile : null,
         externalPdfUrl: uploadMethod === "url" ? externalUrl.trim() : undefined,
-        pdfBlob,
-        updatedAt: Date.now(),
-        isCustomPdf: hasPdf,
-      };
-
-      await saveCustomMaterial(dataToSave);
+        existingFileName: existingMeta?.pdfFileName,
+        existingFileSize: existingMeta?.pdfFileSize,
+        onProgress: (pct) => setUploadProgress(pct),
+        onStatus: (status) => setUploadStatus(status),
+      });
 
       toast.success(
-        hasPdf
-          ? `Materi "${title}" dengan dokumen PDF khusus berhasil disimpan dan dipublikasikan ke siswa!`
+        selectedFile || (uploadMethod === "url" && externalUrl.trim())
+          ? `Materi "${title}" dengan dokumen PDF berhasil disimpan di server dan dapat dilihat siswa!`
           : `Informasi modul "${title}" berhasil diperbarui!`
       );
 
       onSaved();
       onClose();
-    } catch (err) {
-      console.error("Gagal menyimpan materi:", err);
-      toast.error("Terjadi kesalahan saat menyimpan materi. Silakan coba lagi.");
+    } catch (err: any) {
+      console.error("[EditMaterialModal] Gagal menyimpan materi:", {
+        code: err?.code || "SAVE_ERROR",
+        message: err?.message,
+        details: err,
+      });
+      toast.error(err?.message || "Terjadi kesalahan saat menyimpan materi ke server.");
     } finally {
       setIsSaving(false);
+      setUploadProgress(null);
+      setUploadStatus("");
     }
   };
 
@@ -270,20 +314,31 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
     if (!module) return;
     if (
       !confirm(
-        `Kembalikan modul "${module.title}" ke dokumen PDF bawaan sistem SIGMA? Dokumen PDF yang diunggah akan dihapus.`
+        `Kembalikan modul "${module.title}" ke dokumen PDF bawaan sistem SIGMA? Dokumen PDF yang ada di server akan dihapus.`
       )
     ) {
       return;
     }
 
+    setIsDeletingFile(true);
     try {
-      await resetModuleToDefault(module.id);
+      await deleteCustomMaterialPdf(module.id);
+      setIsCustomActive(false);
+      setExistingMeta(null);
+      setSelectedFile(null);
+      setFilePreviewUrl(null);
       toast.success("Modul berhasil dikembalikan ke dokumen bawaan sistem.");
       onSaved();
       onClose();
-    } catch (err) {
-      console.error("Gagal reset:", err);
-      toast.error("Gagal mengembalikan modul.");
+    } catch (err: any) {
+      console.error("[EditMaterialModal] Gagal reset modul:", {
+        code: err?.code || "RESET_ERROR",
+        message: err?.message,
+        details: err,
+      });
+      toast.error("Gagal mengembalikan modul ke bawaan.");
+    } finally {
+      setIsDeletingFile(false);
     }
   };
 
@@ -317,7 +372,7 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
               Edit Materi &amp; Upload PDF Modul
             </h2>
             <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-600"}`}>
-              Unggah materi kurikulum buatan Anda sendiri agar dapat dibaca langsung oleh siswa di portal belajar.
+              Unggah materi kurikulum PDF buatan Anda ke server agar dapat dibaca langsung oleh seluruh siswa di portal belajar.
             </p>
           </div>
 
@@ -493,7 +548,7 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
                         isDark ? "text-slate-400" : "text-slate-500"
                       }`}
                     >
-                      Mendukung dokumen PDF (hingga 50 MB). Tersimpan aman di memori browser guru.
+                      Mendukung dokumen PDF (hingga 50 MB). Tersimpan di server, dapat dilihat siswa.
                     </p>
                   </div>
                 </div>
@@ -512,8 +567,9 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
                           {selectedFile?.name || existingMeta?.pdfFileName}
                         </span>
                         <span className="text-[10px] opacity-80 font-mono">
-                          {formatFileSize(selectedFile?.size || existingMeta?.pdfFileSize)}
-                          {selectedFile && " • Siap disimpan"}
+                          {selectedFile
+                            ? `${formatFileSize(selectedFile.size)} • Siap diunggah ke server`
+                            : "Tersimpan di server, dapat dilihat siswa"}
                         </span>
                       </div>
                     </div>
@@ -531,14 +587,16 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
                       )}
                       <button
                         type="button"
-                        onClick={() => {
-                          setSelectedFile(null);
-                          if (fileInputRef.current) fileInputRef.current.value = "";
-                        }}
-                        className="p-1 rounded-lg hover:bg-rose-500/20 text-rose-400 cursor-pointer"
-                        title="Hapus seleksi file"
+                        onClick={handleDeleteCurrentFile}
+                        disabled={isDeletingFile}
+                        className="p-1.5 rounded-lg hover:bg-rose-500/20 text-rose-400 cursor-pointer transition-colors"
+                        title="Hapus file PDF"
                       >
-                        <Trash2 size={14} />
+                        {isDeletingFile ? (
+                          <RefreshCw size={14} className="animate-spin" />
+                        ) : (
+                          <Trash2 size={14} />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -602,6 +660,27 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
               </div>
             )}
 
+            {/* Live Upload Progress Feedback */}
+            {isSaving && (
+              <div className="space-y-1.5 p-3 rounded-xl border border-cyan-500/30 bg-cyan-950/40">
+                <div className="flex items-center justify-between text-xs font-mono text-cyan-300">
+                  <span className="flex items-center gap-2">
+                    <RefreshCw size={12} className="animate-spin text-cyan-400" />
+                    {uploadStatus || "Memproses dokumen..."}
+                  </span>
+                  <span>{uploadProgress !== null ? `${uploadProgress}%` : ""}</span>
+                </div>
+                {uploadProgress !== null && (
+                  <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-cyan-400 transition-all duration-300 rounded-full shadow-[0_0_8px_rgba(0,240,255,0.8)]"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Live PDF Inline Preview */}
             {isPreviewOpen && filePreviewUrl && (
               <div className="space-y-2 pt-2 border-t border-white/10 animate-in fade-in duration-200">
@@ -610,7 +689,7 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsPreviewOpen(false)}
-                    className="text-slate-400 hover:text-white"
+                    className="text-slate-400 hover:text-white cursor-pointer"
                   >
                     Tutup (X)
                   </button>
@@ -661,9 +740,11 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
               <button
                 type="button"
                 onClick={handleReset}
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full border border-rose-500/40 text-rose-400 hover:bg-rose-500/10 text-xs font-semibold transition-all cursor-pointer"
+                disabled={isSaving || isDeletingFile}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full border border-rose-500/40 text-rose-400 hover:bg-rose-500/10 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
               >
-                <RefreshCw size={13} /> Kembalikan ke PDF Bawaan
+                <RefreshCw size={13} className={isDeletingFile ? "animate-spin" : ""} />
+                Kembalikan ke PDF Bawaan
               </button>
             ) : (
               <span className={`text-[11px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>
@@ -675,7 +756,7 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                disabled={isSaving}
+                disabled={isSaving || isDeletingFile}
                 className={`px-4 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
                   isDark
                     ? "border-white/10 text-slate-300 hover:bg-white/5"
@@ -687,7 +768,7 @@ export const EditMaterialModal: React.FC<EditMaterialModalProps> = ({
 
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || isDeletingFile}
                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-xs font-black bg-cyan-400 hover:bg-cyan-300 active:scale-95 text-slate-950 shadow-lg shadow-cyan-400/25 transition-all cursor-pointer disabled:opacity-50"
               >
                 {isSaving ? (

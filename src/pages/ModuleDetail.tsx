@@ -20,7 +20,7 @@ import { motion } from "framer-motion";
 import { MODULES } from "../lib/sigmaData";
 import { Badge } from "../components/Primitives";
 import { useTheme } from "../lib/theme";
-import { getMaterialMetaSync } from "../lib/pdfStorage";
+import { getMaterialMetaSync, getModuleMaterial, CustomMaterialData } from "../lib/pdfStorage";
 import { useStudentProgress, getModuleUnlockStatus, MIN_PASSING_SCORE } from "../lib/userProgress";
 import {
   getAssessmentResult,
@@ -52,12 +52,41 @@ export default function ModuleDetail() {
   const currentId = moduleId || id;
   const { isDark } = useTheme();
   const moduleData = MODULES.find((m) => m.id === currentId) || MODULES[0];
-  const customMeta = getMaterialMetaSync(moduleData.id);
+  const [customMeta, setCustomMeta] = useState<CustomMaterialData | Partial<CustomMaterialData> | null>(() => getMaterialMetaSync(moduleData.id));
+
+  useEffect(() => {
+    let active = true;
+    const fetchLatestMaterial = async () => {
+      try {
+        const mat = await getModuleMaterial(moduleData.id);
+        if (active && mat) {
+          setCustomMeta(mat);
+        }
+      } catch (err) {
+        console.error("[ModuleDetail] Gagal memuat data materi terbaru:", err);
+      }
+    };
+
+    fetchLatestMaterial();
+
+    const handleMaterialUpdate = (e: any) => {
+      if (!e.detail || e.detail.moduleId === moduleData.id) {
+        fetchLatestMaterial();
+      }
+    };
+
+    window.addEventListener("sigma_material_updated", handleMaterialUpdate);
+    return () => {
+      active = false;
+      window.removeEventListener("sigma_material_updated", handleMaterialUpdate);
+    };
+  }, [moduleData.id]);
+
   const displayTitle = customMeta?.title || moduleData.title;
   const displayDesc = customMeta?.description || moduleData.description;
   const displayDuration = customMeta?.durationMinutes || moduleData.durationMinutes;
   const displayPages = customMeta?.pageCount || moduleData.slides.length;
-  const isCustomPdf = customMeta?.isCustomPdf;
+  const isCustomPdf = Boolean(customMeta?.isCustomPdf && customMeta?.externalPdfUrl);
   const { userProgress } = useStudentProgress();
   const lockStatus = getModuleUnlockStatus(moduleData.id, userProgress);
   const isLocked = !lockStatus.isUnlocked;
