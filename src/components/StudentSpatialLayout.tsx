@@ -29,6 +29,8 @@ export interface AnnouncementItem {
   is_pinned: boolean;
   created_by?: string;
   created_at?: string;
+  author_name?: string | null;
+  author_role?: string | null;
 }
 
 export type StudentDockItem = "dashboard" | "hub" | "discussions" | "profile";
@@ -60,7 +62,7 @@ export const StudentSpatialLayout: React.FC<StudentSpatialLayoutProps> = ({
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(true);
 
-  // Fetch announcements from Supabase
+  // Fetch announcements from Supabase and merge sender profile on client
   const fetchAnnouncements = async () => {
     try {
       const { data, error } = await supabase
@@ -70,10 +72,52 @@ export const StudentSpatialLayout: React.FC<StudentSpatialLayoutProps> = ({
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("[StudentSpatialLayout] Error fetching announcements:", error);
+        console.error("[StudentSpatialLayout] Error fetching announcements:", {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+        });
         return;
       }
-      setAnnouncements(data || []);
+
+      const rawList = data || [];
+      const uniqueAuthorIds = Array.from(
+        new Set(rawList.map((a) => a.created_by).filter((id): id is string => Boolean(id)))
+      );
+
+      const profilesMap: Record<string, { full_name?: string; role?: string }> = {};
+      if (uniqueAuthorIds.length > 0) {
+        const { data: profs, error: profsError } = await supabase
+          .from("profiles")
+          .select("id, full_name, role")
+          .in("id", uniqueAuthorIds);
+
+        if (profsError) {
+          console.error("[StudentSpatialLayout] Error fetching author profiles:", {
+            code: profsError.code,
+            message: profsError.message,
+            details: profsError.details,
+          });
+        } else if (profs) {
+          profs.forEach((p) => {
+            profilesMap[p.id] = {
+              full_name: p.full_name,
+              role: p.role,
+            };
+          });
+        }
+      }
+
+      const merged: AnnouncementItem[] = rawList.map((ann) => {
+        const prof = ann.created_by ? profilesMap[ann.created_by] : null;
+        return {
+          ...ann,
+          author_name: prof?.full_name?.trim() || null,
+          author_role: prof?.role || null,
+        };
+      });
+
+      setAnnouncements(merged);
     } catch (err) {
       console.error("[StudentSpatialLayout] Exception fetching announcements:", err);
     } finally {
@@ -473,19 +517,61 @@ export const StudentSpatialLayout: React.FC<StudentSpatialLayoutProps> = ({
                               <p className="text-[11px] mt-1.5 leading-relaxed whitespace-pre-wrap">
                                 {ann.content}
                               </p>
-                              {ann.created_at && (
-                                <div
-                                  className={`text-[9px] font-mono mt-2 text-right ${
-                                    isDark ? "text-slate-400" : "text-slate-500"
-                                  }`}
-                                >
-                                  {new Date(ann.created_at).toLocaleDateString("id-ID", {
-                                    day: "numeric",
-                                    month: "short",
-                                    year: "numeric",
-                                  })}
+
+                              <div
+                                className={`mt-2 pt-2 border-t flex flex-wrap items-center justify-between gap-1.5 text-[10px] ${
+                                  isDark
+                                    ? "border-white/5 text-slate-400"
+                                    : "border-slate-200 text-slate-500"
+                                }`}
+                              >
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <User
+                                    size={11}
+                                    className={isDark ? "text-cyan-400 shrink-0" : "text-cyan-600 shrink-0"}
+                                  />
+                                  {ann.author_name ? (
+                                    <>
+                                      <span
+                                        className={`truncate font-medium ${
+                                          isDark ? "text-slate-200" : "text-slate-800"
+                                        }`}
+                                      >
+                                        Oleh {ann.author_name}
+                                      </span>
+                                      <span
+                                        className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                          isDark
+                                            ? "bg-cyan-500/15 text-cyan-300 border border-cyan-400/20"
+                                            : "bg-cyan-50 text-cyan-700 border border-cyan-200"
+                                        }`}
+                                      >
+                                        Guru
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span
+                                      className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                        isDark
+                                          ? "bg-cyan-500/15 text-cyan-300 border border-cyan-400/20"
+                                          : "bg-cyan-50 text-cyan-700 border border-cyan-200"
+                                      }`}
+                                    >
+                                      Guru
+                                    </span>
+                                  )}
                                 </div>
-                              )}
+
+                                {ann.created_at && (
+                                  <span className="font-mono text-[9px] shrink-0 opacity-80">
+                                    {new Date(ann.created_at).toLocaleDateString("id-ID", {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                    })}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           ))
                         )}
